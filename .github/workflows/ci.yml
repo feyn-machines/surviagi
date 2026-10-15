@@ -25,7 +25,6 @@ jobs:
       - run: pnpm ontology:check
       - run: pnpm data:setup
       - run: pnpm data:test
-      - run: pnpm data:simulate
       - run: pnpm design:check
       - run: pnpm i18n:test
       - run: pnpm site:test:unit

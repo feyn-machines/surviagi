@@ -10,7 +10,6 @@
 pnpm install --frozen-lockfile
 pnpm data:setup
 pnpm data:test
-pnpm data:simulate
 ```
 
 `data:setup` 在根目录 `data/runtime/venv` 创建 Python 环境，安装固定版本 psycopg，启动专用 Compose 项目 `openaiwill-data-local` 并应用迁移。数据库只监听 `127.0.0.1:7543`，库名 `openaiwill_local`；用户名 `openaiwill` 是本地数据库连接账号，不是网站用户。
@@ -246,9 +245,9 @@ pnpm data:psql -- -c "SELECT id, status, config_version FROM data_batches ORDER 
 pnpm data:psql -- -c "SELECT batch_id, concept_id, central, change_cause, previous_batch_id FROM progress_values ORDER BY estimated_at, concept_id;"
 ```
 
-每次 `data:simulate` 保存独立的 `data/simulation/runs/<UTC时间>/`，内含五批规范化输入、配置、JSON 查询结果和中文 Markdown 报告。全部运行产物保留本地，不进入 Git。
+此前合成模拟的每次运行保存在独立的 `data/simulation/runs/<UTC时间>/`，内含五批规范化输入、配置、JSON 查询结果和中文 Markdown 报告；当前 `package.json` 没有运行它的脚本，全部运行产物保留本地，不进入 Git。
 
-`pnpm data:test` 在独立临时数据库运行真实 PG 回归，测试后只删除本次生成的测试库；`pnpm check` 保留无需 Docker 的网站和静态数据检查，并包含输入单元测试。CI 另执行 setup、真实 PG 测试和模拟。完整验收需两组检查均通过。
+`pnpm data:test` 在独立临时数据库运行真实 PG 回归，测试后只删除本次生成的测试库；`pnpm check` 保留无需 Docker 的网站和静态数据检查，并包含输入单元测试。CI 另执行 setup 和真实 PG 测试。完整验收需两组检查均通过。
 
 ## 人工评审
 
