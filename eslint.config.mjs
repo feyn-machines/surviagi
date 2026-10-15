@@ -19,6 +19,12 @@ const eslintConfig = defineConfig([
     "local/**",
     // Assembled releases hold the compiled server and its dependencies.
     ".release/**",
+    // Local, gitignored data: raw archives, the pipeline database and its
+    // Docker volumes. None of it is source, and the rootless-Docker Postgres
+    // volume is not readable by this user, which made a recursive lint fail
+    // with EACCES on scandir.
+    "data/**",
+    "infra/data/**",
   ]),
 ]);
 
