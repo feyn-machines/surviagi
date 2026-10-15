@@ -36,6 +36,45 @@ def apply_schema(conn) -> None:
             conn.execute(path.read_text())
 
 
+# Object kinds already in schema app whose owner must be the app role, and the
+# keyword ALTER ... OWNER TO needs for each. Indexes follow their table; identity
+# and serial sequences do too, and PostgreSQL refuses to change those directly.
+SCHEMA_OBJECT_KINDS = {"r": "TABLE", "p": "TABLE", "v": "VIEW", "m": "MATERIALIZED VIEW",
+                       "f": "FOREIGN TABLE"}
+# A sequence no table owns needs its own ALTER; one a table owns is skipped here.
+UNOWNED_SEQUENCES = (
+    "SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+    "WHERE n.nspname = %s AND c.relkind = 'S' AND NOT EXISTS ("
+    "  SELECT 1 FROM pg_depend d WHERE d.classid = 'pg_class'::regclass AND d.objid = c.oid "
+    "  AND d.refclassid = 'pg_class'::regclass AND d.deptype IN ('a', 'i'))")
+
+
+def adopt_schema_objects(admin_conn, role: str, schema: str = "app") -> None:
+    """Give `role` ownership of everything already in `schema`.
+
+    A database restored from a dump can already hold schema app with its tables owned by the
+    restoring role; the app role then cannot apply db/app/*.sql, because CREATE INDEX IF NOT
+    EXISTS still checks ownership of the table and fails with "must be owner of table". Runs as
+    a superuser: the local admin connection is one."""
+    from psycopg import sql
+
+    for row in admin_conn.execute(
+            "SELECT c.relkind, c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+            "WHERE n.nspname = %s AND c.relkind = ANY(%s)",
+            (schema, list(SCHEMA_OBJECT_KINDS))).fetchall():
+        admin_conn.execute(sql.SQL("ALTER {} {}.{} OWNER TO {}").format(
+            sql.SQL(SCHEMA_OBJECT_KINDS[row["relkind"]]), sql.Identifier(schema),
+            sql.Identifier(row["relname"]), sql.Identifier(role)))
+    for row in admin_conn.execute(UNOWNED_SEQUENCES, (schema,)).fetchall():
+        admin_conn.execute(sql.SQL("ALTER SEQUENCE {}.{} OWNER TO {}").format(
+            sql.Identifier(schema), sql.Identifier(row["relname"]), sql.Identifier(role)))
+    for row in admin_conn.execute(
+            "SELECT p.proname, pg_get_function_identity_arguments(p.oid) AS args FROM pg_proc p "
+            "JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = %s", (schema,)).fetchall():
+        admin_conn.execute(sql.SQL("ALTER FUNCTION {}.{}({}) OWNER TO {}").format(
+            sql.Identifier(schema), sql.Identifier(row["proname"]), sql.SQL(row["args"]), sql.Identifier(role)))
+
+
 def ensure_role_and_schema(admin_conn, password: str, role: str = APP_ROLE) -> None:
     """Create the role if absent, set its password and limits, and create schema app owned by it."""
     from psycopg import sql
@@ -51,6 +90,8 @@ def ensure_role_and_schema(admin_conn, password: str, role: str = APP_ROLE) -> N
     admin_conn.execute(sql.SQL("GRANT CONNECT ON DATABASE {} TO {}").format(sql.Identifier(database), name))
     admin_conn.execute(sql.SQL("CREATE SCHEMA IF NOT EXISTS app AUTHORIZATION {}").format(name))
     admin_conn.execute(sql.SQL("ALTER SCHEMA app OWNER TO {}").format(name))
+    # A restored database has schema app already, with its objects owned by whoever restored it.
+    adopt_schema_objects(admin_conn, role)
 
 
 def _write_atomic(path: Path, text: str) -> None:
