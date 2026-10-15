@@ -10,13 +10,24 @@
  * error, and none is visible without comparing source against snapshot.
  */
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 const root = new URL("../../", import.meta.url);
 const read = (path) => readFileSync(fileURLToPath(new URL(path, root)), "utf8");
-const manifest = JSON.parse(read("datasets/published/latest/manifest.json"));
+/**
+ * The manifest of the local published snapshot. `pnpm data:publish:snapshot`
+ * writes it into a gitignored directory, so a fresh clone has none. Reading it
+ * lazily lets the other tests in this file run without a snapshot, and the one
+ * test that compares against it skips instead of aborting the whole file at
+ * import time.
+ */
+function snapshotManifest() {
+  const path = "datasets/published/latest/manifest.json";
+  if (!existsSync(fileURLToPath(new URL(path, root)))) return null;
+  return JSON.parse(read(path));
+}
 
 /** Every page that exists, so deleting a route never fails a test by name. */
 function pages(dir = "src/app") {
@@ -29,7 +40,12 @@ function pages(dir = "src/app") {
   return out;
 }
 
-test("every count the publisher emits has a label in both languages", () => {
+test("every count the publisher emits has a label in both languages", (t) => {
+  const manifest = snapshotManifest();
+  if (!manifest) {
+    t.skip("no datasets/published/latest/manifest.json; run `pnpm data:publish:snapshot`");
+    return;
+  }
   const source = read("src/components/data-page.tsx");
   const block = source.slice(source.indexOf("const countLabels = bilingual({"));
   const english = block.slice(block.indexOf("en: {"), block.indexOf('"zh-CN": {'));
