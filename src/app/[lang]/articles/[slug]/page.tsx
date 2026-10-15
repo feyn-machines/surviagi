@@ -77,6 +77,10 @@ function block(item: Block, i: number, language: Language) {
   switch (item.kind) {
     case "rule":
       return <hr key={key} />;
+    case "image":
+      // A figure the site serves itself, often an animated GIF, which the image optimizer would flatten.
+      // eslint-disable-next-line @next/next/no-img-element
+      return <img key={key} className={s.figure} src={item.src} alt={item.alt} loading="lazy" />;
     case "list":
       return <ol key={key}>{item.items.map((row, j) => <li key={`${key}-${j}`}>{inline(row, `${key}-${j}`, language)}</li>)}</ol>;
     case "bullets":

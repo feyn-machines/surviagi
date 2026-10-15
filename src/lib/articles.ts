@@ -41,7 +41,7 @@ function read(slug: string, language: Language): Article | null {
     description: fields.description,
     date: fields.date,
     draft: fields.draft === "true",
-    blocks: parseBlocks(markdown, { bullets: true }),
+    blocks: parseBlocks(markdown, { bullets: true, images: true }),
     markdown,
   };
 }

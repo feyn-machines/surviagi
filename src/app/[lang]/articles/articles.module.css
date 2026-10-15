@@ -21,6 +21,7 @@
 .body li { margin-bottom: var(--ah-space-2); }
 .body a { color: var(--ah-color-signal); text-underline-offset: 3px; }
 .body em { color: var(--ah-color-muted); }
+.figure { display: block; width: 100%; height: auto; margin: 0 0 var(--ah-space-5); border: 1px solid var(--ah-color-line); }
 .body hr { margin: var(--ah-space-6) 0; border: 0; border-top: 1px solid var(--ah-color-line); }
 @media (max-width: 640px) {
   .item { grid-template-columns: 1fr; gap: var(--ah-space-1); }

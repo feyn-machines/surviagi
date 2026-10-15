@@ -25,7 +25,8 @@ export type Block =
   | { kind: "paragraph"; inline: Inline[] }
   | { kind: "list"; items: Inline[][] }
   | { kind: "bullets"; items: Inline[][] }
-  | { kind: "rule" };
+  | { kind: "rule" }
+  | { kind: "image"; alt: string; src: string };
 
 const ANCHOR = /<a id="([^"]+)"><\/a>/g;
 
@@ -87,8 +88,10 @@ export function whitepaperBlocks(language: Language): Block[] {
  * The subset of Markdown the site's own documents use, as blocks. `bullets`
  * turns on unordered lists, which articles use and the whitepaper does not: a
  * line of the whitepaper that happens to begin with a dash stays a paragraph.
+ * `images` turns on a figure: a line that is only `![alt](/path)`, the path
+ * being a file the site serves itself.
  */
-export function parseBlocks(section: string, options: { bullets?: boolean } = {}): Block[] {
+export function parseBlocks(section: string, options: { bullets?: boolean; images?: boolean } = {}): Block[] {
   const blocks: Block[] = [];
   let paragraph: string[] = [];
   let list: string[] = [];
@@ -125,6 +128,12 @@ export function parseBlocks(section: string, options: { bullets?: boolean } = {}
     if (/^---+\s*$/.test(line)) {
       flush();
       blocks.push({ kind: "rule" });
+      continue;
+    }
+    const image = options.images ? line.trim().match(/^!\[([^\]]*)\]\((\/[^)\s]+)\)$/) : null;
+    if (image) {
+      flush();
+      blocks.push({ kind: "image", alt: image[1], src: image[2] });
       continue;
     }
     const heading = line.match(/^(#{1,3})\s+(.*)$/);

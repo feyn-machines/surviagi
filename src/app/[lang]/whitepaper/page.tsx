@@ -93,6 +93,9 @@ function renderBlock(block: Block, i: number, sectionId: string | undefined) {
   switch (block.kind) {
     case "rule":
       return <hr key={key} className={s.rule} />;
+    // The whitepaper is parsed without figures; the case only closes the type.
+    case "image":
+      return null;
     // The whitepaper is parsed without bullet lists; the case only closes the type.
     case "bullets":
     case "list":

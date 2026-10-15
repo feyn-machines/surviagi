@@ -1,5 +1,29 @@
 [
   {
+    "slug": "what-ai-took-over-2026-10-11",
+    "date": "2026-10-11",
+    "title": {
+      "en": "Oct 5–11, 2026 | AI turned in 722 mathematics papers and passed 9.4% of its legal tasks",
+      "zh-CN": "2026 年 10 月 5 日至 11 日｜AI 交了 722 篇数学论文，法律任务只过 9.4%"
+    },
+    "description": {
+      "en": "What AI took over this week, what it changed, and what people are arguing about. Mathematical proofs, clinic intake and live dashboards were taken; legal documents were not; call center jobs began shrinking 4% a year. Every item links to its source.",
+      "zh-CN": "这一周 AI 接手了什么、带来什么影响、大家在争什么。数学证明、诊所问诊、实时看板被接了过去；法律文书没接住；呼叫中心岗位开始每年少 4%。每一条都能点回原帖。"
+    }
+  },
+  {
+    "slug": "will-ai-replace-saas",
+    "date": "2026-10-10",
+    "title": {
+      "en": "Oct 10, 2026 | Will AI replace SaaS? What are users still paying for?",
+      "zh-CN": "2026 年 10 月 10 日｜AI 会取代 SaaS 吗？用户到底为什么付费"
+    },
+    "description": {
+      "en": "Bespoke agents, established workflows and harder-to-sell side projects point to different questions. A source-linked analysis of what it would take to replace paid software.",
+      "zh-CN": "Agent 按需造软件、老牌 SaaS 熟悉工作流程、副业项目越来越难出售，这三条线说的是不同问题。沿原始来源，分析替代付费软件还需要做到什么。"
+    }
+  },
+  {
     "slug": "judgment-for-two-cents",
     "date": "2026-10-07",
     "title": {
