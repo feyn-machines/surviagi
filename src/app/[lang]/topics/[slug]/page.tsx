@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/json-ld";
+import { topicEditorial } from "@/content/topic-editorials";
 import d from "@/components/detail.module.css";
 import { appEnabled } from "@/lib/app-config";
 import { bilingual } from "@/lib/i18n";
@@ -79,11 +80,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const topic = topicBySlug(slug);
   if (!topic) notFound();
   const c = copy[language];
+  const editorial = topicEditorial(slug, language);
   return pageMetadata({
     language,
     path: `/topics/${slug}`,
     title: topic.question[language],
-    description: c.describe.replace("{q}", topic.question[language]).replace("{n}", String(topic.options.length))
+    description: editorial?.description ?? c.describe.replace("{q}", topic.question[language]).replace("{n}", String(topic.options.length))
       .replace("{a}", String(topic.accounts)),
   });
 }
@@ -104,6 +106,7 @@ export default async function TopicPage({ params }: Props) {
   const c = copy[language];
   const topic = topicBySlug((await params).slug);
   if (!topic) notFound();
+  const editorial = topicEditorial(topic.slug, language);
 
   const withPage = new Set(chainEvents().map((e) => e.event_id));
   const about = topic.about;
@@ -130,6 +133,28 @@ export default async function TopicPage({ params }: Props) {
         <div className={d.fact}><dt>{c.posts}</dt><dd>{topic.posts}</dd></div>
         <div className={d.fact}><dt>{c.evidence}</dt><dd className={topic.evidence.length ? d.sig : ""}>{topic.evidence.length}</dd></div>
       </dl>
+
+      {editorial ? (
+        <section className={s.editorial} aria-labelledby="topic-analysis-heading">
+          <div className={s.editorialMeta}>
+            <span>{editorial.label}</span>
+            <span>{editorial.updated} <time dateTime={editorial.date}>{editorial.date}</time></span>
+          </div>
+          <h2 id="topic-analysis-heading" className={s.editorialTitle}>{editorial.title}</h2>
+          <p className={s.editorialSummary}>{editorial.summary}</p>
+          <ul className={s.editorialPoints}>
+            {editorial.points.map((point) => (
+              <li key={point.url}>
+                <h3>{point.title}</h3>
+                <p>{point.text}</p>
+                <a href={point.url} target="_blank" rel="noopener noreferrer">{point.source} ↗</a>
+              </li>
+            ))}
+          </ul>
+          <p className={s.editorialNext}>{editorial.next}</p>
+          <Link className={s.editorialLink} href={href(language, editorial.articlePath)}>{editorial.article}</Link>
+        </section>
+      ) : null}
 
       <TopicVote language={language} enabled={appEnabled()} topicId={topic.topic_id}
         options={topic.options.map((option) => ({ option_id: option.option_id, text: option.text[language] }))} />

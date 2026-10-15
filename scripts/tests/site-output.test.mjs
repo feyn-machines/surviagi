@@ -314,7 +314,7 @@ test("each page names its own address and its counterpart in the other language"
       assert.equal(tag(page, /<meta property="og:url" content="([^"]+)"/), publicUrl(language, path), where);
       assert.equal(tag(page, /<meta property="og:image" content="([^"]+)"/), `${SITE}/og/${language}.png`, where);
       assert.ok(tag(page, /<meta name="description" content="([^"]+)"/), where);
-      assert.equal(tag(page, /<meta name="twitter:site" content="([^"]+)"/), "@openaiwill", where);
+      assert.equal(tag(page, /<meta name="twitter:site" content="([^"]+)"/), "@surviagi", where);
     }
   }
 });
@@ -323,7 +323,7 @@ test("every page links to the project's accounts in the header and in the footer
   for (const language of ["en", "zh-CN"]) {
     for (const path of FIXED) {
       const links = anchors(html(language, path));
-      for (const url of ["https://x.com/openaiwill", "https://discord.gg/ArVHw2K9X", "https://github.com/feyn-machines/surviagi"]) {
+      for (const url of ["https://x.com/surviagi", "https://discord.gg/ArVHw2K9X", "https://github.com/feyn-machines/surviagi"]) {
         // The legal pages also name X and Discord once, as the way to reach us.
         const contact = LEGAL.includes(path) && !url.includes("github") ? 1 : 0;
         assert.equal(links.filter((link) => link === url).length, 2 + contact, `${language}${path}: ${url} should appear in header and footer`);
@@ -453,7 +453,7 @@ test("structured data names the organisation, the datasets and their status", ()
     assert.deepEqual(types(html(language, "")).sort(), ["Organization", "WebSite"]);
     assert.ok(types(html(language, "/whitepaper")).includes("Article"));
     const org = ld(html(language, "")).find((item) => item["@type"] === "Organization");
-    assert.deepEqual(org.sameAs, ["https://x.com/openaiwill", "https://discord.gg/ArVHw2K9X", "https://github.com/feyn-machines/surviagi"]);
+    assert.deepEqual(org.sameAs, ["https://x.com/surviagi", "https://discord.gg/ArVHw2K9X", "https://github.com/feyn-machines/surviagi"]);
   }
 });
 
@@ -482,7 +482,7 @@ test("llms.txt is generated from the site, names real pages, and overstates noth
   assert.doesNotMatch(text, /\bplatform\b|verified|reviewed score|replacement rate/i);
   if (HAS_SNAPSHOT) assert.match(text, /machine-proposed/i);
   else assert.match(text, /No data snapshot is published in this build\./);
-  assert.match(text, /https:\/\/x\.com\/openaiwill/);
+  assert.match(text, /https:\/\/x\.com\/surviagi/);
   assert.match(text, /https:\/\/discord\.gg\/ArVHw2K9X/);
   assert.match(text, /https:\/\/github\.com\/feyn-machines\/surviagi/);
   for (const [, url] of text.matchAll(/\]\((https:\/\/surviagi\.com[^)]*)\)/g)) {

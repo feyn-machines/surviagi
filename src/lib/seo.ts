@@ -7,9 +7,9 @@ export { SITE_URL };
 export const SITE_NAME = "SurviAGI";
 /** What the name stands for, and the names the same project is also known by (the last is its earlier name). */
 export const SITE_ALTERNATE_NAMES = ["The AGI Survival Guide", "新人类 AI 生存指南", "openaiwill"] as const;
-/** The project's own account on X (user-confirmed 2026-10-03). */
-export const X_HANDLE = "@openaiwill";
-export const X_URL = "https://x.com/openaiwill";
+/** The project's current public X account (verified 2026-10-10). */
+export const X_HANDLE = "@surviagi";
+export const X_URL = "https://x.com/surviagi";
 /** The project's community invite on Discord (user-confirmed 2026-10-03). */
 export const DISCORD_URL = "https://discord.gg/ArVHw2K9X";
 /** The public source repository (user-confirmed 2026-10-03). */

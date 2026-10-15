@@ -1,4 +1,4 @@
-import { DISCORD_URL, X_URL } from "@/lib/seo";
+import { DISCORD_URL, X_HANDLE, X_URL } from "@/lib/seo";
 import type { Doc } from "@/lib/legal";
 import type { Language } from "@/lib/i18n";
 import s from "./legal.module.css";
@@ -9,7 +9,7 @@ const UPDATED: Record<Language, string> = { en: "Updated", "zh-CN": "更新于" 
 function paragraph(text: string, key: string) {
   return text.split(/(\{x\}|\{discord\})/).map((part, i) => {
     if (part === "{x}") {
-      return <a key={`${key}-${i}`} href={X_URL} rel="noopener">@openaiwill</a>;
+      return <a key={`${key}-${i}`} href={X_URL} rel="noopener">{X_HANDLE}</a>;
     }
     if (part === "{discord}") {
       return <a key={`${key}-${i}`} href={DISCORD_URL} rel="noopener">Discord</a>;

@@ -35,10 +35,23 @@ a.question:hover{color:var(--ah-color-signal)}
 .quarters th,.quarters td{padding:9px 10px;border-bottom:1px solid var(--ah-color-line);text-align:left}
 .quarters th{font-family:var(--ah-font-mono);font-size:11px;letter-spacing:.05em;font-weight:500;color:var(--ah-color-subtle)}
 .quarters td.n{font-family:var(--ah-font-mono)}
+.editorial{margin:0 0 56px;padding:24px;border:1px solid var(--ah-color-line);background:var(--ah-color-surface)}
+.editorialMeta{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 20px;font-family:var(--ah-font-mono);font-size:11px;letter-spacing:.04em;color:var(--ah-color-subtle)}
+.editorialMeta span:first-child{color:var(--ah-color-signal)}
+.editorialTitle{margin:18px 0 12px;font-size:26px;line-height:1.3;font-weight:600;letter-spacing:-.01em}
+.editorialSummary{margin:0;max-width:80ch;font-size:16px;line-height:1.65;color:var(--ah-color-text)}
+.editorialPoints{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;list-style:none;padding:22px 0;margin:22px 0 0;border-top:1px solid var(--ah-color-line);border-bottom:1px solid var(--ah-color-line)}
+.editorialPoints h3{margin:0 0 8px;font-size:17px;line-height:1.4;font-weight:500;letter-spacing:0}
+.editorialPoints p{margin:0 0 10px;font-size:14px;line-height:1.6;color:var(--ah-color-muted)}
+.editorialPoints a{font-size:12px;color:var(--ah-color-signal);text-underline-offset:3px}
+.editorialNext{margin:18px 0;font-size:14px;line-height:1.6;color:var(--ah-color-muted)}
+.editorialLink{display:inline-block;font-size:15px;color:var(--ah-color-signal);text-decoration:underline;text-underline-offset:4px}
 @media(max-width:900px){
   .item{grid-template-columns:1fr;gap:8px}
   .counts{text-align:left}
   .rows li{grid-template-columns:1fr;gap:2px}
+  .editorialPoints{grid-template-columns:1fr;gap:22px}
+  .editorial{padding:20px}
 }
 
 /* The list page: figures, the topics argued both ways, the fields, then everything with filters and pages. */
