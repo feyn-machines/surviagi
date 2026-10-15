@@ -75,6 +75,19 @@ class Schema(AppBase):
         owners = {r["tableowner"] for r in self.conn.execute("SELECT tableowner FROM pg_tables WHERE schemaname = 'app'")}
         self.assertEqual(owners, {self.role})
 
+    def test_setup_adopts_objects_a_restored_database_already_has(self):
+        # A dump restored into this database leaves schema app's tables owned by the restoring
+        # role. setup_local must hand them to the app role, or applying db/app/*.sql as oaw_app
+        # fails with "must be owner of table" on the indexes of a table it does not own.
+        # submissions has a GENERATED ALWAYS AS IDENTITY key, whose sequence PostgreSQL
+        # refuses to reassign directly; it must follow the table instead.
+        for name in ("session", "admins", "submissions"):
+            self.admin_db.execute(sql.SQL("ALTER TABLE app.{} OWNER TO CURRENT_USER").format(sql.Identifier(name)))
+        app_db.ensure_role_and_schema(self.admin_db, self.password, role=self.role)
+        owners = {r["tableowner"] for r in self.conn.execute("SELECT tableowner FROM pg_tables WHERE schemaname = 'app'")}
+        self.assertEqual(owners, {self.role})
+        app_db.apply_schema(self.conn)  # must not raise
+
 
 class Submissions(AppBase):
     def test_same_user_same_handle_twice_is_refused(self):
