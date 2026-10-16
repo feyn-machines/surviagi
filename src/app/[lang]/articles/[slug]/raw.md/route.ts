@@ -26,5 +26,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
     found.markdown.replace(/\]\((\/[^)]*)\)/g, (_, path: string) => `](${absoluteUrl(language, path)})`),
     "",
   ].join("\n");
-  return new Response(text, { headers: { "Content-Type": "text/markdown; charset=utf-8" } });
+  // The page, not this copy, is what a search engine should keep.
+  const page = absoluteUrl(language, `/articles/${found.slug}`);
+  return new Response(text, { headers: { "Content-Type": "text/markdown; charset=utf-8", Link: `<${page}>; rel="canonical"` } });
 }

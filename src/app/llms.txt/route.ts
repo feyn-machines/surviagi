@@ -1,7 +1,7 @@
 import { LEVEL_NAMES } from "@/lib/level-names";
 import { DISCORD_URL, GITHUB_URL, SITE_NAME, SITE_URL, X_URL, absoluteUrl } from "@/lib/seo";
 import { SITE_NAV, siteNavCopy } from "@/lib/site-nav";
-import { manifest as dataManifest } from "@/lib/snapshot";
+import { manifest as dataManifest, markets, marketSlug } from "@/lib/snapshot";
 import publishedArticles from "@/content/articles.json";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
  */
 export function GET() {
   const manifest = dataManifest();
+  const example = markets()[0];
   const nav = siteNavCopy.en;
   const lines = [
     `# ${SITE_NAME}`,
@@ -39,6 +40,13 @@ export function GET() {
           "",
         ]
       : []),
+    "## Markdown copies",
+    "",
+    "Every work, market and occupation page has the same content as Markdown at its address plus `/raw.md`, " +
+      "with absolute links and the data generation time" +
+      (example ? `, for example ${absoluteUrl("en", `/markets/${marketSlug(example.id)}/raw.md`)}` : "") +
+      ". Chinese pages have theirs under /zh-CN.",
+    "",
     "## Levels",
     "",
     "Each kind of work carries the highest level its evidence supports.",

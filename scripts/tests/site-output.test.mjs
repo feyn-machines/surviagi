@@ -324,6 +324,46 @@ test("market and occupation pages open with one dated sentence that answers them
   }
 });
 
+test("work, market and occupation pages name a Markdown copy that says what the page says", { skip: !HAS_SNAPSHOT }, async () => {
+  const locs = [...files.get("sitemap.xml").matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname);
+  const text = (page) => page.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&#x27;|&#39;/g, "'").replace(/&quot;/g, '"');
+  for (const section of ["/work/", "/markets/", "/occupations/"]) {
+    const path = locs.find((l) => l.startsWith(section) && !l.startsWith("/occupations/g/"));
+    assert.ok(path, `no ${section} page in the sitemap`);
+    for (const prefix of ["", "/zh-CN"]) {
+      const page = await (await fetch(`${site.base}${prefix}${path}`)).text();
+      const copyUrl = `${SITE}${prefix}${path}/raw.md`;
+      assert.ok(page.includes(`<link rel="alternate" type="text/markdown" href="${copyUrl}"/>`), `${prefix}${path}: no Markdown alternate`);
+
+      const res = await fetch(`${site.base}${prefix}${path}/raw.md`);
+      assert.equal(res.status, 200, copyUrl);
+      assert.match(res.headers.get("content-type"), /^text\/markdown/);
+      assert.equal(res.headers.get("link"), `<${SITE}${prefix}${path}>; rel="canonical"`);
+      const md = await res.text();
+      const title = page.match(/<h1[^>]*>([^<]+)<\/h1>/)?.[1];
+      assert.ok(md.startsWith(`# ${text(title)}\n`), `${copyUrl} does not open with the page's title`);
+      // The quoted line is the page's own dated answer, word for word.
+      const answer = md.match(/^> (.+)$/m)?.[1];
+      assert.ok(answer && text(page).includes(answer), `${copyUrl}: "${answer}" is not on the page`);
+      assert.ok(!/\{\w+\}/.test(md), `${copyUrl}: unfilled placeholder`);
+      assert.ok(!/\]\(\//.test(md), `${copyUrl}: a link without its address`);
+      assert.match(md, prefix ? /由机器提出/ : /Machine-proposed/);
+    }
+  }
+  for (const missing of ["/work/no-such-work/raw.md", "/markets/no-such-market/raw.md", "/occupations/00-0000.00/raw.md"]) {
+    assert.equal((await fetch(`${site.base}${missing}`)).status, 404, missing);
+  }
+  const example = body("llms.txt").match(/https:\/\/surviagi\.com(\/markets\/[^ ]+\/raw\.md)/)?.[1];
+  assert.ok(example, "llms.txt names no Markdown copy");
+  assert.equal((await fetch(`${site.base}${example}`)).status, 200, example);
+  // An article's copy points back at its page the same way.
+  const article = body("llms.txt").match(/\]\(https:\/\/surviagi\.com(\/articles\/[^)]+)\/raw\.md\)/)?.[1];
+  if (article) {
+    const res = await fetch(`${site.base}${article}/raw.md`);
+    assert.equal(res.headers.get("link"), `<${SITE}${article}>; rel="canonical"`);
+  }
+});
+
 test("every data page asks to be rendered per request, so none is baked into the build", () => {
   const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
     entry.isDirectory() ? walk(join(dir, entry.name)) : entry.name === "page.tsx" ? [join(dir, entry.name)] : []);

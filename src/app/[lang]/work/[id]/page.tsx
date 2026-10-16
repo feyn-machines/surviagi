@@ -3,12 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LEVEL_NAMES, TIER_NAMES, levelClass } from "@/components/home/sections/levels";
 import s from "@/components/detail.module.css";
-import { bilingual } from "@/lib/i18n";
 import { getLocale } from "@/lib/locale";
 import { breadcrumbLd, pageMetadata } from "@/lib/seo";
 import { JsonLd } from "@/components/json-ld";
 import { fill } from "@/app/[lang]/markets/copy";
 import { siteNavCopy } from "@/lib/site-nav";
+import { copy } from "./copy";
 import { href, marketHref, updateHref, workHref, workSlug } from "@/lib/routes";
 import { activities, activitiesOfMarket, evidenceForActivity, gatesOfActivity, gates as allGates, manifest, marketSlug } from "@/lib/snapshot";
 
@@ -19,54 +19,6 @@ export const dynamic = "force-dynamic";
  * One kind of work: the level it stands at, and every update that put it
  * there. Only work some update bears on has a page.
  */
-const copy = bilingual({
-  en: {
-    back: "← {market}",
-    eyebrow: "WORK",
-    metaDescription: "{name}: L{level} {levelName}. AI updates as evidence: {count}.",
-    say: "As of {date}, AI does this work at {level}. {n} updates bear on it. Strongest evidence: {tier}.",
-    level: "Level",
-    updates: "Updates",
-    companies: "Companies",
-    evidence: "Strongest evidence",
-    here: "Stands here",
-    listTitle: "What moved it",
-    listSub: "Every update that bears on this work, newest first.",
-    claimed: "Claimed L{c} · Accepted L{a}",
-    accepted: "Accepted L{a}",
-    source: "Source ↗",
-    undated: "Undated",
-    held: "Held by a non-technical condition:",
-    heldNote: "The level above is what the evidence supports. Whether the work may be handed over is a separate question.",
-    more: "More work in {market}",
-    all: "All updates",
-    market: "The whole market",
-    meta: "SurviAGI",
-  },
-  "zh-CN": {
-    back: "← {market}",
-    eyebrow: "工作",
-    metaDescription: "{name}：L{level} {levelName}。作为依据的 AI 更新：{count} 条。",
-    say: "截至 {date}，AI 把这项工作做到 {level}。{n} 条更新涉及它，最强的证据：{tier}。",
-    level: "级别",
-    updates: "更新",
-    companies: "公司",
-    evidence: "最强证据",
-    here: "当前位置",
-    listTitle: "是什么把它推到这里",
-    listSub: "涉及这项工作的全部更新，最新的在前。",
-    claimed: "宣称 L{c} · 采信 L{a}",
-    accepted: "采信 L{a}",
-    source: "来源 ↗",
-    undated: "无日期",
-    held: "受非技术条件限制：",
-    heldNote: "上面的级别是证据支持的程度。这项工作能不能交出去，是另一个问题。",
-    more: "{market} 里的其他工作",
-    all: "全部更新",
-    market: "整条赛道",
-    meta: "SurviAGI",
-  },
-});
 
 type Props = { params: Promise<{ id: string }> };
 const TIER_RANK: Record<string, number> = { T1: 0, T2: 1, T3: 2, T4: 3 };
@@ -86,6 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     path: `/work/${id}`,
     title: `${name} · L${level} ${levelName}`,
     description: fill(copy[language].metaDescription, { name, level, levelName, count: work.evidence_rows ?? 0 }),
+    markdown: true,
   });
 }
 

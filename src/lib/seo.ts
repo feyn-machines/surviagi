@@ -62,6 +62,8 @@ export function absoluteUrl(language: Language, path: string): string {
  *
  * `index: false` asks engines to leave the page out while still following its
  * links; it is for a page that has nothing of its own to say yet.
+ *
+ * `markdown: true` names the page's Markdown copy at `<path>/raw.md`.
  */
 export function pageMetadata(page: {
   language: Language;
@@ -70,6 +72,7 @@ export function pageMetadata(page: {
   description?: string;
   languages?: readonly Language[];
   index?: boolean;
+  markdown?: boolean;
 }): Metadata {
   const { language, path } = page;
   const site = siteCopy[language];
@@ -88,6 +91,7 @@ export function pageMetadata(page: {
         ...Object.fromEntries(versions.map((l) => [l, absoluteUrl(l, path)])),
         "x-default": absoluteUrl(versions.includes("en") ? "en" : versions[0], path),
       },
+      ...(page.markdown ? { types: { "text/markdown": absoluteUrl(language, `${path}/raw.md`) } } : {}),
     },
     openGraph: {
       type: "website",
