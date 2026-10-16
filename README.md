@@ -113,7 +113,7 @@ English is the default. Current pages render on the server using the browser's `
 
 ## Open source and security
 
-Project code is licensed under MIT; referenced datasets retain the source licenses recorded in each release. Local agent instructions, skills, environments, credentials and raw collection archives are excluded, including from the initial public history. See [SECURITY.md](SECURITY.md). CI validates public paths, common credential patterns, dataset contracts, lint, types and build. No credentials are required to run the current scaffold.
+Project code is licensed under MIT; referenced datasets retain the source licenses recorded in each release. Local agent instructions, skills, environments, credentials and raw collection archives are excluded, including from the initial public history. See [SECURITY.md](SECURITY.md). Verification is local: `pnpm check` validates public paths, common credential patterns, dataset contracts, lint, types and build, and `pnpm check:full` adds the real PostgreSQL tests. The repository does not rely on hosted CI. No credentials are required to run the current scaffold.
 
 ## Design resources
 
