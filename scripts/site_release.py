@@ -657,7 +657,9 @@ def upload_argv(target: dict, release: str, previous: str = "") -> list[str]:
     server and changed ones are sent as differences, so a release uploads little.
     Release directories are never edited in place, which is what makes the links safe."""
     key = shlex.quote(os.path.expanduser(target["DEPLOY_SSH_KEY"]))
-    link = [f"--link-dest=../{previous}"] if previous and previous != release else []
+    # An absolute path: with a relative `../<id>`, rsync 3.5 here and 3.2.7 on the server discarded nearly
+    # every file as "failed verification" (exit 23) on 2026-10-16; the absolute form sent 0 literal bytes.
+    link = [f"--link-dest={target['DEPLOY_ROOT']}/releases/{previous}"] if previous and previous != release else []
     return ["rsync", "-az", "--delete", *link, "-e", f"ssh -i {key} -o IdentitiesOnly=yes -o BatchMode=yes",
             f"{STAGING / release}/",
             f"{target['DEPLOY_USER']}@{target['DEPLOY_HOST']}:{target['DEPLOY_ROOT']}/releases/{release}/"]
