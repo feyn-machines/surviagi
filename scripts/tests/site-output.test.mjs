@@ -364,6 +364,30 @@ test("work, market and occupation pages name a Markdown copy that says what the 
   }
 });
 
+test("a work's level is the highest reading published under it, and the posts that confirmed one are on its page", { skip: !HAS_SNAPSHOT }, async () => {
+  const chain = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "chain.json"), "utf8"));
+  const levels = new Map();
+  for (const row of chain.evidence) {
+    for (const level of [row.level, ...(row.confirmations ?? []).map((v) => v.level)]) {
+      if (level !== null) levels.set(row.activity_id, Math.max(levels.get(row.activity_id) ?? 0, level));
+    }
+  }
+  // Until 2026-10-16 the confirmations were counted and not published: a page stood at L3 over L2 readings.
+  for (const activity of chain.activities.filter((a) => a.level !== null)) {
+    const shown = levels.get(activity.activity_id);
+    assert.ok(shown !== undefined && (activity.gated ? Math.min(shown, 3) : shown) === activity.level,
+      `${activity.activity_id} stands at L${activity.level} over readings that reach L${shown}`);
+  }
+  const confirmed = chain.evidence.find((row) => row.confirmations?.length);
+  if (!confirmed) return;
+  const [first] = confirmed.confirmations;
+  const path = `/work/${confirmed.activity_id.replace(/^oaw:market:/, "")}`;
+  const page = await (await fetch(`${site.base}${path}`)).text();
+  assert.ok(page.includes(`href="${first.url}"`), `${path} does not link the post that confirmed it`);
+  const md = await (await fetch(`${site.base}/zh-CN${path}/raw.md`)).text();
+  assert.ok(md.includes(`第三方印证：[@${first.handle}](${first.url})`), `${path}/raw.md does not name the confirmation`);
+});
+
 test("every data page asks to be rendered per request, so none is baked into the build", () => {
   const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
     entry.isDirectory() ? walk(join(dir, entry.name)) : entry.name === "page.tsx" ? [join(dir, entry.name)] : []);

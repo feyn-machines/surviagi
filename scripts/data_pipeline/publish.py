@@ -250,6 +250,28 @@ def topics(conn) -> list[dict]:
     return out
 
 
+# X ids carry their own time: milliseconds since this epoch, shifted left 22 bits.
+X_EPOCH_MS = 1288834974657
+
+
+def confirmation(row: dict) -> dict:
+    """One post that confirmed a vendor's reading, as a page can cite it."""
+    handle, source_id = row.get("handle"), str(row["source_id"])
+    posted = (datetime.fromtimestamp(((int(source_id) >> 22) + X_EPOCH_MS) / 1000, timezone.utc).isoformat()
+              if source_id.isdigit() else None)
+    return {
+        "source_id": source_id,
+        "account_key": row["account_key"],
+        "handle": handle,
+        "url": f"https://x.com/{handle}/status/{source_id}" if handle and source_id.isdigit() else None,
+        "posted_at": posted,
+        "post_nature": row["post_nature"],
+        "evidence_tier": row["evidence_tier"],
+        "observed_level": row["observed_level"],
+        "level": row["level"],
+    }
+
+
 def build(conn, ontology_version: str | None = None) -> dict:
     if ontology_version is None:
         found = _rows(conn, "SELECT version FROM public.ontology_releases ORDER BY version DESC LIMIT 1")
@@ -323,6 +345,23 @@ def build(conn, ontology_version: str | None = None) -> dict:
           LEFT JOIN public.org_registry o ON o.org_id = e.primary_org_id
          WHERE ae.ontology_version = %s AND ae.status IN ('candidate', 'reviewed')
          ORDER BY e.occurred_at DESC NULLS LAST, ae.activity_id""", (ontology_version,)))
+
+    # What posts by others said about a vendor's claim (the evidence panel). These
+    # readings count toward an activity's level - a third party's hands-on test can
+    # carry what the vendor's own T3 claim could not - and until 2026-10-16 none of
+    # them was published, so a work page could stand at L3 with only L2 readings
+    # listed under it. The filter and the cap are those of `readings_sql`, so what
+    # is published here is exactly what was counted.
+    confirmations = _clean(_rows(conn, f"""
+        SELECT ve.event_id, ve.activity_id, ve.source_id, ve.account_key, sa.handle,
+               ve.post_nature, ve.evidence_tier, ve.observed_level,
+               LEAST(ve.observed_level, {ontology_schema.level_cap_sql("ve.evidence_tier")},
+                     {ontology_schema.nature_cap_sql("ve.post_nature")}) AS level
+          FROM public.verification_evidence ve
+          LEFT JOIN public.source_accounts sa ON sa.account_key = ve.account_key
+         WHERE ve.ontology_version = %s AND ve.status IN ('candidate', 'reviewed')
+           AND ve.evidence_tier IS NOT NULL AND ve.observed_level IS NOT NULL
+         ORDER BY ve.event_id, ve.activity_id, ve.source_id""", (ontology_version,)))
 
     gates = _clean(_rows(conn, """
         SELECT g.gate_id, g.gate_type, g.label_en, g.label_zh_cn,
@@ -745,6 +784,10 @@ def build(conn, ontology_version: str | None = None) -> dict:
             return None
         return min(observed, int(cap))
 
+    confirmed = {}
+    for row in confirmations:
+        confirmed.setdefault((row["event_id"], row["activity_id"]), []).append(confirmation(row))
+
     chain_evidence = [
         {
             "event_id": row["event_id"],
@@ -758,6 +801,9 @@ def build(conn, ontology_version: str | None = None) -> dict:
             "confidence": row["confidence"],
             "rationale": row["rationale"],
             "status": row["status"],
+            # Only on the rows someone confirmed, so the other readings stay byte for byte
+            # what they were, and a site that predates the field reads past it.
+            **({"confirmations": confirmed[key]} if (key := (row["event_id"], row["activity_id"])) in confirmed else {}),
         }
         for row in evidence
         if row["evidence_sign"] == "positive"

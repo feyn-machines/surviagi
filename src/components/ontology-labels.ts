@@ -44,7 +44,8 @@ export type VocabularyName =
   | "judge"
   | "judgment_task"
   | "panel_role"
-  | "affiliation_relation";
+  | "affiliation_relation"
+  | "post_nature";
 
 function vocabulary(name: VocabularyName): Vocabulary | undefined {
   return labels.vocabularies[name];

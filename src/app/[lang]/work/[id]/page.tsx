@@ -6,11 +6,12 @@ import s from "@/components/detail.module.css";
 import { getLocale } from "@/lib/locale";
 import { breadcrumbLd, pageMetadata } from "@/lib/seo";
 import { JsonLd } from "@/components/json-ld";
+import { termNameOrRaw } from "@/components/ontology-labels";
 import { fill } from "@/app/[lang]/markets/copy";
 import { siteNavCopy } from "@/lib/site-nav";
 import { copy } from "./copy";
 import { href, marketHref, updateHref, workHref, workSlug } from "@/lib/routes";
-import { activities, activitiesOfMarket, evidenceForActivity, gatesOfActivity, gates as allGates, manifest, marketSlug } from "@/lib/snapshot";
+import { activities, activitiesOfMarket, countedReadings, gatesOfActivity, gates as allGates, manifest, marketSlug } from "@/lib/snapshot";
 
 /** Rendered per request from the loaded data release, never at build time. */
 export const dynamic = "force-dynamic";
@@ -21,7 +22,6 @@ export const dynamic = "force-dynamic";
  */
 
 type Props = { params: Promise<{ id: string }> };
-const TIER_RANK: Record<string, number> = { T1: 0, T2: 1, T3: 2, T4: 3 };
 const reached = () => activities().filter((a) => a.evidence_rows && a.level);
 const find = (slug: string) => reached().find((a) => workSlug(a.activity_id) === slug);
 
@@ -52,8 +52,9 @@ export default async function WorkPage({ params }: Props) {
   const name = (zh ? work.label_zh_cn : work.label_en) ?? work.label_en;
   const market = (zh ? work.market_zh_cn : work.market_en) ?? work.market_en;
   const level = Math.round(work.level ?? 0);
-  const rows = evidenceForActivity(work.activity_id).filter((r) => r.level !== null);
-  const tier = rows.map((r) => r.evidence_tier).sort((a, b) => (TIER_RANK[a] ?? 9) - (TIER_RANK[b] ?? 9))[0] ?? "T3";
+  const rows = countedReadings(work.activity_id);
+  // The tier of everything counted, confirmations included, as the level was computed.
+  const tier = work.best_tier ?? "T3";
   const companies = new Set(rows.map((r) => r.org_name).filter(Boolean));
   const gateById = new Map(allGates().map((g) => [g.gate_id, g]));
   const held = work.gated ? gatesOfActivity(work.activity_id).map((id) => gateById.get(id)).filter((g) => g !== undefined) : [];
@@ -105,6 +106,13 @@ export default async function WorkPage({ params }: Props) {
             <div className={s.what}>
               <Link className={s.name} href={updateHref(language, r.event_id)}>{r.title}</Link>
               <p>{r.summary}</p>
+              {r.confirmations?.map((v) => (
+                <small key={v.source_id}>
+                  {c.confirmedBy}
+                  {v.url ? <a href={v.url} target="_blank" rel="nofollow noopener noreferrer">@{v.handle}</a> : `@${v.handle ?? v.account_key}`}
+                  {" · "}{termNameOrRaw("post_nature", v.post_nature, language)} · L{v.level} · {TIER_NAMES[language][v.evidence_tier] ?? v.evidence_tier}
+                </small>
+              ))}
             </div>
             <div className={s.how}>
               <span className={`${s.tag} ${s[levelClass(r.level ?? 0)]}`}>L{r.level} {LEVEL_NAMES[language][r.level ?? 0]}</span>

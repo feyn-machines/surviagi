@@ -179,6 +179,7 @@ ROUTES = (
     ("markets", "FROM public.market_occupation_edges e"),
     ("tasks", "FROM public.activity_task_edges t"),
     ("evidence", "FROM public.activity_evidence ae"),
+    ("confirmations", "LEFT JOIN public.source_accounts sa ON sa.account_key = ve.account_key"),
     ("gates", "FROM public.gates g"),
     ("gate_edges", "FROM public.activity_gate_edges ge"),
     # by_org joins the same two tables as events, so it has to be matched first
@@ -560,6 +561,43 @@ class CaveatTests(unittest.TestCase):
         self.assertIn("never that AI has no bearing",
                       self.one("en", "not evenly spread"))
         self.assertIn("绝不说明 AI 与它无关", self.one("zh-CN", "分布很不均匀"))
+
+
+class ConfirmationTests(unittest.TestCase):
+    """A post that confirmed a vendor's claim is published on the reading it confirmed.
+
+    These readings count toward the activity's level, and until 2026-10-16 none was
+    published: one work page stood at L3 with only L2 readings listed under it.
+    """
+
+    def setUp(self):
+        self.conn, self.snapshot = build(dataset(confirmations=[
+            {"event_id": "evt:1", "activity_id": "oaw:market:audit-evidence",
+             "source_id": "2102916558712705427", "account_key": "x:tester", "handle": "Tester",
+             "post_nature": "hands_on_test", "evidence_tier": "T1", "observed_level": 4,
+             "level": Decimal("3")},
+        ]))
+
+    def test_the_confirmation_sits_on_the_reading_it_confirms_with_its_post(self):
+        [reading] = self.snapshot["chain"]["evidence"]
+        self.assertEqual(reading["confirmations"], [{
+            "source_id": "2102916558712705427", "account_key": "x:tester", "handle": "Tester",
+            "url": "https://x.com/Tester/status/2102916558712705427",
+            # Read from the post id itself, which carries its time.
+            "posted_at": "2026-09-24T00:22:32.554000+00:00",
+            "post_nature": "hands_on_test", "evidence_tier": "T1", "observed_level": 4, "level": 3.0,
+        }])
+
+    def test_the_query_counts_what_the_level_counts(self):
+        sql = self.conn.sql["confirmations"]
+        self.assertIn("ve.evidence_tier IS NOT NULL AND ve.observed_level IS NOT NULL", sql)
+        self.assertIn("ve.status IN ('candidate', 'reviewed')", sql)
+        self.assertEqual(self.conn.params_for("confirmations"), ("1.0.0",))
+
+    def test_a_reading_nobody_confirmed_has_no_field_at_all(self):
+        """So its document, and the release diff, stay as they were."""
+        _, snapshot = build()
+        self.assertNotIn("confirmations", snapshot["chain"]["evidence"][0])
 
 
 class BuildPayloadTests(unittest.TestCase):
