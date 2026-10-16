@@ -16,6 +16,7 @@ import {
   events,
   gates as allGates,
   gatesOfActivity,
+  manifest,
   markets,
   marketSlug,
   occupationsOfMarket,
@@ -155,7 +156,20 @@ export default async function MarketPage({ params }: Props) {
       <Link className="oaw-back" href={href(language, "/markets")}>
         {c.back}
       </Link>
-      <PageHeader eyebrow={c.eyebrow} title={name} lead={c.lead} />
+      <PageHeader
+        eyebrow={c.eyebrow}
+        title={name}
+        lead={c.lead}
+        // The page's answer in one dated sentence with its numbers, the line an engine can quote.
+        note={fill(topRung === null ? c.answerNone : c.answer, {
+          date: manifest()?.generated_at.slice(0, 10) ?? "",
+          name,
+          n: count(activities.length),
+          scored: count(scored.length),
+          top: topRung ?? 0,
+          readings: count(readings.length),
+        })}
+      />
 
       <Screen className={x.stats}>
         <div className={x.rise}>

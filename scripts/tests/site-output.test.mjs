@@ -305,6 +305,25 @@ test("with a snapshot, a detail page of each kind answers", { skip: !HAS_SNAPSHO
   }
 });
 
+test("market and occupation pages open with one dated sentence that answers them", { skip: !HAS_SNAPSHOT }, async () => {
+  const date = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "manifest.json"), "utf8")).generated_at.slice(0, 10);
+  const locs = [...files.get("sitemap.xml").matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname);
+  const opening = { en: `As of ${date}, `, "zh-CN": `截至 ${date}，` };
+  for (const section of ["/markets/", "/occupations/"]) {
+    // Sitemap occupations have evidence; a market with none is a dead end the sentence must still answer.
+    const path = locs.find((l) => l.startsWith(section) && !l.startsWith("/occupations/g/"));
+    assert.ok(path, `no ${section} page in the sitemap`);
+    for (const [language, prefix] of [["en", ""], ["zh-CN", "/zh-CN"]]) {
+      const page = await (await fetch(`${site.base}${prefix}${path}`)).text();
+      const title = page.match(/<h1[^>]*>([^<]+)<\/h1>/)?.[1];
+      const sentence = page.match(new RegExp(`<p[^>]*>(${opening[language]}[^<]+)</p>`))?.[1];
+      assert.ok(sentence, `${language}${path}: no dated answer`);
+      assert.ok(title && sentence.includes(title), `${language}${path}: the answer does not name ${title}`);
+      assert.ok(!/\{\w+\}/.test(sentence), `${language}${path}: unfilled placeholder in ${sentence}`);
+    }
+  }
+});
+
 test("every data page asks to be rendered per request, so none is baked into the build", () => {
   const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
     entry.isDirectory() ? walk(join(dir, entry.name)) : entry.name === "page.tsx" ? [join(dir, entry.name)] : []);
