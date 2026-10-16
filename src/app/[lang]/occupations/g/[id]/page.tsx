@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { bilingual } from "@/lib/i18n";
+import { plural } from "@/lib/plural";
 import { getLocale } from "@/lib/locale";
 import { breadcrumbLd, pageMetadata } from "@/lib/seo";
 import { JsonLd } from "@/components/json-ld";
@@ -18,6 +19,7 @@ import {
   groupFromSlug,
   readings,
   events,
+  manifest,
   type StageCounts,
 } from "@/lib/snapshot";
 import { WorkGrid, type StageKey } from "@/components/work-grid";
@@ -43,6 +45,8 @@ const copy = bilingual({
     back: "All sectors",
     metaDescription: "{name}: {tasks} tasks, {reached} reached by an AI update.",
     lead: "How far apart the occupations inside this sector are.",
+    answer: "As of {date}, AI does {atL2} of the {total} {total|task|tasks} in {name} at L2 or above; {assessed} {assessed|task carries|tasks carry} a level, and the other {rest} {rest|has|have} no evidence either way.",
+    answerNone: "As of {date}, no AI update has reached any of the {total} tasks in {name}.",
     statShareLabel: "AI finishes",
     statShareNote: "of this sector's tasks, at L2 or above. The middle sector is at {median}%.",
     statSpreadLabel: "Spread inside",
@@ -64,6 +68,8 @@ const copy = bilingual({
     back: "全部领域",
     metaDescription: "{name}：{tasks} 项任务，其中 {reached} 项已被 AI 更新触及。",
     lead: "这个领域内部的职业，彼此差多远。",
+    answer: "截至 {date}，{name}领域的 {total} 项任务中，AI 能做到 L2 及以上的有 {atL2} 项；有层级的共 {assessed} 项，其余 {rest} 项没有任何证据。",
+    answerNone: "截至 {date}，{name}领域的 {total} 项任务还没有被任何 AI 更新触及。",
     statShareLabel: "AI 能做完",
     statShareNote: "的任务到 L2 及以上。中位的那个领域是 {median}%。",
     statSpreadLabel: "内部落差",
@@ -201,6 +207,7 @@ export default async function OccupationGroup({ params }: { params: Promise<{ id
   const counts: StageCounts = {};
   for (const key of KEYS) counts[key] = group.by_stage[key] ?? 0;
   const number = new Intl.NumberFormat("en-US");
+  const assessed = assessedCount(group.by_stage);
 
   return (
     <div className={`${s.page} ${bp.canvas}`}>
@@ -211,6 +218,16 @@ export default async function OccupationGroup({ params }: { params: Promise<{ id
 
       <h1 className={s.title}>{label}</h1>
       <p className={s.pageLead}>{c.lead}</p>
+      {/* The page's answer in one dated sentence with its numbers, the line an engine can quote. */}
+      <p className={s.answer}>
+        {plural(assessed > 0 ? c.answer : c.answerNone, { total: group.tasks, assessed, rest: Math.max(0, group.tasks - assessed) })
+          .replace("{date}", manifest()?.generated_at.slice(0, 10) ?? "")
+          .replace("{name}", label)
+          .replace("{total}", number.format(group.tasks))
+          .replace("{atL2}", number.format(atOrAboveL2(group.by_stage)))
+          .replace("{assessed}", number.format(assessed))
+          .replace("{rest}", number.format(Math.max(0, group.tasks - assessed)))}
+      </p>
 
       <div className={s.stats}>
         <Stat
