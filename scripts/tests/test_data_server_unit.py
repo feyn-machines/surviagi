@@ -24,6 +24,16 @@ def build(target=TARGET, compose="services: {}\n", roles="SELECT 1;\n", schema="
     return server_db.setup_script(target, compose, roles, schema, grants, {"001_app.sql": "SELECT 4;\n"} if app is None else app)
 
 
+class DatabaseForwardTest(unittest.TestCase):
+    def test_the_database_forward_is_compressed_and_reaches_the_database_port(self):
+        target = {"DEPLOY_HOST": "h.example", "DEPLOY_USER": "u", "DEPLOY_SSH_KEY": "/k/key", "DEPLOY_ROOT": "/opt/x"}
+        argv = server_db.db_forward_argv(target, 40000)
+        self.assertEqual(argv[:3], ["ssh", "-o", "Compression=yes"])
+        self.assertIn(f"40000:127.0.0.1:{server_db.DB_PORT}", argv)
+        self.assertIn("ExitOnForwardFailure=yes", argv)
+        self.assertEqual(argv[-1], "u@h.example")
+
+
 class SessionOptionsTest(unittest.TestCase):
     """2026-10-16: a release whose SSH forward dropped left its session idle in a transaction holding the
     release lock; the retry waited 26 minutes behind it. Both roles' sessions now time out instead."""
