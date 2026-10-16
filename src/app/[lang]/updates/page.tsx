@@ -238,8 +238,12 @@ export default async function UpdatesPage() {
       ((language === "zh-CN" ? row.org_name_zh_cn : row.org_name) ?? row.org_name) as string,
     );
   }
+  // A button only for a publisher with rows here: coverage counts every update read, including the
+  // ones with no publisher ("unattributed") and publishers none of whose updates bears on any work,
+  // and a button for those would filter the list to nothing.
+  const listed = new Set(rows.map((row) => row.orgKey));
   const orgs = (coverage()?.events_by_organisation ?? [])
-    .filter((o) => o.events > 0)
+    .filter((o) => o.events > 0 && listed.has(o.org))
     .map((o) => ({ ...o, label: orgLabels.get(o.org) ?? o.org }));
   const maxActivities = Math.max(1, ...rows.map((r) => r.activities));
 

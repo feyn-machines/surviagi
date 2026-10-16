@@ -224,6 +224,26 @@ test("a sign-in failure marker does not make another indexable address", async (
   assert.equal(tag(page, /<link rel="canonical" href="([^"]+)"/), `${SITE}/voices`);
 });
 
+test("the updates page offers a publisher filter only for publishers it lists", { skip: !HAS_SNAPSHOT }, () => {
+  const read = (name) => JSON.parse(readFileSync(join(SNAPSHOT_DIR, `${name}.json`), "utf8"));
+  const listed = new Set(read("chain").events.map((e) => e.event_id));
+  const names = new Map(read("events").map((e) => [e.org_name, e.org_name_zh_cn]));
+  const withRows = new Set(read("events").filter((e) => listed.has(e.event_id)).map((e) => e.org_name));
+  const without = read("coverage").events_by_organisation.filter((o) => o.events > 0 && !withRows.has(o.org));
+  assert.ok(without.some((o) => o.org === "unattributed"), "the data no longer has updates without a publisher");
+  for (const language of ["en", "zh-CN"]) {
+    const page = html(language, "/updates");
+    const chips = [...page.matchAll(/aria-pressed="(?:true|false)"[^>]*>([^<]+)<\/button>/g)].map((m) => m[1]);
+    assert.ok(chips.length > 0, `${language}: no publisher buttons`);
+    // A button that filters to nothing is a dead end, and "unattributed" was also shown untranslated.
+    for (const o of without) {
+      const label = language === "zh-CN" ? names.get(o.org) ?? o.org : o.org;
+      assert.ok(!chips.includes(label), `${language}: a button for ${o.org}, which has no listed update`);
+    }
+    assert.ok(!chips.some((c) => /unattributed/i.test(c)), `${language}: ${chips}`);
+  }
+});
+
 test("every fixed page answers in both languages", () => {
   for (const language of ["en", "zh-CN"]) {
     for (const path of FIXED) {
