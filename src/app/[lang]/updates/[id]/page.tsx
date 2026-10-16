@@ -5,12 +5,12 @@ import { notFound } from "next/navigation";
 import { LEVEL_NAMES, TIER_NAMES, levelClass } from "@/components/home/sections/levels";
 import { vocabularyTerm } from "@/components/ontology-labels";
 import s from "@/components/detail.module.css";
-import { bilingual } from "@/lib/i18n";
 import { getLocale } from "@/lib/locale";
 import { articleLd, breadcrumbLd, pageMetadata } from "@/lib/seo";
 import { JsonLd } from "@/components/json-ld";
 import { siteNavCopy } from "@/lib/site-nav";
 import { UPDATE_LANGUAGES } from "@/lib/site-pages";
+import { copy } from "./copy";
 import { href, marketHref, workHref } from "@/lib/routes";
 import { activityById, chainEvents, events as allEvents, evidenceForEvent } from "@/lib/snapshot";
 
@@ -22,44 +22,6 @@ export const dynamic = "force-dynamic";
  * bears on with the level claimed and the level accepted. Only an update that
  * bears on some work has a page.
  */
-const copy = bilingual({
-  en: {
-    back: "← All updates",
-    say: "This update bears on {n} {n|kind|kinds} of work in {m} {m|market|markets}. Highest level accepted: {level}.",
-    work: "Work",
-    markets: "Markets",
-    top: "Highest accepted",
-    views: "Views",
-    listTitle: "The work it bears on",
-    listSub: "Highest level first. Open a kind of work to see everything else that moved it.",
-    claimed: "Claimed L{c} · Accepted L{a}",
-    sources: "Published at",
-    source: "Source {i} ↗",
-    original: "ORIGINAL",
-    undated: "Undated",
-    all: "All updates",
-    home: "Back to the overview",
-    meta: "SurviAGI",
-  },
-  "zh-CN": {
-    back: "← 全部更新",
-    say: "这条更新涉及 {m} 条赛道的 {n} 项工作，最高采信到 {level}。",
-    work: "工作",
-    markets: "赛道",
-    top: "最高采信",
-    views: "浏览",
-    listTitle: "它涉及的工作",
-    listSub: "级别高的在前。点开一项工作，查看推动它的其他更新。",
-    claimed: "宣称 L{c} · 采信 L{a}",
-    sources: "发布于",
-    source: "来源 {i} ↗",
-    original: "原文",
-    undated: "无日期",
-    all: "全部更新",
-    home: "回到全览",
-    meta: "SurviAGI",
-  },
-});
 
 type Props = { params: Promise<{ id: string }> };
 const find = (id: string) => chainEvents().find((e) => e.event_id === id);
@@ -69,7 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const id = (await params).id;
   const update = find(id);
   if (!update) notFound();
-  return pageMetadata({ language, path: `/updates/${id}`, title: update.title, description: update.summary, languages: UPDATE_LANGUAGES });
+  return pageMetadata({ language, path: `/updates/${id}`, title: update.title, description: update.summary, languages: UPDATE_LANGUAGES, markdown: true });
 }
 
 function compact(n: number, zh: boolean): string {

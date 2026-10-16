@@ -85,6 +85,28 @@ export function whitepaperBlocks(language: Language): Block[] {
 }
 
 /**
+ * One language of the whitepaper as the Markdown it was written in, for the
+ * page's Markdown copy: the anchors that are only targets are left out, and a
+ * link into the document (`#…`) or the site (`/…`) is given its whole address,
+ * `page` being the whitepaper's own address in that language.
+ */
+export function whitepaperMarkdown(language: Language, page: string, site: string): string {
+  if (!whitepaperExists) return "";
+  const section = sectionFor(readFileSync(WHITEPAPER_PATH, "utf8"), language);
+  return section
+    .replace(/^\s*<a id="[^"]+"><\/a>\s*\n/gm, "")
+    .replace(/<a id="[^"]+"><\/a>/g, "")
+    .replace(/\]\((#[^)]*)\)/g, (_, anchor: string) => `](${page}${anchor})`)
+    .replace(/\]\((\/[^)]*)\)/g, (_, path: string) => `](${site}${path})`)
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    // The rule that only separates the two languages in the file ends nothing in one of them.
+    .replace(/\n+---+$/, "")
+    // The edition's title is the document's title.
+    .replace(/^## /, "# ");
+}
+
+/**
  * The subset of Markdown the site's own documents use, as blocks. `bullets`
  * turns on unordered lists, which articles use and the whitepaper does not: a
  * line of the whitepaper that happens to begin with a dash stays a paragraph.

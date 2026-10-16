@@ -52,7 +52,7 @@ const copy = bilingual({
 export async function generateMetadata(): Promise<Metadata> {
   const { language } = await getLocale();
   const c = copy[language];
-  return pageMetadata({ language, path: "/whitepaper", title: c.metaTitle, description: c.metaDescription });
+  return pageMetadata({ language, path: "/whitepaper", title: c.metaTitle, description: c.metaDescription, markdown: true });
 }
 
 function renderInline(inline: Inline[], keyPrefix: string) {

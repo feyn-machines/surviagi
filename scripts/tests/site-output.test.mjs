@@ -364,6 +364,43 @@ test("work, market and occupation pages name a Markdown copy that says what the 
   }
 });
 
+test("update pages and the whitepaper name a Markdown copy that points back at the page to keep", { skip: !HAS_SNAPSHOT }, async () => {
+  const locs = [...files.get("sitemap.xml").matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname);
+  const update = locs.find((l) => l.startsWith("/updates/"));
+  assert.ok(update, "no update page in the sitemap");
+  for (const prefix of ["", "/zh-CN"]) {
+    const page = await (await fetch(`${site.base}${prefix}${update}`)).text();
+    assert.ok(page.includes(`<link rel="alternate" type="text/markdown" href="${SITE}${prefix}${update}/raw.md"/>`), `${prefix}${update}: no Markdown alternate`);
+    const res = await fetch(`${site.base}${prefix}${update}/raw.md`);
+    assert.equal(res.status, 200, `${prefix}${update}/raw.md`);
+    assert.match(res.headers.get("content-type"), /^text\/markdown/);
+    // An update has one page to keep, the English one, in both languages.
+    assert.equal(res.headers.get("link"), `<${SITE}${update}>; rel="canonical"`);
+    const md = await res.text();
+    const title = page.match(/<h1[^>]*>([^<]+)</)?.[1].replace(/&amp;/g, "&").replace(/&#x27;|&#39;/g, "'").replace(/&quot;/g, '"');
+    assert.ok(title && md.startsWith(`# ${title}\n`), `${prefix}${update}/raw.md does not open with the page's title`);
+    assert.ok(!/\{\w+\}/.test(md), `${prefix}${update}/raw.md: unfilled placeholder`);
+    assert.ok(!/\]\(\//.test(md), `${prefix}${update}/raw.md: a link without its address`);
+    assert.match(md, prefix ? /由机器提出/ : /Machine-proposed/);
+  }
+  assert.equal((await fetch(`${site.base}/updates/ev-no-such-update/raw.md`)).status, 404);
+
+  for (const prefix of ["", "/zh-CN"]) {
+    const page = html(prefix ? "zh-CN" : "en", "/whitepaper");
+    assert.ok(page.includes(`<link rel="alternate" type="text/markdown" href="${SITE}${prefix}/whitepaper/raw.md"/>`), `${prefix}/whitepaper: no Markdown alternate`);
+    const res = await fetch(`${site.base}${prefix}/whitepaper/raw.md`);
+    assert.equal(res.status, 200, `${prefix}/whitepaper/raw.md`);
+    assert.equal(res.headers.get("link"), `<${SITE}${prefix}/whitepaper>; rel="canonical"`);
+    const md = await res.text();
+    assert.ok(!md.includes("<a id="), `${prefix}/whitepaper/raw.md keeps the anchor tags`);
+    assert.match(md, /^# \S/, `${prefix}/whitepaper/raw.md does not open with a title`);
+    assert.ok(!/\]\((?:#|\/)/.test(md), `${prefix}/whitepaper/raw.md: a link without its address`);
+    // One language per copy: the English copy has no Chinese heading and the Chinese copy no English one.
+    const title = md.split("\n")[0];
+    assert.equal(/[\u4e00-\u9fff]/.test(title), Boolean(prefix), `${prefix}/whitepaper/raw.md is in the wrong language: ${title}`);
+  }
+});
+
 test("a work's level is the highest reading published under it, and the posts that confirmed one are on its page", { skip: !HAS_SNAPSHOT }, async () => {
   const chain = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "chain.json"), "utf8"));
   const levels = new Map();
