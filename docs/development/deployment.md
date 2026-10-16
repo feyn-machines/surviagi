@@ -37,8 +37,8 @@
 | 候选站 | `openaiwill-next` | 8321 | `preview` | 只能经 SSH 隧道预览，页面带 `X-Robots-Tag: noindex` |
 | 数据库 | `openaiwill-db` | 5434 | 无 | 只能经 SSH 转发访问 |
 
-- 正式地址（canonical）是 `https://openaiwill.com`，不带 www。
-- 官方账号：X `https://x.com/openaiwill`，Discord `https://discord.gg/ArVHw2K9X`，GitHub `https://github.com/feyn-machines/openaiwill`。每个页面的页眉页脚和 `llms.txt` 已链接它们。
+- 正式地址（canonical）是 `https://surviagi.com`，不带 www（2026-10-08 改名，见 `src/lib/site-origin.ts`）。改名前的 `openaiwill.com` 和 `www.openaiwill.com` 保留，由网站自己逐页 308 跳转到新地址。服务器上的内部名字有意不改：`DEPLOY_ROOT` 默认 `/opt/openaiwill`，Compose 项目、容器、镜像、Docker 网络和数据库仍叫 `openaiwill*`。
+- 官方账号：X `https://x.com/surviagi`，Discord `https://discord.gg/ArVHw2K9X`，GitHub `https://github.com/feyn-machines/surviagi`。每个页面的页眉页脚和 `llms.txt` 已链接它们。
 
 ## 2. 首次准备
 
@@ -79,9 +79,9 @@ ssh -i <密钥> <用户>@<地址> 'rm -rf <DEPLOY_ROOT>/releases/<id>; sudo dock
 
 服务器 80/443 关闭，把域名用 A 记录指向服务器 IP 不会生效。地址必须是 Tunnel 的公开主机名。
 
-1. 确认 `openaiwill.com` 的 DNS 托管在运行这条 Tunnel 的同一个 Cloudflare 账号下；不在则先把域名的 NS 改过去。
-2. 在 Tunnel 中添加公开主机名 `openaiwill.com` → `http://localhost:8320`，以及 `www.openaiwill.com` → 同一地址。Cloudflare 自动建立 CNAME，不要手工加 A 记录。（服务器上的 Tunnel 已按此配置；这一步只在重建时需要。）
-3. `www.openaiwill.com` 到 `https://openaiwill.com` 的跳转现在由网站自己完成（对任何路径和查询串返回 308，Location 是固定的 `https://openaiwill.com` 加原路径，只认这一个 www 主机名；`/api/*` 也一样，`/healthz` 和静态文件除外）。Cloudflare 上的 301 重定向规则因此是可选的：加了也可以，`pnpm site:promote` 的公开检查对 `https://www.openaiwill.com/` 接受 301 或 308 指向主域名；www 地址解析不到时该项不算失败。
+1. 确认 `surviagi.com` 和 `openaiwill.com` 的 DNS 都托管在运行这条 Tunnel 的同一个 Cloudflare 账号下；不在则先把域名的 NS 改过去。
+2. 在 Tunnel 中添加四个公开主机名 `surviagi.com`、`www.surviagi.com`、`openaiwill.com`、`www.openaiwill.com`，都指向 `http://localhost:8320`。Cloudflare 自动建立 CNAME，不要手工加 A 记录。2026-10-16 查过：`surviagi.com` 和 `www.surviagi.com` 已配好；`openaiwill.com` 和 `www.openaiwill.com` 在 Cloudflare 里没有任何 DNS 记录（NS 在 Cloudflare，`dig` 查不到 A 或 CNAME），旧地址因此打不开，网站自己的跳转用不上——这两个主机名要补上。补好后用 `dig +short openaiwill.com @1.1.1.1` 确认有地址。
+3. 跳转由网站自己完成：`www.surviagi.com`、`openaiwill.com`、`www.openaiwill.com` 对任何路径和查询串返回 308，Location 是固定的 `https://surviagi.com` 加原路径，只认这三个主机名（`/api/*` 也一样，`/healthz` 和静态文件除外）。Cloudflare 上的 301 重定向规则因此是可选的：加了也可以，`pnpm site:promote` 的公开检查对 `https://www.surviagi.com/` 接受 301 或 308 指向主域名；www 地址解析不到时该项不算失败。两个旧主机名不在公开检查里，用 `curl -sI https://openaiwill.com/markets` 看一次（预期 `308`，`location: https://surviagi.com/markets`）。
 4. 关闭"阻止 AI 爬虫"（Block AI bots）和托管的 `robots.txt`。开着会覆盖站点自己的爬虫规则，GEO 部分的工作等于白做。
 5. 不缓存 HTML：不要开启"Cache Everything"。语言跳转依赖源站响应，页面按请求渲染，数据发布后约 30 秒内变化；被边缘缓存的 HTML 无法即时更新。只缓存 `/_next/static/`（默认如此）。
 
@@ -131,7 +131,7 @@ pnpm site:release
 pnpm site:promote
 ```
 
-预期：先在服务器上确认数据库可连（以 `oaw_site` 经容器网络地址）且有生效的数据版本，否则一行报错并停止，不动正式服务（`the database does not accept connections as oaw_site; production was not touched` 或 `the database has no active data release (pnpm data:promote); production was not touched`，`pnpm site:rollback` 同样先做这个检查）；校验候选仍健康；把它启动为正式服务并确认健康；成功后记录 `previous` 和 `current`，打印 `production is now <id>`，关闭候选，清理超出保留数的旧版本（保留最新 5 个，`current` 与 `previous` 受保护）；随后对 `https://openaiwill.com` 做公开冒烟检查（请求带 `User-Agent: openaiwill-release/1.0`；`/healthz` 报告新版本号、语言跳转、客户端导航请求、IndexNow 密钥文件、404、sitemap 中各类页面各一页、正式环境不带 `X-Robots-Tag`，以及 `https://www.openaiwill.com/` 跳转到主域名），通过后向 IndexNow 提交 sitemap 中的地址并打印状态码。公开地址解析不到或连不上时，检查结果只列出一行 `<地址> is not reachable: <原因>`。
+预期：先在服务器上确认数据库可连（以 `oaw_site` 经容器网络地址）且有生效的数据版本，否则一行报错并停止，不动正式服务（`the database does not accept connections as oaw_site; production was not touched` 或 `the database has no active data release (pnpm data:promote); production was not touched`，`pnpm site:rollback` 同样先做这个检查）；校验候选仍健康；把它启动为正式服务并确认健康；成功后记录 `previous` 和 `current`，打印 `production is now <id>`，关闭候选，清理超出保留数的旧版本（保留最新 5 个，`current` 与 `previous` 受保护）；随后对 `https://surviagi.com` 做公开冒烟检查（请求带 `User-Agent: surviagi-release/1.0 (+https://surviagi.com)`；`/healthz` 报告新版本号、语言跳转、客户端导航请求、IndexNow 密钥文件、404、sitemap 中各类页面各一页、正式环境不带 `X-Robots-Tag`，以及 `https://www.surviagi.com/` 跳转到主域名），通过后向 IndexNow 提交 sitemap 中的地址并打印状态码。公开地址解析不到或连不上时，检查结果只列出一行 `<地址> is not reachable: <原因>`。
 
 只想验证构建而不上传：
 
@@ -265,7 +265,7 @@ schema `app` 由超级用户在 `deploy/db/roles.sql` 里创建并交给 `oaw_ap
 | --- | --- | --- |
 | `APP_DATABASE_URL` | `pnpm db:setup` | `oaw_app`，主机 `openaiwill-db`；只在缺少时写入，`db.env` 里的口令变了就跟着改写 |
 | `BETTER_AUTH_SECRET` | `pnpm db:setup` | 服务器上生成的 64 位十六进制串；只在缺少时写入。改它会让所有人退出登录 |
-| `BETTER_AUTH_URL` | `pnpm db:setup` | `https://openaiwill.com`；只在缺少时写入 |
+| `BETTER_AUTH_URL` | `pnpm db:setup` | `https://surviagi.com`；只在缺少时写入，所以改名前写下的旧值不会被改，要在服务器上手工改（2026-10-16 查过，服务器上已是新地址） |
 | `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET` | `pnpm site:env` | 从本机被忽略的 `.env`（再看 `.env.local`，后者优先）上传 |
 
   这些都在 `<DEPLOY_ROOT>/site.env`（权限 600）里，不进 Git、不在脚本输出里、不带 `NEXT_PUBLIC_` 前缀。
@@ -349,9 +349,9 @@ pnpm submissions:pull
 
 ### Google 控制台（需要本人操作）
 
-1. 在 Google Cloud 控制台的"Google 身份验证平台"里创建 OAuth 客户端，类型"Web 应用"。已获授权的重定向 URI 填两条：`http://localhost:3456/api/auth/callback/google`（本机开发，端口 3456）和 `https://openaiwill.com/api/auth/callback/google`。
+1. 在 Google Cloud 控制台的"Google 身份验证平台"里创建 OAuth 客户端，类型"Web 应用"。已获授权的重定向 URI 填两条：`http://localhost:3456/api/auth/callback/google`（本机开发，端口 3456）和 `https://surviagi.com/api/auth/callback/google`。
 2. 客户端 ID 和密钥写进本机 `.env` 的 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`（不进 Git），再 `pnpm site:env` 上传。
-3. "品牌塑造"页：发布应用前要填应用首页 `https://openaiwill.com`、隐私权政策 `https://openaiwill.com/privacy`、服务条款 `https://openaiwill.com/terms`，授权网域加 `openaiwill.com`。不上传徽标（上传徽标会触发品牌验证）。
+3. "品牌塑造"页：发布应用前要填应用首页 `https://surviagi.com`、隐私权政策 `https://surviagi.com/privacy`、服务条款 `https://surviagi.com/terms`，授权网域加 `surviagi.com`。不上传徽标（上传徽标会触发品牌验证）。
 4. 数据访问范围只用默认的 `openid`、`email`、`profile`。应用处于"测试中"时只有测试用户能登录，点"发布应用"后任何 Google 账号都能登录。
 
 ### 这次上线的顺序
@@ -366,16 +366,16 @@ pnpm submissions:pull
 
 以下需要本人的账号。
 
-1. Google Search Console：添加 `openaiwill.com` 域名资源，用 DNS TXT 记录验证；在"站点地图"提交 `https://openaiwill.com/sitemap.xml`。
+1. Google Search Console：添加 `surviagi.com` 域名资源，用 DNS TXT 记录验证；在"站点地图"提交 `https://surviagi.com/sitemap.xml`。旧的 `openaiwill.com` 资源保留，用"更改地址"工具指向 `surviagi.com`。
 2. Bing Webmaster Tools：同样用 DNS TXT 验证并提交该 sitemap。
 3. 确认 AI 爬虫未被 Cloudflare 拦截：
 
 ```bash
-curl -sI https://openaiwill.com/ | grep -i -E '^(HTTP|x-robots-tag)'
-curl -sI 'https://openaiwill.com/markets?lang=zh-CN' | grep -i '^location'
-curl -s -o /dev/null -w '%{http_code}\n' -A GPTBot https://openaiwill.com/
-curl -s -o /dev/null -w '%{http_code}\n' -A ClaudeBot https://openaiwill.com/llms.txt
-curl -s https://openaiwill.com/robots.txt | head -5
+curl -sI https://surviagi.com/ | grep -i -E '^(HTTP|x-robots-tag)'
+curl -sI 'https://surviagi.com/markets?lang=zh-CN' | grep -i '^location'
+curl -s -o /dev/null -w '%{http_code}\n' -A GPTBot https://surviagi.com/
+curl -s -o /dev/null -w '%{http_code}\n' -A ClaudeBot https://surviagi.com/llms.txt
+curl -s https://surviagi.com/robots.txt | head -5
 ```
 
 预期：依次为 `200` 且没有 `x-robots-tag`；`location: /zh-CN/markets`；`200`；`200`；本站生成的 `robots.txt`（含 `Sitemap:`），不是 Cloudflare 托管的版本。爬虫 UA 返回 403，或 `robots.txt` 不是本站的，说明 Cloudflare 的 AI 爬虫设置仍开着。
@@ -384,7 +384,7 @@ curl -s https://openaiwill.com/robots.txt | head -5
 
 ## 10. 每月检查
 
-每月向 ChatGPT、Claude、Perplexity、Gemini 各问下面十个问题，记录 openaiwill 是否被引用、引用是否准确。这是起始清单，由负责人按需调整。
+每月向 ChatGPT、Claude、Perplexity、Gemini 各问下面十个问题，记录 SurviAGI 是否被引用、引用是否准确。这是起始清单，由负责人按需调整。
 
 ```
 How far has AI come in doing accounting work on its own?
@@ -396,5 +396,5 @@ AI 现在能独立完成哪些工作？
 AI 对会计这个职业的各项任务做到了什么程度？
 有没有按职业和任务追踪 AI 进展并给出来源的网站？
 最近哪些 AI 更新改变了某类工作的自动化程度？
-openaiwill 是什么？
+SurviAGI 是什么？
 ```
