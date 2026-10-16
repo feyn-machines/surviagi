@@ -305,13 +305,13 @@ test("with a snapshot, a detail page of each kind answers", { skip: !HAS_SNAPSHO
   }
 });
 
-test("market and occupation pages open with one dated sentence that answers them", { skip: !HAS_SNAPSHOT }, async () => {
+test("market, occupation and sector pages open with one dated sentence that answers them", { skip: !HAS_SNAPSHOT }, async () => {
   const date = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "manifest.json"), "utf8")).generated_at.slice(0, 10);
   const locs = [...files.get("sitemap.xml").matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname);
   const opening = { en: `As of ${date}, `, "zh-CN": `截至 ${date}，` };
-  for (const section of ["/markets/", "/occupations/"]) {
+  for (const section of ["/markets/", "/occupations/", "/occupations/g/"]) {
     // Sitemap occupations have evidence; a market with none is a dead end the sentence must still answer.
-    const path = locs.find((l) => l.startsWith(section) && !l.startsWith("/occupations/g/"));
+    const path = locs.find((l) => l.startsWith(section) && (section === "/occupations/g/" || !l.startsWith("/occupations/g/")));
     assert.ok(path, `no ${section} page in the sitemap`);
     for (const [language, prefix] of [["en", ""], ["zh-CN", "/zh-CN"]]) {
       const page = await (await fetch(`${site.base}${prefix}${path}`)).text();
