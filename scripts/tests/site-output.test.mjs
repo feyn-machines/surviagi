@@ -706,6 +706,18 @@ test("llms.txt is generated from the site, names real pages, and overstates noth
   assert.match(text, /https:\/\/x\.com\/surviagi/);
   assert.match(text, /https:\/\/discord\.gg\/ArVHw2K9X/);
   assert.match(text, /https:\/\/github\.com\/feyn-machines\/surviagi/);
+  if (HAS_SNAPSHOT) {
+    // One dated sentence an engine can quote, with the numbers the home page shows, then the work furthest along.
+    const manifest = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "manifest.json"), "utf8"));
+    const said = text.match(/^As of (\d{4}-\d{2}-\d{2}), AI updates have given a level to (\d+) of the (\d+) kinds of work .*? (\d+) updates from (\d+) AI companies/m);
+    assert.ok(said, "llms.txt has no dated answer sentence");
+    assert.equal(said[1], manifest.generated_at.slice(0, 10));
+    const home = html("en", "").replace(/<script[\s\S]*?<\/script>/g, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+    for (const [n, label] of [[said[2], "Kinds of work reached"], [said[4], "AI updates"], [said[5], "AI companies tracked"]]) {
+      assert.ok(home.includes(`${n} ${label}`), `llms.txt says ${n} where the home page does not say "${n} ${label}"`);
+    }
+    assert.match(text, /^### At L\d\n\n- \[[^\]]+\]\(https:\/\/surviagi\.com\/work\//m);
+  }
   for (const [, url] of text.matchAll(/\]\((https:\/\/surviagi\.com[^)]*)\)/g)) {
     const path = url.slice(SITE.length).replace(/\/$/, "");
     if (/\.(txt|xml)$/.test(path)) continue;
