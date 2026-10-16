@@ -319,7 +319,7 @@ test("market, occupation and sector pages open with one dated sentence that answ
   const date = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "manifest.json"), "utf8")).generated_at.slice(0, 10);
   const locs = [...files.get("sitemap.xml").matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname);
   const opening = { en: `As of ${date}, `, "zh-CN": `截至 ${date}，` };
-  for (const section of ["/markets/", "/occupations/", "/occupations/g/"]) {
+  for (const section of ["/markets/", "/occupations/", "/occupations/g/", "/topics/"]) {
     // Sitemap occupations have evidence; a market with none is a dead end the sentence must still answer.
     const path = locs.find((l) => l.startsWith(section) && (section === "/occupations/g/" || !l.startsWith("/occupations/g/")));
     assert.ok(path, `no ${section} page in the sitemap`);
@@ -328,16 +328,17 @@ test("market, occupation and sector pages open with one dated sentence that answ
       const title = page.match(/<h1[^>]*>([^<]+)<\/h1>/)?.[1];
       const sentence = page.match(new RegExp(`<p[^>]*>(${opening[language]}[^<]+)</p>`))?.[1];
       assert.ok(sentence, `${language}${path}: no dated answer`);
-      assert.ok(title && sentence.includes(title), `${language}${path}: the answer does not name ${title}`);
+      // A topic's title is its question; the sentence counts who argues, so it does not repeat it.
+      if (section !== "/topics/") assert.ok(title && sentence.includes(title), `${language}${path}: the answer does not name ${title}`);
       assert.ok(!/\{\w+\}/.test(sentence), `${language}${path}: unfilled placeholder in ${sentence}`);
     }
   }
 });
 
-test("work, market and occupation pages name a Markdown copy that says what the page says", { skip: !HAS_SNAPSHOT }, async () => {
+test("work, market, occupation and topic pages name a Markdown copy that says what the page says", { skip: !HAS_SNAPSHOT }, async () => {
   const locs = [...files.get("sitemap.xml").matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname);
   const text = (page) => page.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&#x27;|&#39;/g, "'").replace(/&quot;/g, '"');
-  for (const section of ["/work/", "/markets/", "/occupations/"]) {
+  for (const section of ["/work/", "/markets/", "/occupations/", "/topics/"]) {
     const path = locs.find((l) => l.startsWith(section) && !l.startsWith("/occupations/g/"));
     assert.ok(path, `no ${section} page in the sitemap`);
     for (const prefix of ["", "/zh-CN"]) {
@@ -360,7 +361,7 @@ test("work, market and occupation pages name a Markdown copy that says what the 
       assert.match(md, prefix ? /由机器提出/ : /Machine-proposed/);
     }
   }
-  for (const missing of ["/work/no-such-work/raw.md", "/markets/no-such-market/raw.md", "/occupations/00-0000.00/raw.md"]) {
+  for (const missing of ["/work/no-such-work/raw.md", "/markets/no-such-market/raw.md", "/occupations/00-0000.00/raw.md", "/topics/no-such-topic/raw.md"]) {
     assert.equal((await fetch(`${site.base}${missing}`)).status, 404, missing);
   }
   const example = body("llms.txt").match(/https:\/\/surviagi\.com(\/markets\/[^ ]+\/raw\.md)/)?.[1];

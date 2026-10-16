@@ -46,7 +46,7 @@ export function GET() {
       : []),
     "## Markdown copies",
     "",
-    "Every work, market, occupation and update page, and the whitepaper, has the same content as Markdown at its address plus `/raw.md`, " +
+    "Every work, market, occupation, topic and update page, and the whitepaper, has the same content as Markdown at its address plus `/raw.md`, " +
       "with absolute links and the data generation time" +
       (example ? `, for example ${absoluteUrl("en", `/markets/${marketSlug(example.id)}/raw.md`)}` : "") +
       ". Chinese pages have theirs under /zh-CN.",
