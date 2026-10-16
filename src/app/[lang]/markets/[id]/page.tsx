@@ -68,6 +68,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     path: `/markets/${id}`,
     title: `${name} · ${c.metaSuffix}`,
     description: fill(c.metaDescription, { name, count: market.activities }),
+    markdown: true,
   });
 }
 
