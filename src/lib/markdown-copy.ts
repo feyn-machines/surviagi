@@ -42,11 +42,13 @@ export function markdownResponse(
   path: string,
   title: string,
   body: string[],
-  options: { index?: boolean } = {},
+  options: { index?: boolean; canonical?: Language } = {},
 ): Response {
   const c = copy[language];
   const data = manifest();
   const page = absoluteUrl(language, path);
+  // A page whose other-language address points at one version (an update) names that version, not itself.
+  const canonical = absoluteUrl(options.canonical ?? language, path);
   const text = [
     `# ${title}`,
     "",
@@ -68,7 +70,7 @@ export function markdownResponse(
   ].join("\n");
   const headers = new Headers({
     "Content-Type": "text/markdown; charset=utf-8",
-    Link: `<${page}>; rel="canonical"`,
+    Link: `<${canonical}>; rel="canonical"`,
   });
   if (options.index === false) headers.set("X-Robots-Tag", "noindex");
   return new Response(text, { headers });
