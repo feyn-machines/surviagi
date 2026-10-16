@@ -27,6 +27,11 @@ const SWITCH_KEY: Record<Language, "toEnglish" | "toChinese"> = {
  * no prefetching, so following one always reaches the proxy, which turns
  * `?lang=` into the path address and saves the choice. A query-only `href`
  * resolves against the address the reader is on, so the path is kept.
+ *
+ * `nofollow`: each of these addresses only redirects to the other language's
+ * page, which the head already names with `hreflang`. Followed, they are two
+ * redirecting addresses per page for a crawler, reported by Search Console as
+ * "Page with redirect".
  */
 export async function LanguageSwitch() {
   const { language } = await getLocale();
@@ -40,6 +45,7 @@ export async function LanguageSwitch() {
             key={option}
             className={current ? "oaw-lang-option oaw-lang-option-current" : "oaw-lang-option"}
             href={`?${LANGUAGE_PARAM}=${option}`}
+            rel="nofollow"
             hrefLang={option}
             lang={option}
             aria-current={current ? "true" : undefined}

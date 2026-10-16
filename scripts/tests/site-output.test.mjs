@@ -72,6 +72,16 @@ async function assertAdminIsHidden(base) {
   assert.equal((await fetch(`${base}/api/admin/subscribers`)).status, 404);
 }
 
+test("the language switch asks crawlers not to follow its redirecting ?lang= links", () => {
+  for (const language of ["en", "zh-CN"]) {
+    for (const path of FIXED) {
+      const links = [...html(language, path).matchAll(/<a\b[^>]*\shref="\?lang=[^"]*"[^>]*>/g)].map((m) => m[0]);
+      assert.equal(links.length, 2, `${language}${path}: expected the two language options`);
+      for (const link of links) assert.match(link, /\srel="nofollow"/, `${language}${path}: ${link}`);
+    }
+  }
+});
+
 test("the admin page and its endpoints are a 404 without sign-in settings", async () => {
   await assertAdminIsHidden(site.base);
 });
