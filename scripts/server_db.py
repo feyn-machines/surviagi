@@ -267,6 +267,22 @@ def wait_for_listener(port: int, process: subprocess.Popen, seconds: float = 15)
     raise ReleaseError("the SSH forward to the server database did not open")
 
 
+# A session whose client is gone (an SSH forward that dropped mid-release) keeps its transaction open, and
+# the release lock with it, until the server notices: on 2026-10-16 the retry waited 26 minutes behind one.
+# Such a session is ended after IDLE_IN_TRANSACTION, and a wait for a lock gives up after LOCK_WAIT so the
+# caller can retry rather than hang.
+IDLE_IN_TRANSACTION = "10min"
+LOCK_WAIT = "15min"
+
+
+def session_options(role: str) -> str:
+    """Server settings for a session of `role`. The writer works in public; oaw_app's own search_path (app)
+    is set on the role by roles.sql."""
+    return ("-c timezone=UTC"
+            f" -c idle_in_transaction_session_timeout={IDLE_IN_TRANSACTION} -c lock_timeout={LOCK_WAIT}"
+            + (" -c search_path=public" if role == WRITER else ""))
+
+
 @contextlib.contextmanager
 def server_connection(role: str = WRITER):
     """A psycopg connection to the server database as the data writer (default) or as oaw_app, through an SSH
@@ -278,8 +294,7 @@ def server_connection(role: str = WRITER):
         raise ValueError("unknown database role")
     target = site.load_target()
     password = read_writer_password(target) if role == WRITER else read_app_password(target)
-    # The writer works in public; oaw_app's own search_path (app) is set on the role by roles.sql.
-    options = "-c timezone=UTC" + (" -c search_path=public" if role == WRITER else "")
+    options = session_options(role)
     port = site.free_port()
     forward = subprocess.Popen(db_forward_argv(target, port), stdin=subprocess.DEVNULL)
     try:

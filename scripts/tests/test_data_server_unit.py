@@ -24,6 +24,22 @@ def build(target=TARGET, compose="services: {}\n", roles="SELECT 1;\n", schema="
     return server_db.setup_script(target, compose, roles, schema, grants, {"001_app.sql": "SELECT 4;\n"} if app is None else app)
 
 
+class SessionOptionsTest(unittest.TestCase):
+    """2026-10-16: a release whose SSH forward dropped left its session idle in a transaction holding the
+    release lock; the retry waited 26 minutes behind it. Both roles' sessions now time out instead."""
+
+    def test_a_dead_clients_transaction_is_ended_and_a_lock_wait_gives_up(self):
+        for role in (server_db.WRITER, server_db.APP_ROLE):
+            options = server_db.session_options(role)
+            self.assertIn("-c idle_in_transaction_session_timeout=10min", options)
+            self.assertIn("-c lock_timeout=15min", options)
+            self.assertIn("-c timezone=UTC", options)
+
+    def test_only_the_writer_is_pointed_at_public(self):
+        self.assertIn("search_path=public", server_db.session_options(server_db.WRITER))
+        self.assertNotIn("search_path", server_db.session_options(server_db.APP_ROLE))
+
+
 class EnvFileTest(unittest.TestCase):
     def test_parse_skips_comments_and_blank_lines(self):
         self.assertEqual(server_db.parse_env("# c\n\nA=1\n B = x=y \nnoequals\n"), {"A": "1", "B": "x=y"})
