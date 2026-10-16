@@ -670,7 +670,8 @@ def release_command() -> None:
     # A failed release must not leave an earlier candidate for `promote` to pick up.
     remote(target, f"sudo install -d -o {user} -g {user} {rpath(target)} {rpath(target, 'releases')}"
                    f" && rm -f {rpath(target, 'candidate')}")
-    run(upload_argv(target, release, remote_id(target, "live")))
+    # Unchanged files are linked from what production runs: the state file is `current` (there is no `live`).
+    run(upload_argv(target, release, remote_id(target, "current")))
     start_candidate(target, release)
     # Only a candidate that passed is recorded, so `promote` cannot pick up one that did not.
     failures, served = candidate_failures(target, release)
