@@ -25,6 +25,14 @@
   line-height: 1.6;
 }
 
+.answer {
+  max-width: 70ch;
+  margin: calc(-1 * var(--ah-space-4)) 0 var(--ah-space-6);
+  color: var(--ah-color-text);
+  font-size: var(--ah-text-body);
+  line-height: 1.6;
+}
+
 .stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));

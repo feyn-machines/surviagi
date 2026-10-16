@@ -16,6 +16,7 @@ import {
   evidenceForActivity,
   gates as allGates,
   groupSlug,
+  manifest,
   marketSlug,
   marketsOfOccupation,
   occupationMedianShare,
@@ -52,6 +53,8 @@ const copy = bilingual({
     metaDescription: "{name}: {tasks} tasks, {reached} reached by an AI update.",
     back: "All occupations",
     lead: "Which pieces of this job an update has reached, and which nobody has looked at.",
+    answer: "As of {date}, AI does {atL2} of the {total} tasks of {name} at L2 or above; {assessed} tasks carry a level, and the other {rest} have no evidence either way.",
+    answerNone: "As of {date}, no AI update has reached any of the {total} tasks of {name}.",
     statReachLabel: "AI finishes",
     statReachNote: "tasks at L2 or above. The median occupation is at {median}%.",
     statLookedLabel: "Looked at",
@@ -76,6 +79,8 @@ const copy = bilingual({
     metaDescription: "{name}：{tasks} 项任务，其中 {reached} 项已被 AI 更新触及。",
     back: "全部职业",
     lead: "这份工作里，哪几件已经被更新触及，哪几件还没人看过。",
+    answer: "截至 {date}，{name}的 {total} 项任务中，AI 能做到 L2 及以上的有 {atL2} 项；有层级的共 {assessed} 项，其余 {rest} 项没有任何证据。",
+    answerNone: "截至 {date}，{name}的 {total} 项任务还没有被任何 AI 更新触及。",
     statReachLabel: "AI 能做完",
     statReachNote: "项任务到 L2 及以上。中位职业是 {median}%。",
     statLookedLabel: "被看过",
@@ -223,6 +228,16 @@ export default async function OccupationPage({ params }: Props) {
       </Link>
       <h1 className={s.title}>{name}</h1>
       <p className={s.pageLead}>{c.lead}</p>
+      {/* The page's answer in one dated sentence with its numbers, the line an engine can quote. */}
+      <p className={s.answer}>
+        {(assessed > 0 ? c.answer : c.answerNone)
+          .replace("{date}", manifest()?.generated_at.slice(0, 10) ?? "")
+          .replace("{name}", name)
+          .replace("{total}", formatNumber(totalTasks))
+          .replace("{atL2}", formatNumber(atL2))
+          .replace("{assessed}", formatNumber(assessed))
+          .replace("{rest}", formatNumber(Math.max(0, totalTasks - assessed)))}
+      </p>
 
       <div className={s.stats}>
         <Stat
