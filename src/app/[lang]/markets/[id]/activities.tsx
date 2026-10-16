@@ -100,7 +100,7 @@ export function Activities({
                 </span>
                 <span aria-hidden="true">·</span>
                 <span>
-                  {count(activity.tasks)} {c.tasks}
+                  {fill(c.tasks, { n: count(activity.tasks) })}
                 </span>
                 {activity.gated ? (
                   <span className={x.gate}>

@@ -1,5 +1,6 @@
 "use client";
 
+import { plural } from "@/lib/plural";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { Language } from "@/lib/i18n";
@@ -276,7 +277,7 @@ export function UpdatesBrowser({
                             onClick={() => setOpen(isOpen ? null : row.id)}
                           >
                             <span className={s.expandMark} aria-hidden="true" />
-                            {(isOpen ? copy.readingsClose : copy.readingsOpen).replace(
+                            {plural(isOpen ? copy.readingsClose : copy.readingsOpen, { n: row.readings.length }).replace(
                               "{n}",
                               numbers.format(row.readings.length),
                             )}

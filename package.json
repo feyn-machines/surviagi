@@ -68,7 +68,7 @@
     "crawl:x": "data/runtime/crawler-venv/bin/python local/x-crawler/crawler timeline",
     "crawl:setup": "python3 -m venv data/runtime/crawler-venv && data/runtime/crawler-venv/bin/pip install -q -r local/x-crawler/requirements.txt",
     "crawl:test:unit": "if [ -d local/x-crawler/tests ]; then python3 -m unittest discover -s local/x-crawler/tests -p 'test_crawler_*unit.py'; else echo 'local crawler not present; crawler tests skipped'; fi",
-    "i18n:test": "node --test scripts/tests/test_i18n_unit.mjs scripts/tests/test_site_labels_unit.mjs scripts/tests/site-links.test.mjs scripts/tests/test_app_rules_unit.mjs scripts/tests/test_articles_index_unit.mjs",
+    "i18n:test": "node --test scripts/tests/test_i18n_unit.mjs scripts/tests/test_site_labels_unit.mjs scripts/tests/site-links.test.mjs scripts/tests/test_app_rules_unit.mjs scripts/tests/test_articles_index_unit.mjs scripts/tests/test_plural_unit.mjs",
     "articles:index": "node scripts/build-articles-index.mjs",
     "data:panel:import": "data/runtime/venv/bin/python scripts/data-pipeline.py panel-import",
     "data:panel:refresh": "data/runtime/venv/bin/python scripts/data-pipeline.py panel-refresh",

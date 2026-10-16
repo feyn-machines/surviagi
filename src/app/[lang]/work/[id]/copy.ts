@@ -6,7 +6,7 @@ export const copy = bilingual({
     back: "← {market}",
     eyebrow: "WORK",
     metaDescription: "{name}: L{level} {levelName}. AI updates as evidence: {count}.",
-    say: "As of {date}, AI does this work at {level}. {n} updates bear on it. Strongest evidence: {tier}.",
+    say: "As of {date}, AI does this work at {level}. {n} {n|update bears|updates bear} on it. Strongest evidence: {tier}.",
     level: "Level",
     updates: "Updates",
     companies: "Companies",

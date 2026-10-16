@@ -1,3 +1,4 @@
+import { plural } from "@/lib/plural";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -83,9 +84,9 @@ export default async function WorkPage({ params }: Props) {
       <div className={s.eyebrow}>{c.eyebrow} · <Link href={marketHref(language, work.market_id)}>{market}</Link></div>
       <h1 className={s.title}>{name}</h1>
       <p className={s.say}>
-        {c.say.replace("{date}", manifest()?.generated_at.slice(0, 10) ?? "").replace("{n}", String(rows.length)).replace("{tier}", TIER_NAMES[language][tier] ?? tier).split("{level}")[0]}
+        {plural(c.say, { n: rows.length }).replace("{date}", manifest()?.generated_at.slice(0, 10) ?? "").replace("{n}", String(rows.length)).replace("{tier}", TIER_NAMES[language][tier] ?? tier).split("{level}")[0]}
         <b>{levelText}</b>
-        {c.say.replace("{date}", "").replace("{n}", String(rows.length)).replace("{tier}", TIER_NAMES[language][tier] ?? tier).split("{level}")[1]}
+        {plural(c.say, { n: rows.length }).replace("{date}", "").replace("{n}", String(rows.length)).replace("{tier}", TIER_NAMES[language][tier] ?? tier).split("{level}")[1]}
       </p>
 
       <dl className={s.facts}>

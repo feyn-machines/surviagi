@@ -1,4 +1,5 @@
 import { bilingual, type Language } from "@/lib/i18n";
+import { plural } from "@/lib/plural";
 import type { NodeKind } from "./scene";
 
 // Level and source-type names are shared by every homepage module.
@@ -15,7 +16,7 @@ export const copy = bilingual({
     headline: "How far AI has taken over the world",
     subtitle: "Will AI kill your idea? Replace what you do?",
     supporting: "Every AI update could change your answer.",
-    ticker: "{n} updates this day",
+    ticker: "{n} {n|update|updates} this day",
     dayOf: "{weekday} · Day {day} of {days} · UTC",
     dayPanel: "Updates that day",
     dayEmpty: "No updates",
@@ -48,7 +49,7 @@ export const copy = bilingual({
     dayUpdates: "{date}: {n} updates",
     accepted: "Accepted",
     claimed: "Claimed",
-    updatesN: "{n} updates",
+    updatesN: "{n} {n|update|updates}",
     undated: "undated",
     backOverview: "← Back to overview",
     backTo: "← Back: {name}",
@@ -118,7 +119,7 @@ export const copy = bilingual({
   },
 });
 
-/** Fills `{name}` slots in a copy string. */
+/** Fills `{name}` slots in a copy string, after `{n|one|other}` agreement (see `plural`). */
 export function fill(text: string, values: Record<string, string | number>): string {
-  return text.replace(/\{(\w+)\}/g, (slot, key: string) => (key in values ? String(values[key]) : slot));
+  return plural(text, values).replace(/\{(\w+)\}/g, (slot, key: string) => (key in values ? String(values[key]) : slot));
 }

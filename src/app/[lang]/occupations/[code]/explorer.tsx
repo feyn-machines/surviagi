@@ -1,5 +1,6 @@
 "use client";
 
+import { plural } from "@/lib/plural";
 import { useId, useMemo, useState } from "react";
 import { useScrollPages } from "@/components/scroll-pages";
 import Link from "next/link";
@@ -70,7 +71,7 @@ const copy = bilingual({
     sortName: "Name",
     showing: "{shown} of {total} kinds of work",
     clear: "Clear filters",
-    tasks: "tasks",
+    tasks: "{n|task|tasks}",
     open: "Open",
     close: "Close",
     market: "Market",
@@ -291,7 +292,7 @@ export function ActivityExplorer({
                   </span>
                   <span className={s.rowTasks}>
                     {row.tasks}
-                    <span className={s.unit}> {c.tasks}</span>
+                    <span className={s.unit}> {plural(c.tasks, { n: row.tasks })}</span>
                   </span>
                   <span className={s.rowToggle} aria-hidden="true">
                     {expanded ? "−" : "+"}

@@ -88,7 +88,7 @@ const copy = bilingual({
     colStarted: "Started",
     noDecided: "This run recorded no decision count.",
     openSource: "opens the original post",
-    readingsOpen: "{n} pieces of evidence",
+    readingsOpen: "{n} {n|piece|pieces} of evidence",
     readingsClose: "Hide evidence",
     noDate: "No publication time was recorded for this update.",
     noOrg: "No publisher was resolved for this update.",
