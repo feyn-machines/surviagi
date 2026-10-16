@@ -330,7 +330,7 @@ class ReportNeverFailsTest(unittest.TestCase):
                     raise error
                 server_db._report_production = boom
                 with contextlib.redirect_stdout(io.StringIO()):
-                    server_db.report_production("D1")  # must not raise
+                    self.assertFalse(server_db.report_production("D1"))  # must not raise
         finally:
             server_db._report_production = original
 

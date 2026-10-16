@@ -6,7 +6,8 @@
   promote   make the candidate the production service
   rollback  make the previous production release the production service again
   status    show what the server is running: each slot's code release and the data release it serves
-  indexnow  tell IndexNow-fed search engines which addresses exist (promote does this too)
+  indexnow  tell IndexNow-fed search engines every address in the sitemap (promote does this too;
+            `pnpm data:promote` sends only the addresses that are new, changed or gone)
   env       upload GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET from the local .env to the server's site.env
 
 A code release contains no data. The site reads the active data release from the server
@@ -18,6 +19,7 @@ from __future__ import annotations
 import argparse
 import base64
 import hashlib
+import html
 import http.client
 import json
 import os
@@ -44,6 +46,9 @@ LOCAL_PORT = 8399
 KEEP = 5
 RELEASE_ID = re.compile(r"\d{8}T\d{6}Z-[0-9a-f]{7,40}(-dirty)?")
 USER_AGENT = f"surviagi-release/1.0 (+{SITE_URL})"
+# The sitemap as IndexNow last accepted it: the baseline a data release is compared with (local, ignored).
+INDEXNOW_STATE = ROOT / "data" / "indexnow" / "sitemap.json"
+INDEXNOW_BATCH = 10_000  # the protocol's limit per request
 
 
 class ReleaseError(Exception):
@@ -822,23 +827,85 @@ sudo docker ps --filter name=openaiwill --format '{{{{.Names}}}}  {{{{.Image}}}}
     print(f"candidate slot (:{CANDIDATE['port']}):  {describe_health(probes.get('CANDIDATE'))}")
 
 
-def notify_indexnow() -> None:
-    """Tell IndexNow-fed engines (Bing, and through it ChatGPT search) which addresses exist now."""
+def sitemap_entries(xml: str) -> dict[str, str]:
+    """Each address in a sitemap with its lastmod ('' when the entry has none)."""
+    entries = {}
+    for block in re.findall(r"<url>(.*?)</url>", xml, re.S):
+        loc = re.search(r"<loc>([^<]+)</loc>", block)
+        if loc:
+            lastmod = re.search(r"<lastmod>([^<]+)</lastmod>", block)
+            entries[html.unescape(loc.group(1).strip())] = lastmod.group(1).strip() if lastmod else ""
+    return entries
+
+
+def changed_addresses(previous: dict[str, str] | None, current: dict[str, str]) -> list[str]:
+    """The addresses IndexNow should hear about: new ones, ones whose lastmod moved, and ones that are gone
+    (an engine that fetches a removed address finds the 404). With no baseline, every current address."""
+    if previous is None:
+        return sorted(current)
+    moved = [url for url, lastmod in current.items() if previous.get(url) != lastmod]
+    gone = [url for url in previous if url not in current]
+    return sorted(moved + gone)
+
+
+def load_indexnow_state(path: Path = INDEXNOW_STATE) -> dict[str, str] | None:
+    try:
+        entries = json.loads(path.read_text())["entries"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+    return entries if isinstance(entries, dict) else None
+
+
+def save_indexnow_state(entries: dict[str, str], path: Path = INDEXNOW_STATE) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    sent_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    path.write_text(json.dumps({"sent_at": sent_at, "entries": entries}, indent=1, sort_keys=True) + "\n")
+
+
+def submit_indexnow(key: str, urls: list[str]) -> bool:
+    """Send the addresses in batches the protocol accepts. True when every batch was accepted."""
+    for start in range(0, len(urls), INDEXNOW_BATCH):
+        batch = urls[start:start + INDEXNOW_BATCH]
+        body = json.dumps({"host": SITE_URL.removeprefix("https://"), "key": key,
+                           "keyLocation": f"{SITE_URL}/{key}.txt", "urlList": batch}).encode()
+        request = urllib.request.Request("https://api.indexnow.org/indexnow", data=body,
+                                         headers={"Content-Type": "application/json; charset=utf-8"})
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                print(f"IndexNow: {response.status} for {len(batch)} addresses")
+        except (urllib.error.URLError, OSError, http.client.HTTPException) as error:
+            print(f"IndexNow not notified ({error}); the release itself is unaffected", file=sys.stderr)
+            return False
+    return True
+
+
+def notify_indexnow(only_changed: bool = False, state: Path = INDEXNOW_STATE) -> None:
+    """Tell IndexNow-fed engines (Bing, and through it ChatGPT search) about the live sitemap's addresses:
+    all of them, or with `only_changed` those that differ from the sitemap IndexNow last accepted. The
+    accepted sitemap becomes the next baseline. Never fails the release that called it."""
     key = indexnow_key()
     if not key:
         print("no IndexNow key in public/; skipped")
         return
-    _, _, sitemap = fetch(SITE_URL + "/sitemap.xml")
-    urls = re.findall(r"<loc>([^<]+)</loc>", sitemap)
-    body = json.dumps({"host": SITE_URL.removeprefix("https://"), "key": key,
-                       "keyLocation": f"{SITE_URL}/{key}.txt", "urlList": urls}).encode()
-    request = urllib.request.Request("https://api.indexnow.org/indexnow", data=body,
-                                     headers={"Content-Type": "application/json; charset=utf-8"})
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
-            print(f"IndexNow: {response.status} for {len(urls)} addresses")
-    except urllib.error.URLError as error:
+        code, _, sitemap = fetch(SITE_URL + "/sitemap.xml")
+    except ReleaseError as error:
         print(f"IndexNow not notified ({error}); the release itself is unaffected", file=sys.stderr)
+        return
+    current = sitemap_entries(sitemap)
+    if code != 200 or not current:
+        print(f"IndexNow not notified (the sitemap answered {code} with {len(current)} addresses); "
+              "the release itself is unaffected", file=sys.stderr)
+        return
+    previous = load_indexnow_state(state) if only_changed else None
+    urls = changed_addresses(previous, current)
+    if only_changed and previous is None:
+        print("IndexNow: no earlier sitemap on record; sending every address")
+    if not urls:
+        print(f"IndexNow: none of the {len(current)} addresses changed; nothing sent")
+        return
+    if submit_indexnow(key, urls):
+        save_indexnow_state(current, state)
 
 
 def main() -> int:

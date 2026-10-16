@@ -315,21 +315,22 @@ def poll_release(read_body, expected: str, seconds: float = WATCH_SECONDS, inter
         sleep(interval)
 
 
-def report_production(expected: str | None = None) -> None:
-    """Say what the production site serves. With `expected`, wait up to 60 s for it to serve that release.
-    Never fails the command: the database change has already been made."""
+def report_production(expected: str | None = None) -> bool:
+    """Say what the production site serves. With `expected`, wait up to 60 s for it to serve that release,
+    and return whether it does. Never fails the command: the database change has already been made."""
     try:
-        _report_production(expected)
+        return _report_production(expected)
     except (ReleaseError, subprocess.SubprocessError, OSError) as error:
         print(f"could not check the production site ({' '.join(str(error).split())}); the database change is done")
+        return False
 
 
-def _report_production(expected: str | None) -> None:
+def _report_production(expected: str | None) -> bool:
     target = site.load_target()
     probe = site.remote(target, port_probe_script(PRODUCTION["port"]), capture=True)
     if probe != "listening":
         print("no production site is running yet")
-        return
+        return False
     port = site.free_port()
     forward = subprocess.Popen(site.forward_argv(target, port, PRODUCTION["port"]), stdin=subprocess.DEVNULL)
     try:
@@ -338,15 +339,17 @@ def _report_production(expected: str | None) -> None:
         read_body = lambda: site.fetch(base + "/healthz")[2]  # noqa: E731
         if expected is None:
             print(f"production site: {site.describe_health(read_body())}")
-            return
+            return False
         matched, last = poll_release(read_body, expected)
         if matched:
             print(f"production site now serves data release {expected}")
         else:
             print(f"WARNING: production site still reports data release {last or 'none'} after {WATCH_SECONDS} s "
                   "(it re-checks every 30 s); run `pnpm site:status` to look again")
+        return matched
     except ReleaseError as error:
         print(f"could not read the production site: {error}")
+        return False
     finally:
         forward.terminate()
         forward.wait()
