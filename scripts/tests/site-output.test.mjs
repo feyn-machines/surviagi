@@ -713,7 +713,7 @@ test("llms.txt is generated from the site, names real pages, and overstates noth
     assert.ok(said, "llms.txt has no dated answer sentence");
     assert.equal(said[1], manifest.generated_at.slice(0, 10));
     const home = html("en", "").replace(/<script[\s\S]*?<\/script>/g, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
-    for (const [n, label] of [[said[2], "Kinds of work reached"], [said[4], "AI updates"], [said[5], "AI companies tracked"]]) {
+    for (const [n, label] of [[said[2], "Kinds of work reached"], [said[5], "AI companies tracked"]]) {
       assert.ok(home.includes(`${n} ${label}`), `llms.txt says ${n} where the home page does not say "${n} ${label}"`);
     }
     assert.match(text, /^### At L\d\n\n- \[[^\]]+\]\(https:\/\/surviagi\.com\/work\//m);
@@ -722,6 +722,21 @@ test("llms.txt is generated from the site, names real pages, and overstates noth
     const path = url.slice(SITE.length).replace(/\/$/, "");
     if (/\.(txt|xml)$/.test(path)) continue;
     assert.equal((await fetch(`${site.base}${path || "/"}`)).status, 200, `${url} is not a page`);
+  }
+});
+
+test("the home page's count of recent updates covers only the last 30 days of the window", { skip: !HAS_SNAPSHOT }, () => {
+  const chain = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "chain.json"), "utf8"));
+  const coverage = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "coverage.json"), "utf8"));
+  const levelled = new Set(chain.activities.filter((a) => a.evidence_rows && a.level).map((a) => a.activity_id));
+  const used = new Set(chain.evidence.filter((r) => r.level != null && r.observed_level != null && levelled.has(r.activity_id)).map((r) => r.event_id));
+  const last = Date.parse(coverage.collection_window.last.slice(0, 10));
+  const day = 24 * 60 * 60 * 1000;
+  const recent = chain.events.filter((e) => used.has(e.event_id) && e.occurred_at && last - Date.parse(e.occurred_at.slice(0, 10)) < 30 * day).length;
+  for (const [language, label] of [["en", "AI updates in 30 days"], ["zh-CN", "30 天内的 AI 更新"]]) {
+    const text = html(language, "").replace(/<script[\s\S]*?<\/script>/g, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+    const shown = text.match(new RegExp(`(\\d+) ${label}`))?.[1];
+    assert.equal(Number(shown), recent, `${language}: the home page says ${shown} ${label}`);
   }
 });
 

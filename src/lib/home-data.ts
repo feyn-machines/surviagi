@@ -51,9 +51,14 @@ export type HomeRow = {
   tier: string;
 };
 
+/** The home page counts the updates of the last this many days of the window. */
+export const RECENT_DAYS = 30;
+
 export type HomeData = {
   start: string;
   days: number;
+  /** Dated updates in the last `RECENT_DAYS` days of the window; undated ones are not counted. */
+  recentUpdates: number;
   generatedAt: string;
   orgsTracked: number;
   catalogueWorks: number;
@@ -146,6 +151,7 @@ export function buildHomeData(): HomeData | null {
   return {
     start: first.slice(0, 10),
     days,
+    recentUpdates: updates.filter((u) => u.date !== null && u.day >= days - RECENT_DAYS).length,
     generatedAt: manifest.generated_at.slice(0, 10),
     orgsTracked: coverage.events_by_organisation.length,
     catalogueWorks: coverage.activities_total,
