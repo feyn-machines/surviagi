@@ -270,7 +270,7 @@ export default async function OccupationPage({ params }: Props) {
                   </span>
                   <span className={s.marketCount}>
                     {row.activities}
-                    <span className={s.unit}> {c.marketActivities}</span>
+                    <span className={s.unit}> {fill(c.marketActivities, { n: row.activities })}</span>
                   </span>
                 </Link>
               </li>
