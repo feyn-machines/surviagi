@@ -490,7 +490,81 @@
   white-space: nowrap;
 }
 
+/* A phone shows each update as a card instead of five columns in a frame that scrolls sideways:
+   at 390px the 860px table cut every title off mid-word and hid the publisher, the reach and the level.
+   The header row stays for screen readers; every cell stays in its row. */
 @media (max-width: 720px) {
+  .table {
+    min-width: 0;
+  }
+
+  .table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .rows > tr:not(.detailRow) {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      "when from"
+      "update update"
+      "landed top";
+    align-items: center;
+    gap: var(--ah-space-2) var(--ah-space-4);
+    padding: var(--ah-space-4);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .rows > tr:not(.detailRow) > :is(th, td) {
+    display: block;
+    padding: 0;
+    border-bottom: 0;
+  }
+
+  .rows > tr > td:nth-child(1) {
+    grid-area: when;
+  }
+
+  .rows > tr > th {
+    grid-area: update;
+  }
+
+  .rows > tr > td:nth-child(3) {
+    grid-area: from;
+    justify-self: end;
+    color: var(--muted);
+    text-align: right;
+  }
+
+  .rows > tr > td:nth-child(4) {
+    grid-area: landed;
+  }
+
+  .rows > tr > td:nth-child(5) {
+    grid-area: top;
+    justify-self: end;
+  }
+
+  .cellLanded {
+    grid-auto-flow: column;
+    align-items: center;
+  }
+
+  .title {
+    max-width: none;
+    overflow-wrap: anywhere;
+  }
+
+  .detailRow,
+  .detailRow > td {
+    display: block;
+  }
+
   .readout {
     padding: var(--ah-space-5) var(--ah-space-5) var(--ah-space-6);
   }
