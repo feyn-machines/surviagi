@@ -85,6 +85,7 @@
     "data:releases": "data/runtime/venv/bin/python scripts/data-release.py status --target server",
     "data:local:release": "data/runtime/venv/bin/python scripts/data-release.py release --target local",
     "data:local:promote": "data/runtime/venv/bin/python scripts/data-release.py promote --target local",
+    "data:changes": "data/runtime/venv/bin/python scripts/data-changes.py",
     "app:setup": "data/runtime/venv/bin/python scripts/app-db.py setup-local",
     "db:setup": "data/runtime/venv/bin/python scripts/data-release.py setup-db --target server",
     "admins:sync": "data/runtime/venv/bin/python scripts/app-db.py admins --target server",
