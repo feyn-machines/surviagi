@@ -247,7 +247,7 @@ pnpm data:psql -- -c "SELECT batch_id, concept_id, central, change_cause, previo
 
 此前合成模拟的每次运行保存在独立的 `data/simulation/runs/<UTC时间>/`，内含五批规范化输入、配置、JSON 查询结果和中文 Markdown 报告；当前 `package.json` 没有运行它的脚本，全部运行产物保留本地，不进入 Git。
 
-`pnpm data:test` 在独立临时数据库运行真实 PG 回归，测试后只删除本次生成的测试库；`pnpm check` 保留无需 Docker 的网站和静态数据检查，并包含输入单元测试。CI 另执行 setup 和真实 PG 测试。完整验收需两组检查均通过。
+`pnpm data:test` 在独立临时数据库运行真实 PG 回归，测试后只删除本次生成的测试库；`pnpm check` 保留无需 Docker 的网站和静态数据检查，并包含输入单元测试。仓库不使用托管 CI：完整验收在本机运行 `pnpm check:full`，它先执行 `pnpm check`，再执行 `pnpm data:test`（需要本地数据库已由 `pnpm data:setup` 建好并在运行）。
 
 ## 人工评审
 
