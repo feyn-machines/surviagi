@@ -773,7 +773,9 @@
         "method": "official_html_link"
       }
     ],
-    "notes": ""
+    "notes": "",
+    "x_handle_now": "MSFTCopilot",
+    "x_handle_changed": "X 上的用户名已改为 @MSFTCopilot，数字 ID 不变（898250146797846528）；最早见于采集记录 official-2026-09-21_2026-09-23。handle 仍是名单里的账号键，不随改名变动；采集器按数字 ID 认账号，把帖子记在这个 handle 名下。"
   },
   {
     "company": "Microsoft",
@@ -1001,7 +1003,9 @@
       }
     ],
     "notes": "官网当前标识 SpaceXAI。当前 @xai 是另一个数字 ID；二者不得自动合并，也不据此重写历史帖文归属。",
-    "x_display_name": "SpaceXAI"
+    "x_display_name": "SpaceXAI",
+    "x_handle_now": "SpaceXSI",
+    "x_handle_changed": "X 上的用户名已改为 @SpaceXSI，数字 ID 不变（1661523610111193088）；最早见于采集记录 official-2026-10-10_2026-10-11。handle 仍是名单里的账号键，不随改名变动；采集器按数字 ID 认账号，把帖子记在这个 handle 名下。"
   },
   {
     "company": "xAI / SpaceXAI",

@@ -91,6 +91,10 @@ pnpm data:ingest:x -- data/collection/official-x/<run>.json
 
 真实验证(2026-09-14):把 `smoke-2handle` 运行入库,得 22 sources / 22 captures / 2 gaps(OpenAI 17、AnthropicAI 5,均 complete),互动指标(含 null)如实保留,采集库无任何凭据列,重放 `reused:true`。
 
+## 账号改名（2026-10-16）
+
+时间线上每条帖子都核对作者：数字 ID 与任务不同，隔离为 `author_identity_mismatch`；数字 ID 相同、用户名不同，是账号改了名，帖子照收并记在任务的（名单里的）用户名下，帖子上另存 `author_handle_seen`，任务和整次运行都带 `handle_changes`（`from`、`to`、`first_post_id`），命令行结束时提示更新名单。任务状态不因此改变，仍是 `search_ended`。在这之前改名账号的帖子全被隔离；`pnpm data:recover:renamed`（`--dry-run` 只报告）从保留的官方和面板运行文件里取回落在各自窗口内的这类帖子，写成一份 `renamed-recovery-<时间>.json` 并入库，不访问 X。
+
 ## 并发与代理模型
 
 青果隧道**每条新连接换一个出口 IP，连接内 IP 稳定**。因此一个账号绑一条独占连接（`max_connections=1`）= 一个稳定 IP 覆盖其整个抓取；账号之间并发即天然把足迹摊到不同 IP。约 1/5–1/6 的连接会 `ConnectError`（坏出口 IP），按 transport 错误在新连接上重试，不判账号失效。青果套餐并发上限未知（3 路已验证干净），并发度从保守值起步、可配。

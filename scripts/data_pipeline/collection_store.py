@@ -230,3 +230,59 @@ def backfill_relations(conn, run_path, parse_page):
                         WHERE source_id = %s AND full_text IS NULL""",
                     (post.get("text") or None, post["id"])).rowcount
     return counts
+
+
+def recover_renamed(runs, ids, now):
+    """Pure: the posts renamed accounts lost to quarantine, as one run document to ingest.
+
+    `runs` is [(run name, run document)], `ids` maps a registered handle (lower case)
+    to its numeric account id. Until 2026-10-16 the crawler quarantined a post whose
+    author id was the account's own but whose handle had changed, so a renamed
+    account (@Microsoft365 -> @MSFTCopilot, @SpaceXAI -> @SpaceXSI) lost every post.
+    A quarantined post comes back when its author id is the one registered for the
+    job's handle and it falls inside that job's window, as the crawler now accepts
+    it: under the registered handle, with the handle X showed kept beside it. Every
+    other quarantined post stays where it is. Returns None when nothing comes back.
+    """
+    jobs, seen, changes = [], set(), {}
+    for name, doc in runs:
+        if doc.get("status") not in ("queries_exhausted", "needs_attention"):
+            continue
+        for job in doc.get("jobs") or []:
+            expected = ids.get((job.get("handle") or "").lower())
+            if not expected or not job.get("window_start") or not job.get("window_end"):
+                continue
+            start, end = _iso(job["window_start"]).timestamp(), _iso(job["window_end"]).timestamp()
+            posts = []
+            for held in job.get("quarantine") or []:
+                post = held.get("post") or {}
+                if (held.get("reason") != "author_identity_mismatch" or str(post.get("author_id")) != expected
+                        or post.get("author", "").lower() == job["handle"].lower()
+                        or not start <= post["created_utc"] < end or post["id"] in seen):
+                    continue
+                seen.add(post["id"])
+                changes.setdefault((job["handle"], post["author"]), {
+                    "from": job["handle"], "to": post["author"], "first_post_id": post["id"], "first_seen_in": name})
+                posts.append({**post, "author": job["handle"], "author_handle_seen": post["author"]})
+            if posts:
+                jobs.append({
+                    "id": f"{job['id']}-renamed", "handle": job["handle"], "author_id": expected,
+                    "company": job.get("company"), "status": "search_ended", "stop_reason": job.get("stop_reason"),
+                    "pages": 0, "accepted_count": len(posts), "attempts": 0, "account_label": None,
+                    "window_start": job["window_start"], "window_end": job["window_end"],
+                    "posts": posts, "quarantine": [], "requests": [], "next_cursor": None,
+                    "recovered_from": name,
+                })
+    if not jobs:
+        return None
+    return {
+        "version": "crawler-run-1", "source": "x", "synthetic": False, "ok": True, "status": "queries_exhausted",
+        "coverage_status": "recovered_from_quarantine",
+        "coverage_note": "Posts of renamed accounts that earlier runs quarantined; no request was made to X.",
+        "started_at": now, "finished_at": now, "concurrency": 1, "budgets": {},
+        "publication_window": {"start": min(j["window_start"] for j in jobs), "end": max(j["window_end"] for j in jobs)},
+        "total": len(seen), "requests": 0, "schema_change": None, "jobs": jobs,
+        "reconciliation": {"status": "not_configured", "expected_post_ids": [], "missing_post_ids": []},
+        "handle_changes": list(changes.values()),
+        "recovered_from": sorted({j["recovered_from"] for j in jobs}),
+    }
