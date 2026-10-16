@@ -65,8 +65,11 @@ def writer_password(env_text: str) -> str:
 
 
 def db_forward_argv(target: dict, local_port: int) -> list[str]:
-    """ssh command forwarding a local port to the server database's loopback port."""
-    return site.forward_argv(target, local_port, DB_PORT)
+    """ssh command forwarding a local port to the server database's loopback port, compressed: a release
+    sends its snapshot as JSON documents, about six times smaller compressed. On 2026-10-16 the direct link
+    carried 2.4 MB in 21 minutes and a release did not finish."""
+    argv = site.forward_argv(target, local_port, DB_PORT)
+    return [argv[0], "-o", "Compression=yes", *argv[1:]]
 
 
 def heredoc(path: str, text: str, tag: str) -> str:
