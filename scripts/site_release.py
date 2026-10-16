@@ -333,9 +333,20 @@ def load_target() -> dict:
     return target
 
 
+# The link to the server can lose a third of its packets (2026-10-16, through the local proxy). The system's
+# ssh gives up after 3 unanswered keepalives 15 s apart, which dropped data:release three times in a row;
+# these let a connection ride out about five minutes without an answer. Command-line options win over
+# ~/.ssh/config, which is left alone.
+KEEPALIVE = ["-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=20"]
+
+
+def ssh_options(target: dict) -> list[str]:
+    return ["-i", os.path.expanduser(target["DEPLOY_SSH_KEY"]), "-o", "IdentitiesOnly=yes",
+            "-o", "BatchMode=yes", *KEEPALIVE]
+
+
 def ssh_base(target: dict, extra: list[str] | None = None) -> list[str]:
-    return ["ssh", "-i", os.path.expanduser(target["DEPLOY_SSH_KEY"]), "-o", "IdentitiesOnly=yes",
-            "-o", "BatchMode=yes", *(extra or []), f"{target['DEPLOY_USER']}@{target['DEPLOY_HOST']}"]
+    return ["ssh", *ssh_options(target), *(extra or []), f"{target['DEPLOY_USER']}@{target['DEPLOY_HOST']}"]
 
 
 def free_port() -> int:
@@ -656,11 +667,10 @@ def upload_argv(target: dict, release: str, previous: str = "") -> list[str]:
     With a previous release, files that did not change are hard-linked from it on the
     server and changed ones are sent as differences, so a release uploads little.
     Release directories are never edited in place, which is what makes the links safe."""
-    key = shlex.quote(os.path.expanduser(target["DEPLOY_SSH_KEY"]))
     # An absolute path: with a relative `../<id>`, rsync 3.5 here and 3.2.7 on the server discarded nearly
     # every file as "failed verification" (exit 23) on 2026-10-16; the absolute form sent 0 literal bytes.
     link = [f"--link-dest={target['DEPLOY_ROOT']}/releases/{previous}"] if previous and previous != release else []
-    return ["rsync", "-az", "--delete", *link, "-e", f"ssh -i {key} -o IdentitiesOnly=yes -o BatchMode=yes",
+    return ["rsync", "-az", "--delete", *link, "-e", shlex.join(["ssh", *ssh_options(target)]),
             f"{STAGING / release}/",
             f"{target['DEPLOY_USER']}@{target['DEPLOY_HOST']}:{target['DEPLOY_ROOT']}/releases/{release}/"]
 

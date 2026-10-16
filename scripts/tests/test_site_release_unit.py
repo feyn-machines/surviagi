@@ -48,6 +48,17 @@ class UploadTest(unittest.TestCase):
         self.assertIn(f"--link-dest=/opt/openaiwill/releases/{current}", uploads[0])
 
 
+    def test_every_connection_rides_out_a_lossy_link(self):
+        """2026-10-16: three data:release attempts in a row died on the system default of 3 missed
+        keepalives. ssh and rsync's ssh carry a longer allowance."""
+        for argv in (release.ssh_base(TARGET), release.forward_argv(TARGET, 40000, 5434)):
+            self.assertIn("ServerAliveCountMax=20", argv)
+            self.assertIn("ServerAliveInterval=15", argv)
+        rsync_ssh = release.upload_argv(TARGET, "20261004T150523Z-c7f1d16")[4]
+        self.assertTrue(rsync_ssh.startswith("ssh -i /k/key "), rsync_ssh)
+        self.assertIn("-o ServerAliveCountMax=20", rsync_ssh)
+
+
 class ReleaseIdTest(unittest.TestCase):
     def test_id_is_build_time_and_commit(self):
         built = datetime(2026, 10, 3, 10, 29, 12, 430661, tzinfo=timezone.utc)
