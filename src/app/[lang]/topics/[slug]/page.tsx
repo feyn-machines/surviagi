@@ -5,72 +5,19 @@ import { JsonLd } from "@/components/json-ld";
 import { topicEditorial } from "@/content/topic-editorials";
 import d from "@/components/detail.module.css";
 import { appEnabled } from "@/lib/app-config";
-import { bilingual } from "@/lib/i18n";
 import { getLocale } from "@/lib/locale";
 import { href, marketHref, updateHref } from "@/lib/routes";
 import { breadcrumbLd, pageMetadata } from "@/lib/seo";
 import { siteNavCopy } from "@/lib/site-nav";
-import { chainEvents, markets, occupationSlug, occupations, topicBySlug, type Topic } from "@/lib/snapshot";
+import { chainEvents, manifest, markets, occupationSlug, occupations, topicBySlug, type Topic } from "@/lib/snapshot";
 import { localizedPath } from "@/lib/i18n";
 import type { Route } from "next";
 import s from "../topics.module.css";
 import { TopicVote } from "./vote";
+import { answerSentence, copy } from "./copy";
 
 /** Rendered per request from the loaded data release, never at build time. */
 export const dynamic = "force-dynamic";
-
-/**
- * One topic: the question, and under each answer who argued it and which
- * updates weigh for or against it. The page declares no answer.
- */
-const copy = bilingual({
-  en: {
-    back: "← All topics",
-    replacement: "JOB",
-    viability: "BUSINESS",
-    since: "Open since",
-    accounts: "Accounts",
-    posts: "Posts",
-    evidence: "Evidence",
-    answers: "Answers",
-    argued: "argued by",
-    for: "for",
-    against: "against",
-    evidenceLabel: "Evidence",
-    claimsLabel: "Who argues it",
-    supports: "SUPPORTS",
-    contradicts: "CONTRADICTS",
-    nobody: "Nobody argues this yet.",
-    outside: "not in the panel",
-    source: "Source ↗",
-    quarters: "By quarter",
-    quarter: "Quarter",
-    describe: "{q} {n} answers, argued by {a} accounts in the posts collected.",
-  },
-  "zh-CN": {
-    back: "← 全部话题",
-    replacement: "职业",
-    viability: "生意",
-    since: "提出于",
-    accounts: "账号",
-    posts: "帖子",
-    evidence: "证据",
-    answers: "选项",
-    argued: "主张的账号",
-    for: "支持",
-    against: "反驳",
-    evidenceLabel: "证据",
-    claimsLabel: "谁这么主张",
-    supports: "支持",
-    contradicts: "反驳",
-    nobody: "还没有人主张这个答案。",
-    outside: "名单外",
-    source: "来源 ↗",
-    quarters: "按季度",
-    quarter: "季度",
-    describe: "{q} {n} 个选项，采集到的帖子里有 {a} 个账号主张过。",
-  },
-});
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -85,6 +32,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     language,
     path: `/topics/${slug}`,
     title: topic.question[language],
+    markdown: true,
     description: editorial?.description ?? c.describe.replace("{q}", topic.question[language]).replace("{n}", String(topic.options.length))
       .replace("{a}", String(topic.accounts)),
   });
@@ -101,6 +49,10 @@ function aboutHref(topic: Topic, language: "en" | "zh-CN"): Route | null {
   return null;
 }
 
+/**
+ * One topic: the question, and under each answer who argued it and which
+ * updates weigh for or against it. The page declares no answer.
+ */
 export default async function TopicPage({ params }: Props) {
   const { language } = await getLocale();
   const c = copy[language];
@@ -126,6 +78,8 @@ export default async function TopicPage({ params }: Props) {
         {" · "}{c.since} {topic.opened_at.slice(0, 10)}
       </div>
       <h1 className={d.title}>{topic.question[language]}</h1>
+      {/* The page's answer in one dated sentence with its numbers, the line an engine can quote. */}
+      <p className={d.say}>{answerSentence(topic, language, manifest()?.generated_at.slice(0, 10) ?? "")}</p>
 
       <dl className={d.facts}>
         <div className={d.fact}><dt>{c.answers}</dt><dd>{topic.options.length}</dd></div>
