@@ -1,4 +1,5 @@
 import { bilingual } from "@/lib/i18n";
+import { plural } from "@/lib/plural";
 
 /**
  * Copy for the two market pages, in one file because the server page and the
@@ -101,8 +102,8 @@ export const detailCopy = bilingual({
     metaSuffix: "Market",
     metaDescription: "{name}: {count} kinds of work, each with the AI updates that reached it.",
     lead: "How far AI got on each kind of work in this market, and the update that showed it.",
-    answer: "As of {date}, {scored} of the {n} kinds of work in {name} carry a level from AI updates; the furthest is L{top}, from {readings} pieces of evidence.",
-    answerNone: "As of {date}, no AI update has given a level to any of the {n} kinds of work in {name}.",
+    answer: "As of {date}, {scored} of the {n} {n|kind|kinds} of work in {name} {scored|carries|carry} a level from AI updates; the furthest is L{top}, from {readings} {readings|piece|pieces} of evidence.",
+    answerNone: "As of {date}, no AI update has given a level to any of the {n} {n|kind|kinds} of work in {name}.",
     statActivities: "Work",
     statActivitiesNote: "{n} with evidence",
     statTop: "Furthest level reached",
@@ -120,7 +121,7 @@ export const detailCopy = bilingual({
     colUpdate: "Update",
     colWhen: "When",
     readings: "evidence",
-    tasks: "tasks",
+    tasks: "{n} {n|task|tasks}",
     openWork: "Open this work",
     noReadingsTitle: "No update in the collected window mentioned this work.",
     noReadingsWhy: "That is a statement about the collection, not about the work.",
@@ -168,7 +169,7 @@ export const detailCopy = bilingual({
     colUpdate: "更新",
     colWhen: "时间",
     readings: "条证据",
-    tasks: "项任务",
+    tasks: "{n} 项任务",
     openWork: "打开这项工作",
     noReadingsTitle: "采集窗口里没有一条更新谈到这项工作。",
     noReadingsWhy: "这是关于采集的陈述，不是关于这份工作的陈述。",
@@ -193,11 +194,12 @@ export const detailCopy = bilingual({
   },
 });
 
-/** `{n}` and friends, filled in without pulling a formatter into the bundle. */
+/** `{n}` and friends, filled in without pulling a formatter into the bundle, after `{n|one|other}`
+    agreement (see `plural`). */
 export function fill(template: string, values: Record<string, string | number>): string {
   return Object.entries(values).reduce(
     (text, [key, value]) => text.replaceAll(`{${key}}`, String(value)),
-    template,
+    plural(template, values),
   );
 }
 

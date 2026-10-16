@@ -1,3 +1,4 @@
+import { plural } from "@/lib/plural";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -24,7 +25,7 @@ export const dynamic = "force-dynamic";
 const copy = bilingual({
   en: {
     back: "← All updates",
-    say: "This update bears on {n} kinds of work in {m} markets. Highest level accepted: {level}.",
+    say: "This update bears on {n} {n|kind|kinds} of work in {m} {m|market|markets}. Highest level accepted: {level}.",
     work: "Work",
     markets: "Markets",
     top: "Highest accepted",
@@ -91,7 +92,7 @@ export default async function UpdatePage({ params }: Props) {
   const top = Math.max(0, ...rows.map((r) => r.level ?? 0));
   const views = more?.attention?.views ?? null;
   const levelText = `L${top} ${LEVEL_NAMES[language][top]}`;
-  const say = c.say.replace("{n}", String(rows.length)).replace("{m}", String(markets.size)).split("{level}");
+  const say = plural(c.say, { n: rows.length, m: markets.size }).replace("{n}", String(rows.length)).replace("{m}", String(markets.size)).split("{level}");
 
   const path = `/updates/${update.event_id}`;
   const ld = [

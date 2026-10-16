@@ -1,3 +1,4 @@
+import { plural } from "@/lib/plural";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -197,7 +198,7 @@ export default async function OccupationPage({ params }: Props) {
       <p className={s.pageLead}>{c.lead}</p>
       {/* The page's answer in one dated sentence with its numbers, the line an engine can quote. */}
       <p className={s.answer}>
-        {(assessed > 0 ? c.answer : c.answerNone)
+        {plural(assessed > 0 ? c.answer : c.answerNone, { total: totalTasks, assessed, rest: Math.max(0, totalTasks - assessed) })
           .replace("{date}", manifest()?.generated_at.slice(0, 10) ?? "")
           .replace("{name}", name)
           .replace("{total}", formatNumber(totalTasks))
@@ -222,7 +223,12 @@ export default async function OccupationPage({ params }: Props) {
           unit={c.ofTotal.replace("{total}", formatNumber(totalTasks))}
           tone={assessed === 0 ? "correction" : "plain"}
           note={
-            <p>{c.statLookedNote.replace("{rest}", formatNumber(totalTasks - assessed))}</p>
+            <p>
+              {plural(c.statLookedNote, { assessed, rest: totalTasks - assessed }).replace(
+                "{rest}",
+                formatNumber(totalTasks - assessed),
+              )}
+            </p>
           }
         />
       </div>

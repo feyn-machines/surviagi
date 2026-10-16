@@ -71,7 +71,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
     const held = gates.length > 0
       ? ` · ${c.gated}${sep}${gates.map((g) => (zh ? g.label_zh_cn : g.label_en) ?? g.label_en).join(" · ")}`
       : "";
-    body.push(`- ${title}${sep}${level} · ${count(activity.tasks)} ${c.tasks}${held}`);
+    body.push(`- ${title}${sep}${level} · ${fill(c.tasks, { n: count(activity.tasks) })}${held}`);
     for (const r of evidence) {
       const published = r.level === null ? c.noReading : `L${r.level}`;
       const claimed = r.observed_level !== null && r.level !== null && r.observed_level > r.level

@@ -1,3 +1,4 @@
+import { plural } from "@/lib/plural";
 import type { Route } from "next";
 import Link from "next/link";
 import type { Language } from "@/lib/i18n";
@@ -38,7 +39,7 @@ const COPY = {
     colSector: "Sector",
     colFrontier: "L5 ← 4 ← 3 ← 2 ← 1 ← 0 ← unknown ← untouched",
     colShare: "L2+",
-    tasks: "tasks",
+    tasks: "{n|task|tasks}",
     median: "median",
     shareNote: "share of tasks AI produces the bulk of, leaving a person to check",
   },
@@ -113,7 +114,7 @@ export function ProgressCompare<T extends string>({
                 {marked ? <span className={s.markDot} aria-hidden="true" /> : null}
                 {row.label}
                 <span className={s.sub}>
-                  {new Intl.NumberFormat("en-US").format(row.tasks)} {c.tasks}
+                  {new Intl.NumberFormat("en-US").format(row.tasks)} {plural(c.tasks, { n: row.tasks })}
                 </span>
               </span>
               <span
