@@ -231,7 +231,7 @@ export function UpdatesBrowser({
             aria-label={copy.tableLabel}
             tabIndex={0}
           >
-            <table className="oaw-table">
+            <table className={`oaw-table ${s.table}`}>
               <thead>
                 <tr>
                   <th scope="col">{copy.colWhen}</th>

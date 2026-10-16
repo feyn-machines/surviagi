@@ -744,3 +744,15 @@ test("a server that must use the database is healthy only when it serves a relea
     await stop(proc);
   }
 });
+
+test("on a phone the updates table is a list of cards, not a frame that cuts titles off", async () => {
+  // 2026-10-16: at 390px the 860px table showed each title cut mid-word and hid the publisher and level.
+  const html = pages.get("zh-CN/updates");
+  const sheets = [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="([^"]+\.css)"/g)].map((m) => m[1]);
+  assert.ok(sheets.length > 0, "the updates page links a stylesheet");
+  let css = "";
+  for (const href of sheets) css += await (await fetch(new URL(href, site.base))).text();
+  const phone = [...css.matchAll(/@media \(max-width:\s*720px\)\s*\{([\s\S]*?)\}\s*\}/g)].map((m) => m[1]).join("\n");
+  assert.match(phone, /grid-template-areas:\s*"when from"\s*"update update"\s*"landed top"/);
+  assert.match(phone, /\.[\w-]*table[\w-]*\{min-width:0\}/);
+});
