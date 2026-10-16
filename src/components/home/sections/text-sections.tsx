@@ -65,7 +65,7 @@ const copy = bilingual({
 export function ReadersSection({ data, language, index }: { data: HomeData; language: Language; index: string }) {
   const c = copy[language];
   const stats: [number, string][] = [
-    [data.updates.length, c.statUpdates],
+    [data.recentUpdates, c.statUpdates],
     [data.works.length, c.statWork],
     [data.orgsTracked, c.statOrgs],
   ];
