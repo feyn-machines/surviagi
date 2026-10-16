@@ -754,5 +754,6 @@ test("on a phone the updates table is a list of cards, not a frame that cuts tit
   for (const href of sheets) css += await (await fetch(new URL(href, site.base))).text();
   const phone = [...css.matchAll(/@media \(max-width:\s*720px\)\s*\{([\s\S]*?)\}\s*\}/g)].map((m) => m[1]).join("\n");
   assert.match(phone, /grid-template-areas:\s*"when from"\s*"update update"\s*"landed top"/);
-  assert.match(phone, /\.[\w-]*table[\w-]*\{min-width:0\}/);
+  // Outranks the global .oaw-table minimum whatever order the sheets load in: two classes, not one.
+  assert.match(phone, /\.[\w-]*tableWrap[\w-]* \.[\w-]*table[\w-]*\{min-width:0\}/);
 });

@@ -494,7 +494,9 @@
    at 390px the 860px table cut every title off mid-word and hid the publisher, the reach and the level.
    The header row stays for screen readers; every cell stays in its row. */
 @media (max-width: 720px) {
-  .table {
+  /* Two classes: the global .oaw-table (min-width: 860px) has one, and in the built site its sheet can
+     load after this one, so a single class lost to it. */
+  .tableWrap .table {
     min-width: 0;
   }
 
