@@ -7,11 +7,11 @@ import { getLocale } from "@/lib/locale";
 import { breadcrumbLd, pageMetadata } from "@/lib/seo";
 import { JsonLd } from "@/components/json-ld";
 import { termNameOrRaw } from "@/components/ontology-labels";
-import { fill } from "@/app/[lang]/markets/copy";
+import { detailCopy, fill } from "@/app/[lang]/markets/copy";
 import { siteNavCopy } from "@/lib/site-nav";
 import { copy } from "./copy";
 import { href, marketHref, updateHref, workHref, workSlug } from "@/lib/routes";
-import { activities, activitiesOfMarket, countedReadings, gatesOfActivity, gates as allGates, manifest, marketSlug } from "@/lib/snapshot";
+import { activities, activitiesOfMarket, countedReadings, levelSteps, gatesOfActivity, gates as allGates, manifest, marketSlug, type Confirmation } from "@/lib/snapshot";
 
 /** Rendered per request from the loaded data release, never at build time. */
 export const dynamic = "force-dynamic";
@@ -60,6 +60,14 @@ export default async function WorkPage({ params }: Props) {
   const held = work.gated ? gatesOfActivity(work.activity_id).map((id) => gateById.get(id)).filter((g) => g !== undefined) : [];
   const siblings = activitiesOfMarket(work.market_id).filter((a) => a.activity_id !== work.activity_id && a.evidence_rows && a.level);
   const levelText = `L${level} ${LEVEL_NAMES[language][level]}`;
+  const steps = levelSteps(work.activity_id);
+  const confirms = (v: Confirmation, title: string) =>
+    fill(detailCopy[language].confirms, {
+      handle: v.handle ?? v.account_key,
+      nature: termNameOrRaw("post_nature", v.post_nature, language),
+      title,
+    });
+  const reachedOn = steps.at(-1)?.date?.slice(0, 10);
 
   const slug = (await params).id;
   const trail = [
@@ -95,6 +103,45 @@ export default async function WorkPage({ params }: Props) {
 
       {held.length > 0 && (
         <p className={s.note}><b>{c.held}</b> {held.map((g) => (zh ? g.label_zh_cn : g.label_en) ?? g.label_en).join(" · ")}. {c.heldNote}</p>
+      )}
+
+      {steps.length > 0 && (
+        <>
+          <h2 className={s.h2}>{c.historyTitle}</h2>
+          <p className={s.sub}>
+            {reachedOn && `${fill(c.historyReached, { level, date: reachedOn })}${zh ? "" : " "}`}
+            {c.historySub}
+          </p>
+          <ul className={s.list}>
+            {steps.map((step) => (
+              <li key={`${step.reading.event_id}-${step.confirmation?.source_id ?? ""}`} className={s.row}>
+                <div className={s.when}>
+                  <b>{step.date ? step.date.slice(0, 10) : c.undated}</b>
+                  {step.confirmation ? `@${step.confirmation.handle ?? step.confirmation.account_key}` : step.reading.org_name}
+                </div>
+                <div className={s.what}>
+                  {step.confirmation ? (
+                    step.confirmation.url ? (
+                      <a className={s.name} href={step.confirmation.url} target="_blank" rel="nofollow noopener noreferrer">
+                        {confirms(step.confirmation, step.reading.title)}
+                      </a>
+                    ) : (
+                      <span className={s.name}>{confirms(step.confirmation, step.reading.title)}</span>
+                    )
+                  ) : (
+                    <Link className={s.name} href={updateHref(language, step.reading.event_id)}>{step.reading.title}</Link>
+                  )}
+                </div>
+                <div className={s.how}>
+                  <span className={`${s.tag} ${s[levelClass(step.to)]}`}>
+                    {step.from === null ? "" : `L${Math.round(step.from)} → `}L{Math.round(step.to)} {LEVEL_NAMES[language][Math.round(step.to)]}
+                  </span>
+                  <span>{TIER_NAMES[language][step.confirmation?.evidence_tier ?? step.reading.evidence_tier] ?? step.reading.evidence_tier}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
 
       <h2 className={s.h2}>{c.listTitle}</h2>

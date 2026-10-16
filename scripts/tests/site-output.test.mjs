@@ -388,6 +388,38 @@ test("a work's level is the highest reading published under it, and the posts th
   assert.ok(md.includes(`第三方印证：[@${first.handle}](${first.url})`), `${path}/raw.md does not name the confirmation`);
 });
 
+test("a work page says when its level was first reached, and its history ends where the work stands", { skip: !HAS_SNAPSHOT }, async () => {
+  const chain = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "chain.json"), "utf8"));
+  const confirmed = new Set(chain.evidence.filter((row) => row.confirmations?.length).map((row) => row.activity_id));
+  const reached = chain.activities.filter((a) => a.evidence_rows && a.level);
+  // One a confirmation carried, if there is one, and a plain one.
+  const sample = [reached.find((a) => confirmed.has(a.activity_id)), reached.find((a) => !confirmed.has(a.activity_id))].filter(Boolean);
+  assert.ok(sample.length > 0, "no work with a level");
+  for (const work of sample) {
+    const path = `/work/${work.activity_id.replace(/^oaw:market:/, "")}`;
+    for (const [prefix, heading, sentence] of [["", "## How it got here", /It first reached L(\d) on (\d{4}-\d\d-\d\d)\./], ["/zh-CN", "## 它是怎么走到这里的", /它在 (\d{4}-\d\d-\d\d) 首次达到 L(\d)。/]]) {
+      const md = await (await fetch(`${site.base}${prefix}${path}/raw.md`)).text();
+      const section = md.split(heading)[1]?.split("\n## ")[0];
+      assert.ok(section, `${prefix}${path}/raw.md has no history`);
+      const steps = section.split("\n").filter((line) => line.startsWith("- "));
+      assert.ok(steps.length > 0, `${prefix}${path}: an empty history`);
+      // Each step rises, and the last one ends at the work's level.
+      // The rise closes the line, so its level is the last "L<n> " on it.
+      const tops = steps.map((line) => Number([...line.matchAll(/L(\d) /g)].at(-1)?.[1]));
+      assert.deepEqual(tops, [...tops].sort((a, b) => a - b), `${prefix}${path}: a step that does not rise`);
+      assert.equal(tops.at(-1), work.level, `${prefix}${path}: the history ends at L${tops.at(-1)}, the work stands at L${work.level}`);
+      const said = section.match(sentence);
+      if (said) {
+        const [level, date] = prefix ? [said[2], said[1]] : [said[1], said[2]];
+        assert.equal(Number(level), work.level);
+        assert.ok(steps.at(-1).includes(date), `${prefix}${path}: first reached on ${date}, but the last step is ${steps.at(-1)}`);
+        const page = await (await fetch(`${site.base}${prefix}${path}`)).text();
+        assert.ok(page.includes(said[0]), `${prefix}${path}: the page does not say ${said[0]}`);
+      }
+    }
+  }
+});
+
 test("every data page asks to be rendered per request, so none is baked into the build", () => {
   const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
     entry.isDirectory() ? walk(join(dir, entry.name)) : entry.name === "page.tsx" ? [join(dir, entry.name)] : []);
