@@ -754,6 +754,13 @@ test("llms.txt is generated from the site, names real pages, and overstates noth
       assert.ok(home.includes(`${n} ${label}`), `llms.txt says ${n} where the home page does not say "${n} ${label}"`);
     }
     assert.match(text, /^### At L\d\n\n- \[[^\]]+\]\(https:\/\/surviagi\.com\/work\//m);
+    // Each level says what it means and what evidence it needs, in the home page's words.
+    const homeHtml = html("en", "");
+    for (const line of text.match(/^- L[0-5] .+$/gm) ?? []) {
+      const roles = line.replace(/^- L\d [^:]+: /, "").replace(/ Evidence required: .*$/, "");
+      assert.ok(homeHtml.includes(roles), `llms.txt says "${roles}", the home page does not`);
+    }
+    assert.equal((text.match(/^- L[0-5] .+$/gm) ?? []).length, 6, "llms.txt does not define all six levels");
   }
   for (const [, url] of text.matchAll(/\]\((https:\/\/surviagi\.com[^)]*)\)/g)) {
     const path = url.slice(SITE.length).replace(/\/$/, "");

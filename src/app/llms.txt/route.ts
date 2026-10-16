@@ -1,4 +1,4 @@
-import { LEVEL_NAMES } from "@/lib/level-names";
+import { LEVEL_LINE, LEVEL_MEANINGS, LEVEL_NAMES } from "@/lib/level-names";
 import { DISCORD_URL, GITHUB_URL, SITE_NAME, SITE_URL, X_URL, absoluteUrl } from "@/lib/seo";
 import { SITE_NAV, siteNavCopy } from "@/lib/site-nav";
 import { buildHomeData } from "@/lib/home-data";
@@ -53,9 +53,13 @@ export function GET() {
     "",
     "## Levels",
     "",
-    "Each kind of work carries the highest level its evidence supports.",
+    "Each kind of work carries the highest level its evidence supports. " +
+      `${LEVEL_LINE.en} A level is accepted only with the evidence it requires; a claim above it is kept as a claim.`,
     "",
-    ...LEVEL_NAMES.en.map((name, level) => `- L${level}: ${name}`),
+    ...LEVEL_NAMES.en.map((name, level) => {
+      const { roles, evidence } = LEVEL_MEANINGS.en[level];
+      return `- L${level} ${name}: ${roles}${evidence === "—" ? "" : ` Evidence required: ${evidence}.`}`;
+    }),
     "",
     "## Data",
     "",
