@@ -202,20 +202,23 @@ def run(conn, *, ontology_version: str = "1.0.0", limit: int | None = None,
         failures_before = step.failed_batches
         readings = step.classify(_state(event), options, progress)
         asked += len(options)
-        hits = [(r.option_id, by_id[r.option_id], r.value)
+        # Each reading keeps the judge that gave it: Jev, or the comparison model
+        # when Jev failed (a region block once answered every batch that way).
+        hits = [(r.option_id, by_id[r.option_id], r.value, r.judge)
                 for r in readings if r.value > BEARS_ABOVE]
         here = 0
         levels_read = True
         if hits:
             try:
-                levels = read_levels(step.primary, event, [(a, label) for a, label, _ in hits])
+                levels = read_levels(step.primary, event, [(a, label) for a, label, _, _ in hits])
             except JudgeError as error:
                 # Evidence with no level contributes nothing downstream, so this
-                # event is half-decided and must not be checkpointed.
+                # event is half-decided: it is neither checkpointed nor written,
+                # since a written row would block the retry's (ON CONFLICT DO NOTHING).
                 if progress:
                     progress(f"  level read failed for {event['event_id']}: {error}")
                 levels, levels_read = {}, False
-            for activity_id, label, value in hits:
+            for activity_id, label, value, judge in hits if levels_read else []:
                 detail = levels.get(activity_id) or {}
                 row = {
                     "event_id": event["event_id"],
@@ -225,7 +228,7 @@ def run(conn, *, ontology_version: str = "1.0.0", limit: int | None = None,
                     "evidence_sign": "positive",
                     "observed_level": detail.get("level"),
                     "confidence": round(value, 3),
-                    "judge": "typesafe",
+                    "judge": judge,
                     "method": "ai_proposed",
                     "status": "candidate",
                     "rationale": f"bears={value:.3f} on «{label}»",
