@@ -44,7 +44,8 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
     readings: evidenceForActivity(activity.activity_id),
   }));
   const scored = rows.filter((row) => row.rung !== null);
-  const readings = rows.reduce((sum, row) => sum + row.readings.length, 0);
+  // Counted as the page counts them: each reading, and each post that confirmed one.
+  const readings = rows.reduce((sum, row) => sum + row.readings.reduce((n, r) => n + 1 + (r.confirmations?.length ?? 0), 0), 0);
   const topRung = scored.reduce<number | null>((best, row) => Math.max(best ?? 0, row.rung ?? 0), null);
 
   const body = [
@@ -79,6 +80,15 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
       const source = r.source_urls[0] ? `[${r.title.replace(/([[\]])/g, "\\$1")}](${r.source_urls[0]})` : r.title;
       body.push(`  - ${r.occurred_at?.slice(0, 10) ?? ""} · ${source}${sep}${published}${claimed} · ` +
         termNameOrRaw("evidence_tier", r.evidence_tier, language));
+      for (const v of r.confirmations ?? []) {
+        const said = fill(c.confirms, {
+          handle: v.handle ?? v.account_key,
+          nature: termNameOrRaw("post_nature", v.post_nature, language),
+          title: r.title,
+        }).replace(/([[\]])/g, "\\$1");
+        body.push(`  - ${v.posted_at?.slice(0, 10) ?? ""} · ${v.url ? `[${said}](${v.url})` : said}${sep}` +
+          `${v.level === null ? c.noReading : `L${v.level}`} · ${termNameOrRaw("evidence_tier", v.evidence_tier, language)}`);
+      }
     }
   }
 

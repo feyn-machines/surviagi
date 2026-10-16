@@ -112,18 +112,41 @@ export default async function MarketPage({ params }: Props) {
       }];
     }),
     tasks: activity.tasks,
-    readings: evidenceForActivity(activity.activity_id).map((row, index) => ({
-      key: `${row.event_id}-${index}`,
-      published: row.level,
-      publishedRung: row.level === null ? null : Math.floor(row.level),
-      judged: row.observed_level,
-      tier: row.evidence_tier,
-      tierName: termNameOrRaw("evidence_tier", row.evidence_tier, language),
-      tierCap: (caps as Record<string, number>)[row.evidence_tier] ?? null,
-      title: row.title,
-      url: sourceUrl.get(row.event_id) ?? null,
-      when: isoDate(row.occurred_at),
-    })),
+    readings: evidenceForActivity(activity.activity_id).flatMap((row, index) => [
+      {
+        key: `${row.event_id}-${index}`,
+        published: row.level,
+        publishedRung: row.level === null ? null : Math.floor(row.level),
+        judged: row.observed_level,
+        tier: row.evidence_tier,
+        tierName: termNameOrRaw("evidence_tier", row.evidence_tier, language),
+        tierCap: (caps as Record<string, number>)[row.evidence_tier] ?? null,
+        title: row.title,
+        url: sourceUrl.get(row.event_id) ?? null,
+        when: isoDate(row.occurred_at),
+      },
+      // A post by someone else that confirmed this reading counts toward the level in its own right.
+      ...(row.confirmations ?? []).map((v) => {
+        const tierCap = (caps as Record<string, number>)[v.evidence_tier] ?? null;
+        return {
+          key: `${row.event_id}-${index}-${v.source_id}`,
+          published: v.level,
+          publishedRung: v.level === null ? null : Math.floor(v.level),
+          judged: v.observed_level,
+          tier: v.evidence_tier,
+          tierName: termNameOrRaw("evidence_tier", v.evidence_tier, language),
+          // The cap note names the tier, so it is shown only when the tier is what held the reading down.
+          tierCap: tierCap !== null && v.level === tierCap ? tierCap : null,
+          title: fill(c.confirms, {
+            handle: v.handle ?? v.account_key,
+            nature: termNameOrRaw("post_nature", v.post_nature, language),
+            title: row.title,
+          }),
+          url: v.url,
+          when: isoDate(v.posted_at),
+        };
+      }),
+    ]),
   }));
 
   const served = occupationsOfMarket(market.id);

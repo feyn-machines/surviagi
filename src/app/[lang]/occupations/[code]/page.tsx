@@ -31,6 +31,8 @@ import {
   Provenance,
 } from "@/components/data-page";
 import { copy } from "./copy";
+import { detailCopy, fill } from "@/app/[lang]/markets/copy";
+import { termNameOrRaw } from "@/components/ontology-labels";
 import { ActivityExplorer, type ExplorerActivity } from "./explorer";
 import s from "./detail.module.css";
 
@@ -100,6 +102,7 @@ export default async function OccupationPage({ params }: Props) {
   const median = occupationMedianShare();
 
   const served = marketsOfOccupation(id);
+  const caps: Record<string, number> = progress()?.tier_caps ?? {};
 
   // One row per activity, with the readings that produced its level already
   // joined: the client list only narrows and opens what the server resolved.
@@ -133,16 +136,34 @@ export default async function OccupationPage({ params }: Props) {
         tier: activity.best_tier,
         tasks: activity.tasks,
         gated: activity.gated,
-        readings: evidenceForActivity(activity.activity_id).map((reading) => ({
-          eventId: reading.event_id,
-          title: reading.title,
-          date: reading.occurred_at,
-          org: reading.org_name,
-          tier: reading.evidence_tier,
-          observed: reading.observed_level,
-          level: reading.level,
-          url: reading.source_urls?.[0] ?? null,
-        })),
+        readings: evidenceForActivity(activity.activity_id).flatMap((reading) => [
+          {
+            eventId: reading.event_id,
+            title: reading.title,
+            date: reading.occurred_at,
+            org: reading.org_name,
+            tier: reading.evidence_tier,
+            observed: reading.observed_level,
+            level: reading.level,
+            url: reading.source_urls?.[0] ?? null,
+          },
+          // A post by someone else that confirmed the reading counts toward the level in its own right.
+          ...(reading.confirmations ?? []).map((v) => ({
+            eventId: `${reading.event_id}:${v.source_id}`,
+            title: fill(detailCopy[language].confirms, {
+              handle: v.handle ?? v.account_key,
+              nature: termNameOrRaw("post_nature", v.post_nature, language),
+              title: reading.title,
+            }),
+            date: v.posted_at,
+            org: `@${v.handle ?? v.account_key}`,
+            tier: v.evidence_tier,
+            // The list explains a cut by the tier; a cut made by the kind of post is not the tier's, so it is not shown as one.
+            observed: v.level !== null && caps[v.evidence_tier] !== v.level ? v.level : v.observed_level,
+            level: v.level,
+            url: v.url,
+          })),
+        ]),
       });
     }
   }

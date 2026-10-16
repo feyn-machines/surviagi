@@ -141,6 +141,7 @@ export const detailCopy = bilingual({
     colHolds: "Work held here",
     noReading: "no update mentioned it",
     source: "source",
+    confirms: "@{handle} ({nature}) confirms: {title}",
   },
   "zh-CN": {
     eyebrow: "赛道",
@@ -188,6 +189,7 @@ export const detailCopy = bilingual({
     colHolds: "在本赛道按住",
     noReading: "没有更新谈到它",
     source: "原文",
+    confirms: "@{handle}（{nature}）印证：{title}",
   },
 });
 

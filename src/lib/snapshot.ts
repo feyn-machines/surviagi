@@ -100,6 +100,26 @@ export type EvidenceRow = {
   confidence: number | null;
   rationale: string;
   status: string;
+  /** Posts by others that confirmed this reading; absent when none did, and in releases before 2026-10-16. */
+  confirmations?: Confirmation[];
+};
+
+/**
+ * One post by someone other than the vendor that confirmed a reading: a hands-on
+ * test, an independent evaluation. It counts toward the activity's level under its
+ * own tier and the cap of its kind of post, so it can carry a level the vendor's
+ * own claim could not - and a page showing that level has to show it.
+ */
+export type Confirmation = {
+  source_id: string;
+  account_key: string;
+  handle: string | null;
+  url: string | null;
+  posted_at: string | null;
+  post_nature: string;
+  evidence_tier: string;
+  observed_level: number | null;
+  level: number | null;
 };
 
 /** A reading with its activity and its update resolved, for rendering. */
@@ -622,6 +642,14 @@ export function evidenceForActivity(activityId: string): Reading[] {
     .filter((row) => row.activity_id === activityId)
     .map((row) => reading(store, row))
     .sort((a, b) => (b.occurred_at ?? "").localeCompare(a.occurred_at ?? ""));
+}
+
+/**
+ * The readings that count toward an activity's level: those with a level of their
+ * own, and those a confirmation lifted. Newest update first, as on the work page.
+ */
+export function countedReadings(activityId: string): Reading[] {
+  return evidenceForActivity(activityId).filter((r) => r.level !== null || (r.confirmations?.length ?? 0) > 0);
 }
 
 export function occupationSlug(id: string): string {
