@@ -652,6 +652,49 @@ export function countedReadings(activityId: string): Reading[] {
   return evidenceForActivity(activityId).filter((r) => r.level !== null || (r.confirmations?.length ?? 0) > 0);
 }
 
+/** One rise in a work's level: the reading that first carried it there, dated by the evidence. */
+export type LevelStep = {
+  /** When the update or post appeared; null for evidence with no date, which is placed last. */
+  date: string | null;
+  from: number | null;
+  to: number;
+  reading: Reading;
+  /** Set when a post by someone else, not the update itself, carried the level. */
+  confirmation: Confirmation | null;
+};
+
+/**
+ * How a work reached its level, by the date of the evidence: each reading that
+ * raised the highest level so far. The level is the highest counted reading, so
+ * the last step always ends where the work stands. A gate holds the level below
+ * what the evidence reached; every step is held the same way, by capping at the
+ * level the work stands at. These are the dates the evidence carries, not the
+ * dates it was collected or published here.
+ */
+export function levelSteps(activityId: string): LevelStep[] {
+  const final = activityById(activityId)?.level ?? null;
+  if (final === null) return [];
+  const seen: Omit<LevelStep, "from">[] = [];
+  for (const reading of countedReadings(activityId)) {
+    if (reading.level !== null) seen.push({ date: reading.occurred_at, to: reading.level, reading, confirmation: null });
+    for (const confirmation of reading.confirmations ?? []) {
+      if (confirmation.level !== null) seen.push({ date: confirmation.posted_at, to: confirmation.level, reading, confirmation });
+    }
+  }
+  // Oldest first; on one day the higher reading first, so a day makes one step.
+  const dated = seen.filter((s) => s.date).sort((a, b) => a.date!.localeCompare(b.date!) || b.to - a.to);
+  const undated = seen.filter((s) => !s.date).sort((a, b) => b.to - a.to);
+  const steps: LevelStep[] = [];
+  let level: number | null = null;
+  for (const candidate of [...dated, ...undated]) {
+    const to = Math.min(candidate.to, final);
+    if (level !== null && to <= level) continue;
+    steps.push({ ...candidate, from: level, to });
+    level = to;
+  }
+  return steps;
+}
+
 export function occupationSlug(id: string): string {
   return id.replace(/^oaw:occupation:/, "");
 }

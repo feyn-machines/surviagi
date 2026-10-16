@@ -4,7 +4,7 @@ import { termNameOrRaw } from "@/components/ontology-labels";
 import { DEFAULT_LANGUAGE, normalizeLanguage } from "@/lib/i18n";
 import { colon, link, markdownResponse } from "@/lib/markdown-copy";
 import { workSlug } from "@/lib/routes";
-import { activities, activitiesOfMarket, countedReadings, gatesOfActivity, gates as allGates, manifest, marketSlug } from "@/lib/snapshot";
+import { activities, activitiesOfMarket, countedReadings, levelSteps, gatesOfActivity, gates as allGates, manifest, marketSlug } from "@/lib/snapshot";
 import { copy } from "../copy";
 
 /** Rendered per request from the loaded data release, like the page. */
@@ -44,6 +44,26 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
   ];
   if (held.length > 0) {
     body.push("", `${c.held} ${held.map((g) => (zh ? g.label_zh_cn : g.label_en) ?? g.label_en).join(" · ")}. ${c.heldNote}`);
+  }
+  const steps = levelSteps(work.activity_id);
+  if (steps.length > 0) {
+    const reachedOn = steps.at(-1)?.date?.slice(0, 10);
+    body.push("", `## ${c.historyTitle}`, "", `${reachedOn ? `${fill(c.historyReached, { level, date: reachedOn })}${zh ? "" : " "}` : ""}${c.historySub}`, "");
+    for (const step of steps) {
+      const v = step.confirmation;
+      const rise = `${step.from === null ? "" : `L${Math.round(step.from)} → `}L${Math.round(step.to)} ${levels[Math.round(step.to)]}`;
+      const what = v
+        ? (() => {
+            const said = fill(detailCopy[language].confirms, {
+              handle: v.handle ?? v.account_key,
+              nature: termNameOrRaw("post_nature", v.post_nature, language),
+              title: step.reading.title,
+            }).replace(/([[\]])/g, "\\$1");
+            return v.url ? `[${said}](${v.url})` : said;
+          })()
+        : `${step.reading.org_name ?? ""} · ${link(language, step.reading.title, `/updates/${step.reading.event_id}`)}`;
+      body.push(`- ${step.date ? step.date.slice(0, 10) : c.undated} · ${what}${sep}${rise}`);
+    }
   }
   body.push("", `## ${c.listTitle}`, "", c.listSub, "");
   for (const r of rows) {
