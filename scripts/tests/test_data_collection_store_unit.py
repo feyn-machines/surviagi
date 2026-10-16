@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from data_pipeline.collection_store import build_rows  # noqa: E402
+from data_pipeline.collection_store import build_rows, recover_renamed  # noqa: E402
 
 
 def post(pid, created_utc, handle="OpenAI", author_id="4398626122", reply=False, text="hello"):
@@ -91,6 +91,47 @@ class BuildRowsTests(unittest.TestCase):
         b = build_rows(run_doc(), "r")[0]["run_sha256"]
         self.assertEqual(a, b)
         self.assertEqual(len(a), 64)
+
+
+class RecoverRenamedTests(unittest.TestCase):
+    """@Microsoft365 became @MSFTCopilot under the same id, and every post went to quarantine."""
+
+    # 2026-09-10T00:00:00Z, inside the job's window; the older one is 2026-09-04.
+
+    def doc(self, *held):
+        doc = run_doc()
+        doc["jobs"] = [{"id": "j1", "handle": "OpenAI", "company": "OpenAI", "status": "search_ended",
+                        "stop_reason": "window_start_reached",
+                        "window_start": "2026-09-08T00:00:00+00:00", "window_end": "2026-09-11T00:00:00+00:00",
+                        "posts": [], "requests": [],
+                        "quarantine": [{"post_id": p["id"], "reason": "author_identity_mismatch", "post": p}
+                                       for p in held]}]
+        return doc
+
+    def test_a_renamed_accounts_post_in_its_window_comes_back_under_the_registered_handle(self):
+        renamed = post("1", 1788998400.0, handle="OpenAIRenamed")
+        doc = recover_renamed([("run-a", self.doc(renamed))], {"openai": "4398626122"}, "2026-10-16T00:00:00+00:00")
+        [job] = doc["jobs"]
+        [back] = job["posts"]
+        self.assertEqual((back["author"], back["author_handle_seen"], job["recovered_from"]),
+                         ("OpenAI", "OpenAIRenamed", "run-a"))
+        self.assertEqual(doc["handle_changes"], [{"from": "OpenAI", "to": "OpenAIRenamed",
+                                                  "first_post_id": "1", "first_seen_in": "run-a"}])
+        # It ingests like any run, under the account it belongs to.
+        _, sources, _, _ = build_rows(doc, "renamed-recovery")
+        self.assertEqual([s["account_handle"] for s in sources], ["OpenAI"])
+
+    def test_another_account_a_post_outside_the_window_and_a_repeat_stay_out(self):
+        imposter = post("2", 1788998400.0, handle="Imposter", author_id="999")
+        too_old = post("3", 1788500000.0, handle="OpenAIRenamed")
+        kept = post("4", 1788998400.0, handle="OpenAIRenamed")
+        runs = [("run-a", self.doc(imposter, too_old, kept)), ("run-b", self.doc(kept))]
+        doc = recover_renamed(runs, {"openai": "4398626122"}, "2026-10-16T00:00:00+00:00")
+        self.assertEqual([p["id"] for j in doc["jobs"] for p in j["posts"]], ["4"])
+        self.assertEqual(doc["total"], 1)
+
+    def test_nothing_to_recover_is_none(self):
+        self.assertIsNone(recover_renamed([("run-a", self.doc())], {"openai": "4398626122"}, "now"))
 
 
 if __name__ == "__main__":

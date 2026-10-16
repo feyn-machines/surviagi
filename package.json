@@ -35,6 +35,7 @@
     "data:migrate": "data/runtime/venv/bin/python scripts/data-pipeline.py migrate",
     "data:import:ontology": "data/runtime/venv/bin/python scripts/data-pipeline.py import-ontology",
     "data:ingest:x": "data/runtime/venv/bin/python scripts/data-pipeline.py ingest",
+    "data:recover:renamed": "data/runtime/venv/bin/python scripts/recover-renamed-posts.py",
     "data:extract:events": "data/runtime/venv/bin/python scripts/data-pipeline.py extract-events",
     "data:search:index": "data/runtime/venv/bin/python scripts/data-pipeline.py search-index",
     "data:search": "data/runtime/venv/bin/python scripts/data-pipeline.py search",
