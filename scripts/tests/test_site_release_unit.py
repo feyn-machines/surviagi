@@ -24,6 +24,30 @@ class UploadTest(unittest.TestCase):
             self.assertFalse([a for a in argv if a.startswith("--link-dest")])
 
 
+    def test_a_release_links_unchanged_files_from_the_production_release(self):
+        """The reference is the id in the server's `current` file; a name the server does not keep
+        would leave every release uploading in full."""
+        current = "20261011T163859Z-8cb85a4"
+        state = {"current": current, "previous": "20261011T162414Z-8cb85a4"}
+        uploads = []
+
+        def run(argv, **_):
+            if argv[0] == "rsync":
+                uploads.append(argv)
+
+        with mock.patch.object(release, "load_target", return_value=TARGET), \
+                mock.patch.object(release, "build", return_value="20261016T084255Z-c3724a8"), \
+                mock.patch.object(release, "remote"), \
+                mock.patch.object(release, "remote_id", side_effect=lambda _t, name: state.get(name, "")), \
+                mock.patch.object(release, "run", side_effect=run), \
+                mock.patch.object(release, "start_candidate"), \
+                mock.patch.object(release, "candidate_failures", return_value=([], "20261016T042031Z-7eca3cca")), \
+                mock.patch("sys.stdout"):
+            release.release_command()
+        self.assertEqual(len(uploads), 1)
+        self.assertIn(f"--link-dest=../{current}", uploads[0])
+
+
 class ReleaseIdTest(unittest.TestCase):
     def test_id_is_build_time_and_commit(self):
         built = datetime(2026, 10, 3, 10, 29, 12, 430661, tzinfo=timezone.utc)
