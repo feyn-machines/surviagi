@@ -88,7 +88,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
   body.push("", `## ${c.marketsTitle}`, "", c.marketsLead, "");
   if (marketRows.length === 0) body.push(c.marketsNone);
   for (const row of marketRows) {
-    body.push(`- ${link(language, row.label, `/markets/${row.slug}`)}${sep}${count(row.activities)} ${c.marketActivities}`);
+    body.push(`- ${link(language, row.label, `/markets/${row.slug}`)}${sep}${count(row.activities)} ${fill(c.marketActivities, { n: row.activities })}`);
   }
   // An occupation no update has reached has nothing of its own to say yet; its page is left out of the index too.
   return markdownResponse(language, `/occupations/${code}`, name, body, { index: assessed > 0 });
