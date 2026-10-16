@@ -67,6 +67,8 @@ class Step:
     name: str
     argv: list[str]
     check: Callable[["Outcome"], list[str]] = lambda _outcome: []
+    # What a person may want to read, without holding the release.
+    notes: Callable[["Outcome"], list[str]] = lambda _outcome: []
     # Exit statuses that still count as finished (the crawler's 2 = finished but needs attention).
     finished: tuple[int, ...] = (0,)
     before: Callable[[], None] | None = None
@@ -181,10 +183,37 @@ def extraction_problems(output: Path) -> Callable[[Outcome], list[str]]:
     return check
 
 
-def crawl_problems(outcome: Outcome) -> list[str]:
-    if outcome.returncode == 2:
-        return ["the crawl finished but needs attention (exit 2): read the jobs' stop_reason in its run file"]
-    return []
+# Above this share of jobs left incomplete, a crawl's gaps hold the release back.
+INCOMPLETE_JOBS_HELD = 0.05
+INGESTED = "Ingested into the collection store:"
+
+
+def crawl_review(run_file: Path, outcome: Outcome) -> tuple[list[str], list[str]]:
+    """(problems that hold the release, notes that do not) for a crawl that ran.
+
+    The crawler exits 2 for anything short of every job ending cleanly. One record it could not parse
+    (`parse_error:*`) refuses that record only; the release goes out with a note. A changed X schema, a
+    failed ingest, or more than INCOMPLETE_JOBS_HELD of the jobs left incomplete hold it."""
+    if outcome.returncode == 0:
+        return [], []
+    if INGESTED not in outcome.stdout:
+        return ["the crawl's run was not ingested; ingest it with `pnpm data:ingest:x <run>.json`"], []
+    try:
+        run = json.loads(run_file.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return [f"{run_file.name} cannot be read"], []
+    if run.get("schema_change"):
+        return [f"X answered in a shape the crawler does not know: {run['schema_change']}"], []
+    jobs = run.get("jobs") or []
+    incomplete = [j for j in jobs if j.get("status") != "search_ended"]
+    listed = [f"@{j.get('handle')}: {j.get('stop_reason')}" for j in incomplete]
+    if jobs and len(incomplete) / len(jobs) > INCOMPLETE_JOBS_HELD:
+        return [f"{len(incomplete)} of {len(jobs)} jobs incomplete: " + ", ".join(listed[:10])], []
+    if incomplete and all(str(j.get("stop_reason", "")).startswith("parse_error") for j in incomplete):
+        return [], [f"{len(incomplete)} of {len(jobs)} jobs refused a record: " + ", ".join(listed)]
+    if incomplete:
+        return [f"{len(incomplete)} of {len(jobs)} jobs incomplete: " + ", ".join(listed)], []
+    return [], [f"the crawl exited {outcome.returncode} with every job complete"]
 
 
 def typesafe_preflight(url: str = TYPESAFE_URL, opener=urllib.request.urlopen) -> None:
@@ -210,17 +239,21 @@ def steps(window: Window, root: Path = ROOT) -> list[Step]:
     start, end = window.iso(window.start), window.iso(window.end)
     official, panel = f"official-{tag}", f"panel-{tag}"
     extraction = f"data/extraction/v230-{tag}.json"
+    official_run, panel_run = f"data/collection/official-x/{official}.json", f"data/collection/panel/{panel}.json"
+
+    def crawl(run_file: str) -> dict:
+        return {"check": lambda outcome: crawl_review(root / run_file, outcome)[0],
+                "notes": lambda outcome: crawl_review(root / run_file, outcome)[1], "finished": (0, 2)}
+
     # Extraction files are immutable: one written by a run that stopped before ingesting it is ingested.
     extract = (pnpm("data:ingest:events", extraction) if (root / extraction).exists() else
                pnpm("data:extract:events", "--collection-run", official, "--collection-run", panel,
                     "--window-start", start, "--window-end", end, "--output", extraction))
     return [
         Step("crawl-official", pnpm("crawl", "timeline", "--targets", "official", "--start", start, "--end", end,
-                                    "--output", f"data/collection/official-x/{official}.json"),
-             check=crawl_problems, finished=(0, 2)),
+                                    "--output", official_run), **crawl(official_run)),
         Step("crawl-panel", pnpm("crawl", "timeline", "--targets", "panel", "--start", start, "--end", end,
-                                 "--output", f"data/collection/panel/{panel}.json"),
-             check=crawl_problems, finished=(0, 2)),
+                                 "--output", panel_run), **crawl(panel_run)),
         Step("extract-events", extract, check=extraction_problems(root / extraction)),
         Step("verify", pnpm("data:verify"), check=batch_problems, before=typesafe_preflight),
         Step("identify-models", pnpm("data:identify:models"), check=batch_problems),
@@ -287,13 +320,15 @@ class Daily:
             outcome = self.runner(step, folder / f"{number:02}-{step.name}.log")
             finished = outcome.returncode in step.finished
             problems = step.check(outcome) if finished else []
+            notes = step.notes(outcome) if finished else []
             record["steps"][step.name] = {"finished": finished, "exit": outcome.returncode,
                                           "seconds": round(outcome.seconds, 1), "problems": problems,
+                                          "notes": notes,
                                           "result": outcome.result,
                                           "said": (outcome.stdout.strip().splitlines() or [""])[-1]}
             record_path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
             self.out(f"     exit {outcome.returncode} in {outcome.seconds:.0f}s"
-                     + "".join(f"\n     ! {p}" for p in problems))
+                     + "".join(f"\n     ! {p}" for p in problems) + "".join(f"\n     - {n}" for n in notes))
             if not finished:
                 raise Stop(f"{step.name} failed (exit {outcome.returncode}); log: {folder / f'{number:02}-{step.name}.log'}")
         state.pop("pending", None)
@@ -306,13 +341,14 @@ class Daily:
         """Import the snapshot as a verified release on the server; make it live only when nothing is held."""
         release = Step("data:release", pnpm("data:release"))
         for attempt in range(1, RELEASE_ATTEMPTS + 1):
-            outcome = self.runner(release, self.daily_dir / "release.log")
+            # One log per attempt: a retry must not overwrite why the one before failed.
+            outcome = self.runner(release, self.daily_dir / f"release-{attempt}.log")
             if outcome.returncode == 0:
                 break
             # The release is one transaction; a dropped SSH forward leaves nothing behind.
             self.out(f"data:release failed (exit {outcome.returncode}), attempt {attempt} of {RELEASE_ATTEMPTS}")
             if attempt == RELEASE_ATTEMPTS:
-                raise Stop("data:release kept failing; see data/daily/release.log")
+                raise Stop(f"data:release kept failing; see {self.daily_dir}/release-*.log")
             self.sleep(60)
         self.out(outcome.stdout.strip())
         if held:
