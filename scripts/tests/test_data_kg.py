@@ -328,16 +328,32 @@ class CliTest(KgBase):
             fake = mock.MagicMock()
             with mock.patch.object(cli.server_db, "server_connection", return_value=fake), \
                     mock.patch.object(cli, "COMMANDS", {**cli.COMMANDS, command: lambda conn, args: "D1"}), \
-                    mock.patch.object(cli.server_db, "report_production") as report, redirect_stdout(io.StringIO()):
+                    mock.patch.object(cli.server_db, "report_production") as report, \
+                    mock.patch.object(cli.site_release, "notify_indexnow"), redirect_stdout(io.StringIO()):
                 self.assertEqual(cli.main([command, "--target", "server"]), 0)
             report.assert_called_once_with("D1")
+
+    def test_indexnow_hears_of_a_server_release_only_once_the_site_serves_it(self):
+        for command in ("promote", "rollback"):
+            for serving in (True, False):
+                with mock.patch.object(cli.server_db, "server_connection", return_value=mock.MagicMock()), \
+                        mock.patch.object(cli, "COMMANDS", {**cli.COMMANDS, command: lambda conn, args: "D1"}), \
+                        mock.patch.object(cli.server_db, "report_production", return_value=serving), \
+                        mock.patch.object(cli.site_release, "notify_indexnow") as notify, redirect_stdout(io.StringIO()):
+                    self.assertEqual(cli.main([command, "--target", "server"]), 0)
+                if serving:
+                    notify.assert_called_once_with(only_changed=True)
+                else:
+                    notify.assert_not_called()
 
     def test_local_promote_does_not_ask_the_production_site(self):
         with mock.patch.object(cli, "connect", return_value=mock.MagicMock()), \
                 mock.patch.object(cli, "COMMANDS", {**cli.COMMANDS, "promote": lambda conn, args: "D1"}), \
-                mock.patch.object(cli.server_db, "report_production") as report, redirect_stdout(io.StringIO()):
+                mock.patch.object(cli.server_db, "report_production") as report, \
+                mock.patch.object(cli.site_release, "notify_indexnow") as notify, redirect_stdout(io.StringIO()):
             self.assertEqual(cli.main(["promote"]), 0)
         report.assert_not_called()
+        notify.assert_not_called()
 
 if __name__ == "__main__":
     unittest.main()

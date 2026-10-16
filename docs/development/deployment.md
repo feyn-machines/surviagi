@@ -182,7 +182,7 @@ pnpm data:release
 pnpm data:promote
 ```
 
-预期：让最新的 `verified` 版本生效，打印 `active release: <id>`；随后通过 SSH 转发访问正式站 `/healthz`，最多等 60 秒，报告 `production site now serves data release <id>`（网站每 30 秒查一次生效指针，所以通常要等十几到三十秒）；超过 60 秒仍是旧版本则打印 `WARNING: ...`（数据库里已经生效，网站仍在重试读取，用 `pnpm site:status` 再看）；服务器上还没有正式站时打印 `no production site is running yet`，命令仍以状态 0 结束。
+预期：让最新的 `verified` 版本生效，打印 `active release: <id>`；随后通过 SSH 转发访问正式站 `/healthz`，最多等 60 秒，报告 `production site now serves data release <id>`（网站每 30 秒查一次生效指针，所以通常要等十几到三十秒）；超过 60 秒仍是旧版本则打印 `WARNING: ...`（数据库里已经生效，网站仍在重试读取，用 `pnpm site:status` 再看）；服务器上还没有正式站时打印 `no production site is running yet`，命令仍以状态 0 结束。正式站报告新版本后，读取公开的 `https://surviagi.com/sitemap.xml`，与 IndexNow 上次接受的站点地图（本机 `data/indexnow/sitemap.json`，不进 Git）比较，只提交新增、`lastmod` 变化和已移除的地址，打印 `IndexNow: <状态码> for <n> addresses`；没有变化时打印 `IndexNow: none of the <n> addresses changed; nothing sent`；本机还没有记录时提交全部地址。提交被接受后，这份站点地图成为下次比较的基准；提交失败或站点地图读不到时只打印 `IndexNow not notified (...)`，基准不变，数据发布不受影响。`pnpm site:promote` 和 `pnpm site:indexnow` 照旧提交全部地址，也会更新这份基准。
 
 ```bash
 pnpm data:releases
@@ -208,7 +208,7 @@ pnpm site:rollback
 pnpm data:rollback
 ```
 
-预期：让上一个生效过的数据版本重新生效，打印 `active release: <id>` 并等待正式站报告它；约 30 秒内网站读到。连续运行两次会回到原来的版本。回滚数据不影响代码版本，也不删除任何数据版本。
+预期：让上一个生效过的数据版本重新生效，打印 `active release: <id>` 并等待正式站报告它；约 30 秒内网站读到，随后像 `data:promote` 一样只向 IndexNow 提交变化的地址。连续运行两次会回到原来的版本。回滚数据不影响代码版本，也不删除任何数据版本。
 
 ## 7. 数据库
 

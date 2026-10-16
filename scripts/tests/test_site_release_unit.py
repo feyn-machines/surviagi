@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import site_release as release  # noqa: E402
@@ -171,6 +172,110 @@ class FetchAndSmokeTest(unittest.TestCase):
         failures = release.smoke("http://127.0.0.1:1", None)
         self.assertEqual(len(failures), 1)
         self.assertIn("http://127.0.0.1:1 is not reachable", failures[0])
+
+
+def sitemap(entries):
+    """A sitemap as Next writes it: each address, with a lastmod when it has one."""
+    urls = "".join(f"<url>\n<loc>{url}</loc>\n" + (f"<lastmod>{mod}</lastmod>\n" if mod else "") +
+                   "<changefreq>daily</changefreq>\n</url>\n" for url, mod in entries.items())
+    return f'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n{urls}</urlset>\n'
+
+
+class IndexNowChangesTest(unittest.TestCase):
+    def test_the_sitemap_is_read_as_address_and_lastmod(self):
+        xml = sitemap({"https://surviagi.com/markets": "2026-10-16T04:20:31.000Z",
+                       "https://surviagi.com/work/a?x=1&amp;y=2": ""})
+        self.assertEqual(release.sitemap_entries(xml), {"https://surviagi.com/markets": "2026-10-16T04:20:31.000Z",
+                                                        "https://surviagi.com/work/a?x=1&y=2": ""})
+
+    def test_new_moved_and_gone_addresses_are_sent_and_unchanged_ones_are_not(self):
+        previous = {"/same": "2026-10-13", "/undated": "", "/moved": "2026-10-13", "/gone": "2026-10-10"}
+        current = {"/same": "2026-10-13", "/undated": "", "/moved": "2026-10-16", "/new": ""}
+        self.assertEqual(release.changed_addresses(previous, current), ["/gone", "/moved", "/new"])
+
+    def test_a_page_that_gains_its_first_dated_evidence_is_sent(self):
+        self.assertEqual(release.changed_addresses({"/work/a": ""}, {"/work/a": "2026-10-16"}), ["/work/a"])
+
+    def test_without_a_baseline_every_address_is_sent(self):
+        self.assertEqual(release.changed_addresses(None, {"/b": "", "/a": "x"}), ["/a", "/b"])
+
+
+class NotifyIndexNowTest(unittest.TestCase):
+    """notify_indexnow against a fake sitemap and a fake IndexNow; nothing leaves the machine."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.state = Path(tmp.name) / "indexnow" / "sitemap.json"
+        self.sent = []
+        self.accept = True
+
+    def notify(self, entries, only_changed=True, status=200):
+        def submit(key, urls):
+            self.sent.append(urls)
+            return self.accept
+        with mock.patch.object(release, "indexnow_key", return_value="a" * 32), \
+                mock.patch.object(release, "fetch", return_value=(status, {}, sitemap(entries))), \
+                mock.patch.object(release, "submit_indexnow", side_effect=submit), \
+                mock.patch("sys.stdout"), mock.patch("sys.stderr"):
+            release.notify_indexnow(only_changed=only_changed, state=self.state)
+
+    def test_a_data_release_sends_only_what_changed_since_the_last_accepted_sitemap(self):
+        self.notify({"/a": "1", "/b": "1"})
+        self.assertEqual(self.sent, [["/a", "/b"]])  # no baseline yet: everything
+        self.notify({"/a": "1", "/b": "2", "/c": ""})
+        self.assertEqual(self.sent[-1], ["/b", "/c"])
+        self.notify({"/a": "1", "/b": "2", "/c": ""})
+        self.assertEqual(len(self.sent), 2)  # nothing changed, nothing sent
+
+    def test_a_refused_submission_keeps_the_old_baseline(self):
+        self.notify({"/a": "1"})
+        self.accept = False
+        self.notify({"/a": "2"})
+        self.accept = True
+        self.notify({"/a": "2"})
+        self.assertEqual(self.sent, [["/a"], ["/a"], ["/a"]])
+
+    def test_a_code_release_sends_everything_and_records_the_baseline(self):
+        self.notify({"/a": "1"})
+        self.notify({"/a": "1", "/b": ""}, only_changed=False)
+        self.assertEqual(self.sent[-1], ["/a", "/b"])
+        self.notify({"/a": "1", "/b": ""})
+        self.assertEqual(len(self.sent), 2)
+
+    def test_a_broken_sitemap_sends_nothing_and_keeps_the_baseline(self):
+        self.notify({"/a": "1"})
+        self.notify({}, status=200)
+        self.notify({"/a": "2"}, status=503)
+        self.assertEqual(self.sent, [["/a"]])
+        self.assertEqual(json.loads(self.state.read_text())["entries"], {"/a": "1"})
+
+    def test_an_unreadable_sitemap_does_not_fail_the_release(self):
+        with mock.patch.object(release, "indexnow_key", return_value="a" * 32), \
+                mock.patch.object(release, "fetch", side_effect=release.ReleaseError("no answer")), \
+                mock.patch.object(release, "submit_indexnow") as submit, mock.patch("sys.stderr"):
+            release.notify_indexnow(only_changed=True, state=self.state)
+        submit.assert_not_called()
+
+    def test_submissions_are_split_at_the_protocol_limit(self):
+        seen = []
+
+        class Answer:
+            status = 202
+            def __enter__(self):
+                return self
+            def __exit__(self, *exc):
+                return False
+
+        def urlopen(request, timeout):
+            seen.append(len(json.loads(request.data)["urlList"]))
+            return Answer()
+        with mock.patch.object(release.urllib.request, "urlopen", side_effect=urlopen), mock.patch("sys.stdout"):
+            self.assertTrue(release.submit_indexnow("a" * 32, [f"/{i}" for i in range(release.INDEXNOW_BATCH + 1)]))
+        self.assertEqual(seen, [release.INDEXNOW_BATCH, 1])
+
+    def test_the_baseline_lives_under_the_ignored_data_directory(self):
+        self.assertEqual(release.INDEXNOW_STATE.relative_to(release.ROOT).parts[0], "data")
 
 
 class RscRequestTest(unittest.TestCase):

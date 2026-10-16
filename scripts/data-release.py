@@ -14,7 +14,9 @@ returns to where you started.
 `--target server` runs the same commands against the server database through an
 SSH forward (settings in .env.deploy; the writer's password is read from the
 server into memory). After `promote` and `rollback` it reports what the
-production site serves. `--target local` (the default) is the local database.
+production site serves and, once it serves the new release, tells IndexNow
+which addresses are new, changed or gone since the sitemap it last accepted.
+`--target local` (the default) is the local database.
 Errors are one `error: ...` line and exit status 1.
 """
 import argparse
@@ -30,6 +32,7 @@ import psycopg  # noqa: E402
 import server_db  # noqa: E402
 from data_pipeline import kg  # noqa: E402
 from data_pipeline.db import connect  # noqa: E402
+import site_release  # noqa: E402
 from site_release import ReleaseError  # noqa: E402
 
 
@@ -104,7 +107,8 @@ def cmd_reset(conn, args):
 COMMANDS = {"release": cmd_release, "promote": cmd_promote, "rollback": cmd_rollback, "status": cmd_status,
             "reset": cmd_reset}
 SERVER_ONLY = {"setup-db"}
-# After these the production site is asked which data release it serves (server target only).
+# After these the production site is asked which data release it serves, and IndexNow hears what changed
+# once it serves it (server target only).
 WATCHED = {"promote", "rollback"}
 
 
@@ -124,8 +128,8 @@ def main(argv=None):
             return 0
         with open_target(args.target) as conn:
             result = COMMANDS[args.command](conn, args)
-        if args.target == "server" and args.command in WATCHED:
-            server_db.report_production(result)
+        if args.target == "server" and args.command in WATCHED and server_db.report_production(result):
+            site_release.notify_indexnow(only_changed=True)
     except ReleaseError as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
