@@ -161,6 +161,26 @@ test("www.surviagi.com is sent to the apex with the same path and query", async 
       assert.equal(answer.location, `${SITE}${path}`, `${host}${path}`);
     }
   }
+  // Every address means the files beside the pages too: robots.txt, the sitemap, llms.txt, share images, figures,
+  // the icon and the IndexNow key. On the apex they are still served as they are.
+  const key = readdirSync(join(ROOT, "public")).find((name) => /^[0-9a-f]{32}\.txt$/.test(name));
+  const figure = readdirSync(join(ROOT, "public", "figures"), { recursive: true }).find((name) => name.includes("."));
+  const filePaths = ["/robots.txt", "/sitemap.xml", "/llms.txt", "/og/en.png", "/icon.svg",
+    ...(key ? [`/${key}`] : []), ...(figure ? [`/figures/${figure}`] : [])];
+  for (const host of ["www.surviagi.com", "openaiwill.com", "www.openaiwill.com"]) {
+    for (const path of filePaths) {
+      const answer = await getWithHeaders(site.base, path, { host });
+      assert.equal(answer.status, 308, `${host}${path}`);
+      assert.equal(answer.location, `${SITE}${path}`, `${host}${path}`);
+    }
+  }
+  for (const path of filePaths) {
+    const answer = await getWithHeaders(site.base, path, { host: "surviagi.com" });
+    assert.equal(answer.status, 200, `surviagi.com${path}`);
+    assert.equal(answer.location, null, `surviagi.com${path}`);
+  }
+  // The health check is local and answers on any host.
+  assert.equal((await getWithHeaders(site.base, "/healthz", { host: "openaiwill.com" })).status, 200);
   // The case of a host name does not matter; a port or a trailing dot names the same host.
   for (const host of ["WWW.SurviAGI.com", "www.surviagi.com:443", "www.surviagi.com:8080", "www.surviagi.com."]) {
     const answer = await getWithHeaders(site.base, "/voices", { host });

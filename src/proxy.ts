@@ -13,6 +13,13 @@ function isNavigation(request: NextRequest) {
   return (destination === null || destination === "document") && !purpose.includes("prefetch");
 }
 
+/**
+ * Files that are not pages are named one by one. "Anything with an extension"
+ * would be wrong: occupation addresses such as /occupations/11-1011.00 contain
+ * a dot. The 32-hex `.txt` is the IndexNow key file in `public/`.
+ */
+const FILE_PATH = /^\/(?:og\/|figures\/|robots\.txt$|sitemap\.xml$|llms\.txt$|icon\.svg$|[0-9a-f]{32}\.txt$)/;
+
 const REWRITTEN = "x-openaiwill-rewritten";
 // A value only this process knows. A fixed value would let any client send the header and skip
 // the language rules (duplicate /en/... pages, no redirects), so only our own rewrite can match.
@@ -43,6 +50,8 @@ export function proxy(request: NextRequest) {
   }
   // `/api/*` reaches this function only for the redirect above; it has no language.
   if (request.nextUrl.pathname.startsWith("/api/")) return passThrough();
+  // Nor do the files beside the pages: on the apex they are served untouched.
+  if (FILE_PATH.test(request.nextUrl.pathname)) return NextResponse.next();
 
   // The server runs this proxy again on the address a rewrite produced. That second
   // pass is ours, not a reader asking for /en/..., so it must not be sent back.
@@ -84,15 +93,11 @@ export function proxy(request: NextRequest) {
 }
 
 /**
- * Files that are not pages are named one by one. "Anything with an extension"
- * would be wrong: occupation addresses such as /occupations/11-1011.00 contain
- * a dot. The 32-hex `.txt` is the IndexNow key file in `public/`. Route handlers
- * under `/api/` have no language: rewritten to `/en/api/...` they would be a 404, so they are
- * matched only to get the host redirect and are then passed through untouched.
+ * Everything goes through the proxy so that every address of a redirected host is redirected, files included;
+ * the files (`FILE_PATH`) and `/api/*` are then passed through without a language. Left out: Next's own
+ * assets, which only pages on the apex ask for, and `/healthz`, which the server's health check asks for on
+ * 127.0.0.1. Route handlers under `/api/` have no language: rewritten to `/en/api/...` they would be a 404.
  */
 export const config = {
-  matcher: [
-    "/api/:path*",
-    "/((?!_next/|api/|og/|figures/|healthz$|robots\\.txt$|sitemap\\.xml$|llms\\.txt$|icon\\.svg$|[0-9a-f]{32}\\.txt$).*)",
-  ],
+  matcher: ["/((?!_next/|healthz$).*)"],
 };
