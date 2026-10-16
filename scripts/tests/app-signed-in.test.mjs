@@ -24,7 +24,6 @@ let base;
 let names;
 let admin;
 let pool;
-let server;
 const people = {};
 
 /** Better Auth 1.7.7 on an http base URL: cookie `better-auth.session_token`, value `<token>.<base64 HMAC-SHA256(token, secret)>`, URL-encoded. */
@@ -80,7 +79,7 @@ before(async () => {
 
   const port = await freePort();
   base = `http://127.0.0.1:${port}`;
-  server = await startServer(
+  await startServer(
     {
       SNAPSHOT_DIR,
       APP_DATABASE_URL: `postgres://${names.role}:${password}@127.0.0.1:7543/${names.database}`,
@@ -119,7 +118,11 @@ const decideAs = (who, fields, extra = {}) => call("/api/admin/submissions", { w
 const me = async (who) => (await call("/api/me", { who })).json();
 /** `@name` as the page writes it: React puts a comment between the two text parts. */
 const shows = (html, handle) => html.includes(`@${handle}`) || html.includes(`@<!-- -->${handle}`);
-const t = (name, fn) => test(name, { skip: SKIP, timeout: 60000 }, fn);
+/** `t(name, fn)` or `t(name, { skip }, fn)`: a test's own skip reason is added to the file's. */
+const t = (name, options, fn) => {
+  if (typeof options === "function") [options, fn] = [{}, options];
+  return test(name, { timeout: 60000, ...options, skip: SKIP || options.skip }, fn);
+};
 
 t("the signed cookie is accepted: get-session and /api/me return the user", async () => {
   const session = await (await call("/api/auth/get-session", { who: "a" })).json();
