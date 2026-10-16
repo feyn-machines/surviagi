@@ -65,7 +65,7 @@ openaiwill 的三样独有资产：
 | --- | --- |
 | IndexNow | 已提交 3,428 个地址，已接收 |
 | Google Search Console | 已添加网域并提交站点地图；状态显示"无法抓取"，属新站排队期间的常见显示，待复查 |
-| Bing Webmaster Tools | 未登记 |
+| Bing Webmaster Tools | 未登记（2026-10-08 起 Bing 给 surviagi.com 发站长邮件，说明已登记，见下文 2026-10-17 一节） |
 | `www` 跳转到主域名 | 未设置，需在 Cloudflare 加重定向规则 |
 
 ## 持续要做的事
@@ -132,6 +132,53 @@ openaiwill 的三样独有资产：
 - 上次接受的站点地图记在本机 `data/indexnow/sitemap.json`（不进 Git）。本机还没有这份记录时，第一次提交全部地址。
 - 代码发布仍然提交全部地址（页面模板可能全部变了），并更新这份记录。
 - 判断依据是上一节按证据计算的 `lastmod`：一项工作有了新证据，它所在的赛道、职业和职业大类也随之变化，这些页面都会被提交；列表页和首页用数据生成时间，每次数据发布都会被提交。
+
+## 2026-10-17 线上核查（已核查；修改在本地 main，未上线）
+
+用户 2026-10-17 要求核查线上站点的 SEO 和 GEO，对照本文列出已做到的、还差的和补法，能改的直接改。
+
+**怎么查的**：直接请求正式站的 `robots.txt`、`sitemap.xml`、`llms.txt`，逐个请求站点地图里的 2,250 个地址（状态码、`robots`、canonical、标题、描述），抽查各类页面的 `<head>`、结构化数据、直接答案句和 `raw.md`；用 13 个搜索引擎和 AI 爬虫的 User-Agent 请求同一页面；Search Console 和 Bing 没有可用的接口（本机 `gws` 不支持 Search Console），按它们发到负责人邮箱的通知核对。
+
+**已经做到的**（线上实测）：
+
+- `robots.txt` 对所有爬虫开放，点名 13 个 AI 爬虫，只挡 `/admin` 和 `/api/`；Googlebot、bingbot、GPTBot、OAI-SearchBot、ClaudeBot、PerplexityBot、Google-Extended、CCBot、Bytespider、Amazonbot、meta-externalagent、DuckAssistBot 请求页面都得到 200，Cloudflare 没有按 User-Agent 拦截。
+- `http://` 和 `www.` 都 301/308 到 `https://surviagi.com`（上文“`www` 跳转未设置”已过时）。
+- 站点地图 2,250 个地址逐个请求：全部 200，没有一个带 `noindex`，canonical 全部指向自身，每页都有描述；标题只有两组重复，都是同一件事被记成了两条更新（见下）。
+- 每页有 canonical、`hreflang`、Open Graph；工作、赛道、职业页有带日期的直接答案句和 `raw.md`，副本用 HTTP `Link` 把页面标为 canonical；文章有 RSS、`raw.md` 和带 `datePublished` 的文章结构化数据。
+- IndexNow：密钥文件可访问；10-16 的数据发布后 14:37 推送过，本机记录 2,250 个地址。
+
+**Search Console 和 Bing 的通知**：
+
+| 日期 | 来源 | 内容 | 判断 |
+| --- | --- | --- | --- |
+| 10-08 | Search Console | 开始收集 surviagi.com 的搜索展示次数 | 已被收录并出现在结果中 |
+| 10-10 | Search Console | 数据集结构化数据：缺少 `license`（非严重） | 需负责人选定数据许可，见下 |
+| 10-11 | Search Console | 新的未编入索引原因：“被 noindex 排除”“网页会自动重定向” | 前者是有意的（无证据的职业页）；后者主要来自每页的 `?lang=` 链接，已处理 |
+| 10-08 | Bing | “Crawl politeness issues”：站长工具里的抓取速度设置妨碍抓取 | 需负责人在 Bing 站长工具把抓取速度改回默认或调高 |
+
+**本次修改**（每项一个分支，已合并到本地 main，均有测试，未发布）：
+
+1. `llms.txt` 开头一句带日期的现状（多少类工作有级别、最高到哪级、几类、多少条更新来自几家公司），数字与首页同源，并列出最高一级的全部工作页。
+2. 首页“30 天内的 AI 更新”原来是整个采集窗口（2026-08-22 起，56 天）的条数，445 条；改为只数最后 30 天。
+3. 更新页和白皮书有 `raw.md`；更新页的副本在两种语言里都把英文页标为 canonical。
+4. `llms.txt` 写出每一级的含义和所需证据（与首页“尺度”同一份文字，移到 `src/lib/level-names.ts`）。白皮书并不定义 L0–L5，概念类问题此前没有机器可读的出处。
+5. 职业大类页（`/occupations/g/…`）加了带日期的直接答案句，写法同职业页。
+6. 语言切换的 `?lang=` 链接加 `rel="nofollow"`：它们只是跳转，另一语言的页面已由 `hreflang` 给出。
+7. 话题页加了带日期的一句（多少账号在多少条帖子里主张其中一个答案、多少条更新支持或反驳、只有一个答案领先时写出它，并写明本站不给答案），并有 `raw.md`。
+
+**还差的，以及怎么补**：
+
+| 事项 | 补法 | 谁 |
+| --- | --- | --- |
+| 上面 7 项未上线 | `pnpm site:release` 后 `pnpm site:promote`；代码发布会向 IndexNow 推送全部地址 | 负责人决定发布时间 |
+| 数据集缺 `license` | 选定数据许可（建议 CC BY 4.0：要求署名，正合“引用时写页面地址”）；之后在 `datasetLd` 加 `license`，条款页写明，也解开“可下载的数据文件” | 负责人决定 |
+| Bing 抓取速度 | 在 Bing 站长工具的 Crawl Control 改回默认 | 负责人 |
+| 数据只到 10-16 | `pnpm data:daily --promote` 的定时运行尚未设定 | 负责人在前台设定 |
+| 两件事各有两条更新（Meta Muse；Claude Dashboards 和 Claude Motion），标题相同 | 事件去重漏掉了它们；在数据管线里合并，保留各自的原帖 | 数据管线 |
+| 17 条更新没有日期 | 文章结构化数据因此缺 `datePublished`；需在抽取时补发生时间，不能用采集时间冒充 | 数据管线 |
+| 详情页标题（改进顺序第 3 项） | 文案需负责人确定 | 负责人 |
+| 首页 HTML 约 1.2 MB（内嵌 SVG 约 0.46 MB、页面数据约 0.56 MB） | 在 Googlebot 的 2 MB 上限内，但较重；以后可把图形数据改为按需加载 | 以后 |
+| AI 引擎引用情况 | 每月用固定问题询问各 AI 引擎（见部署手册），本次未做 | 每月 |
 
 ## 文章栏目（2026-10-07 实现）
 
