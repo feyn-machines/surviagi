@@ -37,7 +37,7 @@
 | 候选站 | `openaiwill-next` | 8321 | `preview` | 只能经 SSH 隧道预览，页面带 `X-Robots-Tag: noindex` |
 | 数据库 | `openaiwill-db` | 5434 | 无 | 只能经 SSH 转发访问 |
 
-- 正式地址（canonical）是 `https://surviagi.com`，不带 www（2026-10-08 改名，见 `src/lib/site-origin.ts`）。改名前的 `openaiwill.com` 和 `www.openaiwill.com` 保留，由网站自己逐页 308 跳转到新地址。服务器上的内部名字有意不改：`DEPLOY_ROOT` 默认 `/opt/openaiwill`，Compose 项目、容器、镜像、Docker 网络和数据库仍叫 `openaiwill*`。
+- 正式地址（canonical）是 `https://surviagi.com`，不带 www（2026-10-08 改名，见 `src/lib/site-origin.ts`）。改名前的 `openaiwill.com` 已完全弃用（负责人 2026-10-16）：它在 Cloudflare 里没有 DNS 记录，不再维护，也不在任何检查里。服务器上的内部名字有意不改：`DEPLOY_ROOT` 默认 `/opt/openaiwill`，Compose 项目、容器、镜像、Docker 网络和数据库仍叫 `openaiwill*`。
 - 官方账号：X `https://x.com/surviagi`，Discord `https://discord.gg/ArVHw2K9X`，GitHub `https://github.com/feyn-machines/surviagi`。每个页面的页眉页脚和 `llms.txt` 已链接它们。
 
 ## 2. 首次准备
@@ -79,9 +79,9 @@ ssh -i <密钥> <用户>@<地址> 'rm -rf <DEPLOY_ROOT>/releases/<id>; sudo dock
 
 服务器 80/443 关闭，把域名用 A 记录指向服务器 IP 不会生效。地址必须是 Tunnel 的公开主机名。
 
-1. 确认 `surviagi.com` 和 `openaiwill.com` 的 DNS 都托管在运行这条 Tunnel 的同一个 Cloudflare 账号下；不在则先把域名的 NS 改过去。
-2. 在 Tunnel 中添加四个公开主机名 `surviagi.com`、`www.surviagi.com`、`openaiwill.com`、`www.openaiwill.com`，都指向 `http://localhost:8320`。Cloudflare 自动建立 CNAME，不要手工加 A 记录。2026-10-16 查过：`surviagi.com` 和 `www.surviagi.com` 已配好；`openaiwill.com` 和 `www.openaiwill.com` 在 Cloudflare 里没有任何 DNS 记录（NS 在 Cloudflare，`dig` 查不到 A 或 CNAME），旧地址因此打不开，网站自己的跳转用不上——这两个主机名要补上。补好后用 `dig +short openaiwill.com @1.1.1.1` 确认有地址。
-3. 跳转由网站自己完成：`www.surviagi.com`、`openaiwill.com`、`www.openaiwill.com` 对任何路径和查询串返回 308，Location 是固定的 `https://surviagi.com` 加原路径，只认这三个主机名（`/api/*` 也一样，`/healthz` 和静态文件除外）。Cloudflare 上的 301 重定向规则因此是可选的：加了也可以，`pnpm site:promote` 的公开检查对 `https://www.surviagi.com/` 接受 301 或 308 指向主域名；www 地址解析不到时该项不算失败。两个旧主机名不在公开检查里，用 `curl -sI https://openaiwill.com/markets` 看一次（预期 `308`，`location: https://surviagi.com/markets`）。
+1. 确认 `surviagi.com` 的 DNS 托管在运行这条 Tunnel 的同一个 Cloudflare 账号下；不在则先把域名的 NS 改过去。
+2. 在 Tunnel 中添加公开主机名 `surviagi.com` 和 `www.surviagi.com`，都指向 `http://localhost:8320`。Cloudflare 自动建立 CNAME，不要手工加 A 记录。（服务器上的 Tunnel 已按此配置；这一步只在重建时需要。）
+3. `www.surviagi.com` 到 `https://surviagi.com` 的跳转由网站自己完成（对任何路径和查询串返回 308，Location 是固定的 `https://surviagi.com` 加原路径；`/api/*` 也一样，`/healthz` 和静态文件除外）。Cloudflare 上的 301 重定向规则因此是可选的：加了也可以，`pnpm site:promote` 的公开检查对 `https://www.surviagi.com/` 接受 301 或 308 指向主域名；www 地址解析不到时该项不算失败。
 4. 关闭"阻止 AI 爬虫"（Block AI bots）和托管的 `robots.txt`。开着会覆盖站点自己的爬虫规则，GEO 部分的工作等于白做。
 5. 不缓存 HTML：不要开启"Cache Everything"。语言跳转依赖源站响应，页面按请求渲染，数据发布后约 30 秒内变化；被边缘缓存的 HTML 无法即时更新。只缓存 `/_next/static/`（默认如此）。
 
@@ -366,7 +366,7 @@ pnpm submissions:pull
 
 以下需要本人的账号。
 
-1. Google Search Console：添加 `surviagi.com` 域名资源，用 DNS TXT 记录验证；在"站点地图"提交 `https://surviagi.com/sitemap.xml`。旧的 `openaiwill.com` 资源保留，用"更改地址"工具指向 `surviagi.com`。
+1. Google Search Console：添加 `surviagi.com` 域名资源，用 DNS TXT 记录验证；在"站点地图"提交 `https://surviagi.com/sitemap.xml`。
 2. Bing Webmaster Tools：同样用 DNS TXT 验证并提交该 sitemap。
 3. 确认 AI 爬虫未被 Cloudflare 拦截：
 
