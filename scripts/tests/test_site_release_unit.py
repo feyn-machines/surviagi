@@ -14,7 +14,7 @@ TARGET = {"DEPLOY_HOST": "h.example", "DEPLOY_USER": "u", "DEPLOY_SSH_KEY": "/k/
 class UploadTest(unittest.TestCase):
     def test_unchanged_files_are_linked_from_the_previous_release(self):
         argv = release.upload_argv(TARGET, "20261004T150523Z-c7f1d16", "20261003T102912Z-e2d4005")
-        self.assertIn("--link-dest=../20261003T102912Z-e2d4005", argv)
+        self.assertIn("--link-dest=/opt/openaiwill/releases/20261003T102912Z-e2d4005", argv)
         self.assertEqual(argv[-1], "u@h.example:/opt/openaiwill/releases/20261004T150523Z-c7f1d16/")
         self.assertTrue(argv[-2].endswith("/20261004T150523Z-c7f1d16/"))
 
@@ -45,7 +45,7 @@ class UploadTest(unittest.TestCase):
                 mock.patch("sys.stdout"):
             release.release_command()
         self.assertEqual(len(uploads), 1)
-        self.assertIn(f"--link-dest=../{current}", uploads[0])
+        self.assertIn(f"--link-dest=/opt/openaiwill/releases/{current}", uploads[0])
 
 
 class ReleaseIdTest(unittest.TestCase):
