@@ -475,6 +475,58 @@ test("the sitemap lists each address once, with its counterpart, and the address
   }
 });
 
+test("a detail page's lastmod is when its newest dated evidence happened, never when the data was published", { skip: !HAS_SNAPSHOT }, () => {
+  const read = (name) => JSON.parse(readFileSync(join(SNAPSHOT_DIR, `${name}.json`), "utf8"));
+  const { events, evidence, activities } = read("chain");
+  const progress = read("progress");
+  const second = (time) => time.replace(/(T\d{2}:\d{2}:\d{2})\.\d+/, "$1");
+  const latest = (times) => times.filter(Boolean).sort().at(-1) ?? null;
+
+  // The same joins the pages make: work -> its readings; market -> its work; occupation -> the markets serving it;
+  // group -> its occupations.
+  const occurred = new Map(events.map((e) => [e.event_id, e.occurred_at]));
+  const byActivity = new Map();
+  for (const row of evidence) byActivity.set(row.activity_id, latest([byActivity.get(row.activity_id), occurred.get(row.event_id)]));
+  const byMarket = new Map();
+  for (const a of activities) byMarket.set(a.market_id, latest([byMarket.get(a.market_id), byActivity.get(a.activity_id)]));
+  const byOccupation = new Map();
+  for (const edge of read("markets")) {
+    byOccupation.set(edge.occupation_id, latest([byOccupation.get(edge.occupation_id), byMarket.get(edge.market_id)]));
+  }
+  const byGroup = new Map();
+  for (const [id, entry] of Object.entries(progress.occupations)) {
+    byGroup.set(entry.group_id, latest([byGroup.get(entry.group_id), byOccupation.get(id)]));
+  }
+  const topicDates = new Map(read("topics").map((t) => [t.slug, t.latest_claim_at]));
+  const expected = (path) => {
+    let m;
+    if ((m = path.match(/^\/updates\/(.+)$/))) return occurred.get(m[1]) ?? null;
+    if ((m = path.match(/^\/topics\/(.+)$/))) return topicDates.get(m[1]) ?? null;
+    if ((m = path.match(/^\/work\/(.+)$/))) return byActivity.get(`oaw:market:${m[1]}`);
+    if ((m = path.match(/^\/markets\/(.+)$/))) return byMarket.get(`oaw:market:${m[1]}`);
+    if ((m = path.match(/^\/occupations\/g\/(.+)$/))) return byGroup.get(`oaw:occupation-group:${m[1]}`);
+    if ((m = path.match(/^\/occupations\/(.+)$/))) return byOccupation.get(`oaw:occupation:${m[1]}`);
+    return undefined;
+  };
+
+  let checked = 0;
+  let dated = 0;
+  for (const [entry] of body("sitemap.xml").matchAll(/<url>[\s\S]*?<\/url>/g)) {
+    const loc = entry.match(/<loc>([^<]+)<\/loc>/)[1];
+    const lastmod = entry.match(/<lastmod>([^<]+)<\/lastmod>/)?.[1];
+    const path = decodeURI(loc.slice(SITE.length)).replace(/^\/zh-CN(?=\/|$)/, "");
+    const want = expected(path);
+    if (want === undefined) continue;
+    checked += 1;
+    if (want) dated += 1;
+    // Without a dated reading there is no honest time, and the publication time would move at every release.
+    assert.equal(lastmod, want ? second(want) : undefined, loc);
+  }
+  assert.ok(checked > 0, "no detail page in the sitemap");
+  assert.ok(checked > dated, "every detail page is dated, so the undated case went untested");
+  assert.ok(dated > 0, "no detail page carries the date of its evidence");
+});
+
 const ld = (page) =>
   [...page.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].flatMap((m) => {
     const value = JSON.parse(m[1]);

@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { LANGUAGES, type Language } from "@/lib/i18n";
 import { absoluteUrl } from "@/lib/seo";
-import { FIXED_PATHS, UPDATE_LANGUAGES, detailPages } from "@/lib/site-pages";
+import { FIXED_PATHS, UPDATE_LANGUAGES, detailPages, evidenceDates } from "@/lib/site-pages";
 import { manifest } from "@/lib/snapshot";
 import publishedArticles from "@/content/articles.json";
 
@@ -14,9 +14,13 @@ type Page = { path: string; lastModified?: string; languages?: readonly Language
  * addresses come from the release the routes answer from, so nothing here can
  * be a 404.
  *
- * `lastModified` is when the data behind a page was produced: the snapshot's
- * generation time, or for an update the time it happened. It is left out
- * rather than invented when there is no snapshot.
+ * `lastModified` is when a page last had something new: for an update the
+ * time it happened, for a topic its latest claim, for market, occupation and
+ * work pages the newest dated update among their readings (`evidenceDates`),
+ * and for the fixed pages, which summarise the whole release, the snapshot's
+ * generation time. It is left out rather than invented when there is no such
+ * time: a detail page with no date of its own would otherwise claim a change
+ * at every data release.
  *
  * Only pages with something of their own are listed: an occupation no update
  * has reached is left out (its page asks not to be indexed), and an update is
@@ -33,14 +37,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
 }
 
 function entries(built: string | undefined): MetadataRoute.Sitemap {
+  const dated = evidenceDates();
   const pages: Page[] = [
     ...FIXED_PATHS.map((path) => ({ path, lastModified: built })),
-    ...detailPages.markets().map((id) => ({ path: `/markets/${id}`, lastModified: built })),
-    ...detailPages.occupationGroups().map((id) => ({ path: `/occupations/g/${id}`, lastModified: built })),
-    ...detailPages.reachedOccupations().map((code) => ({ path: `/occupations/${code}`, lastModified: built })),
-    ...detailPages.work().map((id) => ({ path: `/work/${id}`, lastModified: built })),
-    ...detailPages.topics().map(({ slug, latest }) => ({ path: `/topics/${slug}`, lastModified: latest ?? built })),
-    ...detailPages.updates().map(({ id, occurredAt }) => ({ path: `/updates/${id}`, lastModified: occurredAt ?? built, languages: UPDATE_LANGUAGES })),
+    ...detailPages.markets().map((id) => ({ path: `/markets/${id}`, lastModified: dated.market(`oaw:market:${id}`) })),
+    ...detailPages.occupationGroups().map((id) => ({
+      path: `/occupations/g/${id}`,
+      lastModified: dated.group(`oaw:occupation-group:${id}`),
+    })),
+    ...detailPages.reachedOccupations().map((code) => ({
+      path: `/occupations/${code}`,
+      lastModified: dated.occupation(`oaw:occupation:${code}`),
+    })),
+    ...detailPages.work().map((id) => ({ path: `/work/${id}`, lastModified: dated.work(`oaw:market:${id}`) })),
+    ...detailPages.topics().map(({ slug, latest }) => ({ path: `/topics/${slug}`, lastModified: latest ?? undefined })),
+    ...detailPages.updates().map(({ id, occurredAt }) => ({ path: `/updates/${id}`, lastModified: occurredAt ?? undefined, languages: UPDATE_LANGUAGES })),
     // The article pages are built ahead from documents the server does not carry,
     // so the list comes from the index written beside the build.
     ...publishedArticles.map((item) => ({ path: `/articles/${item.slug}`, lastModified: item.date })),
