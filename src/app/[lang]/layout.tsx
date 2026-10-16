@@ -6,6 +6,8 @@ import { LANGUAGES, bilingual } from "@/lib/i18n";
 import { getLocale } from "@/lib/locale";
 import { SITE_NAV, siteNavCopy } from "@/lib/site-nav";
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { lang } from "next/root-params";
 import localFont from "next/font/local";
 import Link from "next/link";
 import "../globals.css";
@@ -79,6 +81,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  // `dynamicParams = false` does not hold for pages rendered per request. The proxy never rewrites to another
+  // value, but the paths it leaves to the file server (`/og/...`, `/figures/...`, `/<key>.txt`) reach this
+  // segment as they are when no file matches, and would render an English page at that address.
+  const segment = await lang();
+  if (!LANGUAGES.some((language) => language === segment)) notFound();
   const { language } = await getLocale();
   const c = copy[language];
   const nav = siteNavCopy[language];

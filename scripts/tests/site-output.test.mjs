@@ -234,6 +234,20 @@ test("an address outside the loaded release is a 404 in both languages", async (
   assert.equal((await fetch(`${site.base}/fr/markets`)).status, 404);
 });
 
+test("a path the proxy skips is not a page under some other language segment", async () => {
+  // The proxy leaves these prefixes to the file server, so a miss reaches `[lang]` with "og", "figures" or the
+  // file name as the language. That is a 404, not a duplicate of an English page.
+  for (const path of ["/og/markets", "/figures/voices", "/og/privacy", "/figures/topics", "/0123456789abcdef0123456789abcdef.txt"]) {
+    const res = await fetch(`${site.base}${path}`, { redirect: "manual" });
+    assert.equal(res.status, 404, path);
+    assert.match(await res.text(), /404/, path);
+  }
+  // The files those prefixes are for still answer.
+  for (const path of ["/og/en.png", "/icon.svg"]) assert.equal((await fetch(`${site.base}${path}`)).status, 200, path);
+  const key = readdirSync(join(ROOT, "public")).find((name) => /^[0-9a-f]{32}\.txt$/.test(name));
+  if (key) assert.equal((await fetch(`${site.base}/${key}`)).status, 200, key);
+});
+
 test("with a snapshot, a detail page of each kind answers", { skip: !HAS_SNAPSHOT }, async () => {
   const locs = [...files.get("sitemap.xml").matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
   for (const section of ["markets", "occupations/g", "occupations", "updates", "work"]) {
