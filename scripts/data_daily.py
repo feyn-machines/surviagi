@@ -260,7 +260,7 @@ class Daily:
     def __init__(self, *, root: Path = ROOT, state_path: Path = STATE, daily_dir: Path = DAILY, runner=run_step,
                  now: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
                  collection_end: Callable[[], datetime | None] = newest_collection_end,
-                 out=print, sleep=time.sleep):
+                 out=lambda line: print(line, flush=True), sleep=time.sleep):
         self.root, self.state_path, self.daily_dir, self.runner = root, state_path, daily_dir, runner
         self.now, self.collection_end, self.out, self.sleep = now, collection_end, out, sleep
 
