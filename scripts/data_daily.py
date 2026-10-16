@@ -234,6 +234,11 @@ def steps(window: Window, root: Path = ROOT) -> list[Step]:
         Step("post-events", pnpm("data:post-events")),
         Step("activity-state", pnpm("data:activity:state")),
         Step("publish-snapshot", pnpm("data:publish:snapshot")),
+        # The local database keeps the same releases as the server, so the two can be compared.
+        Step("local-release", pnpm("data:local:release")),
+        Step("local-promote", pnpm("data:local:promote")),
+        # A Chinese brief of what this window changed: data/reports/changes-<from>_<to>.md.
+        Step("changes", pnpm("data:changes")),
     ]
 
 
@@ -284,7 +289,8 @@ class Daily:
             problems = step.check(outcome) if finished else []
             record["steps"][step.name] = {"finished": finished, "exit": outcome.returncode,
                                           "seconds": round(outcome.seconds, 1), "problems": problems,
-                                          "result": outcome.result}
+                                          "result": outcome.result,
+                                          "said": (outcome.stdout.strip().splitlines() or [""])[-1]}
             record_path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
             self.out(f"     exit {outcome.returncode} in {outcome.seconds:.0f}s"
                      + "".join(f"\n     ! {p}" for p in problems))
@@ -293,6 +299,7 @@ class Daily:
         state.pop("pending", None)
         state["window_end"] = window.end.isoformat()
         write_state(state, self.state_path)
+        self.out(f"window done; brief: {record['steps']['changes']['said']}")
         return [p for name, s in record["steps"].items() for p in (f"{name}: {x}" for x in s["problems"])]
 
     def publish(self, promote: bool, held: list[str]) -> int:

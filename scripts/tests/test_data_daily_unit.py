@@ -101,6 +101,12 @@ class RunTest(DailyCase):
         self.assertEqual(state["window_end"], "2026-10-17T03:00:00+00:00")
         self.assertNotIn("pending", state)
 
+    def test_the_local_database_gets_the_release_too_and_the_brief_is_reported(self):
+        runner = FakeRunner({"changes": (0, "wrote data/reports/changes-a_b.md")})
+        self.make(runner).main([])
+        self.assertEqual(runner.ran[-4:], ["local-release", "local-promote", "changes", "data:release"])
+        self.assertIn("window done; brief: wrote data/reports/changes-a_b.md", self.lines)
+
     def test_without_promote_the_release_is_verified_but_not_made_live(self):
         runner = FakeRunner()
         self.assertEqual(self.make(runner).main([]), 0)

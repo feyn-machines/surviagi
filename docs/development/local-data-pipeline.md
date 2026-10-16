@@ -223,7 +223,7 @@ pnpm data:daily --promote    # ……没有需要人看的问题时再 data:prom
 ```
 
 - **窗口**：从上一个完成的窗口结束处开始（`data/daily/state.json`；第一次运行取最新一次官方账号采集的结束时间），到当前的最后一个整点为止；不足 6 小时的窗口留到下次。
-- **顺序**（2026-10-16 手动跑通的一轮）：官方账号采集、名单账号采集（分开两次）、`data:extract:events`、`data:verify`、`data:identify:models`、`data:route:events`、`data:measure:markets`、`data:gate:state`、`data:mine:topics`、`data:topics:evidence`、`data:post-events`、`data:activity:state`、`data:publish:snapshot`。一轮大约 1 小时 15 分。
+- **顺序**（2026-10-16 手动跑通的一轮）：官方账号采集、名单账号采集（分开两次）、`data:extract:events`、`data:verify`、`data:identify:models`、`data:route:events`、`data:measure:markets`、`data:gate:state`、`data:mine:topics`、`data:topics:evidence`、`data:post-events`、`data:activity:state`、`data:publish:snapshot`，然后 `data:local:release`、`data:local:promote`（本机数据库留同样的版本）和 `data:changes`（这次变了什么的中文简报，写到 `data/reports/changes-<前>_<后>.md`，路径在输出的最后）。一轮大约 1 小时 15 分。
 - **断点续跑**：每个窗口一个目录 `data/daily/<窗口>/`，每步一个日志，`record.json` 记下做完的步骤。中途停下的窗口下次从停下的那一步接着跑，已采集的帖子不重采、已发给模型的不再发。抽取结果文件已写出但没入库时改为 `data:ingest:events`。快照写好之后游标才前进。
 - **停下（退出码 1，保留位置）**：某一步失败；采集被拒（退出码 1）；第一次调用判断模型之前 TypeSafe 从本机连不上或回 451（地区封锁，要在代理里把 `typesafe.ai` 走美国出口）；`data:release` 连续 3 次失败（它在一个事务里，断线不留半个版本）。
 - **发布但不生效（退出码 2）**：采集结束但需要注意（退出码 2）；任何一步报告失败或改用备用模型的批次（`failed`、`failed_batches`、`batches_failed`、`fallback_batches`）或没处理完的更新。版本仍导入并校验，报告列出原因，人看过后用 `pnpm data:promote` 生效。
