@@ -190,6 +190,69 @@ class RunTest(DailyCase):
         self.assertFalse(self.state.exists())
 
 
+def run_file(path, jobs, schema_change=None):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"schema_change": schema_change, "jobs": jobs}))
+    return path
+
+
+def jobs(complete, incomplete_reason=None, incomplete=0):
+    done = [{"handle": f"a{i}", "status": "search_ended", "stop_reason": "window_start_reached"} for i in range(complete)]
+    left = [{"handle": f"b{i}", "status": "incomplete", "stop_reason": incomplete_reason} for i in range(incomplete)]
+    return done + left
+
+
+INGESTED_OUT = 'Saved 194 posts\nIngested into the collection store: {"run_id": "panel-x"}'
+
+
+class CrawlReviewTest(unittest.TestCase):
+    """2026-10-16: 323 of 324 panel jobs ended cleanly and one refused a record (parse_error:ValueError);
+    the crawler exits 2 for that, and the whole release was held. One refused record is a note."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+
+    def review(self, run, code=2, stdout=INGESTED_OUT):
+        return daily.crawl_review(run, daily.Outcome(code, stdout, 1.0))
+
+    def test_one_refused_record_is_a_note_not_a_hold(self):
+        run = run_file(self.tmp / "panel.json", jobs(323, "parse_error:ValueError", 1))
+        problems, notes = self.review(run)
+        self.assertEqual(problems, [])
+        self.assertEqual(notes, ["1 of 324 jobs refused a record: @b0: parse_error:ValueError"])
+
+    def test_a_changed_x_schema_holds_the_release(self):
+        run = run_file(self.tmp / "panel.json", jobs(10), schema_change={"detail": "404"})
+        self.assertTrue(self.review(run)[0])
+
+    def test_many_incomplete_jobs_hold_the_release(self):
+        run = run_file(self.tmp / "panel.json", jobs(300, "exhausted_accounts:rate_limit", 24))
+        problems, _ = self.review(run)
+        self.assertIn("24 of 324 jobs incomplete", problems[0])
+
+    def test_a_few_jobs_stopped_for_another_reason_still_hold_it(self):
+        run = run_file(self.tmp / "panel.json", jobs(320, "transport_exhausted", 2))
+        self.assertTrue(self.review(run)[0])
+
+    def test_a_run_that_was_not_ingested_holds_the_release(self):
+        run = run_file(self.tmp / "panel.json", jobs(10))
+        problems, _ = self.review(run, stdout="Ingested into the collection store failed; the run file is kept")
+        self.assertIn("not ingested", problems[0])
+
+    def test_a_clean_crawl_has_nothing_to_say(self):
+        self.assertEqual(self.review(self.tmp / "missing.json", code=0), ([], []))
+
+
+class CrawlNoteRunTest(DailyCase):
+    def test_a_crawl_with_one_refused_record_is_promoted_and_the_note_reported(self):
+        panel = self.tmp / "data" / "collection" / "panel" / "panel-2026-10-16T0300_2026-10-17T0300.json"
+        run_file(panel, jobs(323, "parse_error:ValueError", 1))
+        runner = FakeRunner({"crawl-panel": (2, INGESTED_OUT)})
+        self.assertEqual(self.make(runner).main(["--promote"]), 0)
+        self.assertEqual(runner.ran[-1], "data:promote")
+        self.assertTrue(any("- 1 of 324 jobs refused a record" in line for line in self.lines))
+
+
 class PieceTest(unittest.TestCase):
     def test_json_result_is_the_last_object_printed(self):
         self.assertEqual(daily.json_result('progress\n{\n  "a": 1\n}\n'), {"a": 1})
