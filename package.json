@@ -53,6 +53,7 @@
     "data:activity:state": "data/runtime/venv/bin/python scripts/data-pipeline.py activity-state",
     "data:gate:state": "data/runtime/venv/bin/python scripts/data-pipeline.py gate-state",
     "data:publish:snapshot": "data/runtime/venv/bin/python scripts/data-pipeline.py publish-snapshot",
+    "data:daily": "python3 scripts/data_daily.py",
     "site:test:unit": "python3 -m unittest discover -s scripts/tests -p 'test_site_release_unit.py'",
     "site:build": "python3 scripts/site_release.py build",
     "site:release": "python3 scripts/site_release.py release",
