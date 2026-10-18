@@ -341,8 +341,14 @@ KEEPALIVE = ["-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=20"]
 
 
 def ssh_options(target: dict) -> list[str]:
-    return ["-i", os.path.expanduser(target["DEPLOY_SSH_KEY"]), "-o", "IdentitiesOnly=yes",
-            "-o", "BatchMode=yes", *KEEPALIVE]
+    options = ["-i", os.path.expanduser(target["DEPLOY_SSH_KEY"]), "-o", "IdentitiesOnly=yes",
+               "-o", "BatchMode=yes", *KEEPALIVE]
+    # The workstation may have a lossy transparent proxy route. An optional source address lets the
+    # operator select the physical interface without changing the system-wide routing policy.
+    bind_address = target.get("DEPLOY_SSH_BIND_ADDRESS", "").strip()
+    if bind_address:
+        options.extend(["-b", bind_address])
+    return options
 
 
 def ssh_base(target: dict, extra: list[str] | None = None) -> list[str]:

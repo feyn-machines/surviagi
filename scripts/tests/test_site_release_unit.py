@@ -12,6 +12,12 @@ import site_release as release  # noqa: E402
 TARGET = {"DEPLOY_HOST": "h.example", "DEPLOY_USER": "u", "DEPLOY_SSH_KEY": "/k/key", "DEPLOY_ROOT": "/opt/openaiwill"}
 
 class UploadTest(unittest.TestCase):
+    def test_optional_ssh_bind_address_is_applied_to_every_connection(self):
+        target = {**TARGET, "DEPLOY_SSH_BIND_ADDRESS": "10.10.20.13"}
+        for argv in (release.ssh_base(target), release.forward_argv(target, 40000, 5434)):
+            self.assertIn("-b", argv)
+            self.assertEqual(argv[argv.index("-b") + 1], "10.10.20.13")
+
     def test_unchanged_files_are_linked_from_the_previous_release(self):
         argv = release.upload_argv(TARGET, "20261004T150523Z-c7f1d16", "20261003T102912Z-e2d4005")
         self.assertIn("--link-dest=/opt/openaiwill/releases/20261003T102912Z-e2d4005", argv)
