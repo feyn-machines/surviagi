@@ -318,9 +318,17 @@ def _write_documents(cur, rows: list[Row]) -> int:
     column is `json`, not `jsonb`: json keeps the text as sent, so a number such
     as 1e+22 or -0.0 reads back byte-for-byte and the hash holds by construction.
     """
+    # The snapshot contains every row, while only changed document bodies need to cross the SSH forward.
+    # Advisory locking in import_release makes this lookup and the insert one consistent operation.
+    hashes = [row.sha256 for row in rows]
+    cur.execute("SELECT sha256 FROM kg.docs WHERE sha256 = ANY(%s)", (hashes,))
+    known = {sha256 for (sha256,) in cur.fetchall()}
+    pending = [row for row in rows if row.sha256 not in known]
+    if not pending:
+        return 0
     cur.execute("CREATE TEMP TABLE kg_incoming (sha256 text, doc text) ON COMMIT DROP")
     with cur.copy("COPY kg_incoming (sha256, doc) FROM STDIN") as copy:
-        for row in rows:
+        for row in pending:
             copy.write_row((row.sha256, canonical(row.doc)))
     cur.execute("INSERT INTO kg.docs (sha256, doc) SELECT DISTINCT ON (sha256) sha256, doc::json "
                 "FROM kg_incoming ON CONFLICT (sha256) DO NOTHING")

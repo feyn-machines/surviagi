@@ -48,7 +48,7 @@
 cp deploy/deploy.env.example .env.deploy
 ```
 
-编辑 `.env.deploy`，填 `DEPLOY_HOST`、`DEPLOY_USER`、`DEPLOY_SSH_KEY`（私钥路径，密钥本身留在 `~/.ssh`）、`DEPLOY_ROOT`。预期：`git status` 不列出 `.env.deploy`。本机还需要 `rsync` 和已执行过 `pnpm data:setup`（数据发布用本机的 Python 环境）。
+编辑 `.env.deploy`，填 `DEPLOY_HOST`、`DEPLOY_USER`、`DEPLOY_SSH_KEY`（私钥路径，密钥本身留在 `~/.ssh`）、`DEPLOY_ROOT`。如果本机有透明代理且长 SSH 流不稳定，可再填 `DEPLOY_SSH_BIND_ADDRESS`，例如物理网卡地址 `10.10.20.13`，让发布连接从该地址发出。预期：`git status` 不列出 `.env.deploy`。本机还需要 `rsync` 和已执行过 `pnpm data:setup`（数据发布用本机的 Python 环境）。
 
 ### 服务器要求
 
