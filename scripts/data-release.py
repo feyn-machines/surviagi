@@ -20,7 +20,9 @@ which addresses are new, changed or gone since the sitemap it last accepted.
 Errors are one `error: ...` line and exit status 1.
 """
 import argparse
+import contextlib
 from pathlib import Path
+import signal
 import subprocess
 import sys
 import time
@@ -110,6 +112,24 @@ SERVER_ONLY = {"setup-db"}
 # After these the production site is asked which data release it serves, and IndexNow hears what changed
 # once it serves it (server target only).
 WATCHED = {"promote", "rollback"}
+SERVER_OPERATION_TIMEOUT = 300
+
+
+@contextlib.contextmanager
+def operation_timeout(seconds: int):
+    """Bound a server transaction so a lossy SSH/COPY stream cannot occupy the daily run forever."""
+    if not hasattr(signal, "SIGALRM"):
+        yield
+        return
+    previous = signal.getsignal(signal.SIGALRM)
+    signal.signal(signal.SIGALRM, lambda _signum, _frame: (_ for _ in ()).throw(
+        ReleaseError(f"server database operation exceeded {seconds}s; SSH/COPY stream stalled")))
+    signal.alarm(seconds)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, previous)
 
 
 def main(argv=None):
@@ -126,8 +146,9 @@ def main(argv=None):
                 raise kg.KgError(f"{args.command} works only with --target server")
             server_db.setup_db()
             return 0
-        with open_target(args.target) as conn:
-            result = COMMANDS[args.command](conn, args)
+        with operation_timeout(SERVER_OPERATION_TIMEOUT if args.target == "server" else 0):
+            with open_target(args.target) as conn:
+                result = COMMANDS[args.command](conn, args)
         if args.target == "server" and args.command in WATCHED and server_db.report_production(result):
             site_release.notify_indexnow(only_changed=True)
     except ReleaseError as error:
