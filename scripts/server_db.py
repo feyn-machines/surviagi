@@ -276,6 +276,26 @@ def wait_for_listener(port: int, process: subprocess.Popen, seconds: float = 15)
 # caller can retry rather than hang.
 IDLE_IN_TRANSACTION = "10min"
 LOCK_WAIT = "15min"
+FORWARD_SHUTDOWN_WAIT = 5
+# The tunnel can be lossy, but database-side work should still have a bounded statement/lock lifetime.
+DATABASE_STATEMENT_TIMEOUT = "3min"
+
+
+def stop_forward(process: subprocess.Popen, timeout: float = FORWARD_SHUTDOWN_WAIT) -> None:
+    """Close an SSH forward without letting a half-closed TCP channel hang the release forever.
+
+    A killed publisher can leave PostgreSQL idle in a transaction while the SSH process is still waiting for
+    its forwarded channel to close.  Terminating and then waiting without a bound made the next scheduled run
+    appear frozen; the server-side idle timeout eventually cleaned the session, but only after many minutes.
+    """
+    if process.poll() is not None:
+        return
+    process.terminate()
+    try:
+        process.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait()
 
 
 def session_options(role: str) -> str:
@@ -283,6 +303,7 @@ def session_options(role: str) -> str:
     is set on the role by roles.sql."""
     return ("-c timezone=UTC"
             f" -c idle_in_transaction_session_timeout={IDLE_IN_TRANSACTION} -c lock_timeout={LOCK_WAIT}"
+            f" -c statement_timeout={DATABASE_STATEMENT_TIMEOUT}"
             + (" -c search_path=public" if role == WRITER else ""))
 
 
@@ -311,8 +332,7 @@ def server_connection(role: str = WRITER):
         finally:
             conn.close()
     finally:
-        forward.terminate()
-        forward.wait()
+        stop_forward(forward)
 
 
 def poll_release(read_body, expected: str, seconds: float = WATCH_SECONDS, interval: float = 3,
@@ -369,5 +389,4 @@ def _report_production(expected: str | None) -> bool:
         print(f"could not read the production site: {error}")
         return False
     finally:
-        forward.terminate()
-        forward.wait()
+        stop_forward(forward)
