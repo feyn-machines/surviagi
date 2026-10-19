@@ -1,6 +1,6 @@
 ---
 title: Oct 19, 2026 | When AI starts using software for you, how many apps will you still open?
-description: A $85 yoga receipt was found by ChatGPT and entered into an expense system. As AI moves between software for us, which product will we open first, and which subscriptions will we keep paying for?
+description: An $85 yoga receipt was found by ChatGPT and entered into an expense system. As AI moves between software for us, which product will we open first, and which subscriptions will we keep paying for?
 date: 2026-10-19
 ---
 
