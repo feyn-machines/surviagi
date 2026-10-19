@@ -180,6 +180,20 @@ openaiwill 的三样独有资产：
 | 首页 HTML 约 1.2 MB（内嵌 SVG 约 0.46 MB、页面数据约 0.56 MB） | 在 Googlebot 的 2 MB 上限内，但较重；以后可把图形数据改为按需加载 | 以后 |
 | AI 引擎引用情况 | 每月用固定问题询问各 AI 引擎（见部署手册），本次未做 | 每月 |
 
+## 2026-10-19 线上复核（已核查；本地修改未发布）
+
+本次用公开 HTTP 请求复核正式站，并用 `gws gmail` 只读读取已连接邮箱中的 Search Console 与 Bing Webmaster 通知。批量抓取站点地图的 2,290 个地址得到 2,288 个 `200`；并发时有两个中文详情页超时，降低并发后各自连续三次均为 `200`，不是稳定的 404 或重定向问题。
+
+线上现状：
+
+- `robots.txt`、`sitemap.xml`、`llms.txt` 和中英文首页均可访问；HTTP、`www`、`/en/`、`?lang=` 都会回到规范地址。Googlebot、bingbot、GPTBot、OAI-SearchBot、ChatGPT-User、ClaudeBot、Claude-SearchBot、PerplexityBot、Google-Extended、CCBot、Bytespider、Amazonbot、meta-externalagent、DuckAssistBot 请求同一详情页均得到 `200`。
+- 站点地图的 2,290 个地址没有 `noindex`，标题、描述和 canonical 均存在；抽样的市场、职业、工作、话题、更新、文章、白皮书页面都有服务端文字。详情页 Markdown 副本返回 `text/markdown; charset=utf-8`，并用 HTTP `Link` 把正式页面标为 canonical。
+- 两组更新标题各出现两次：`Meta launches Muse personal AI agent`、`Anthropic launches Claude Dashboards and Claude Motion in beta`。前者是两个发生日期，后者是同一帖子拆成两个主题键；标题重复会让搜索结果难以区分，仍需在数据管线合并或改成能反映日期/主题的标题，同时保留各自原帖。
+- 正式站当前版本仍没有职业大类页和话题页的直接答案句；本地 `main` 已有这两类页面的实现和回归测试，需下一次代码发布后再在线复核。更新详情页和文章详情页的 Article JSON-LD 在线已存在。
+- Search Console 邮件确认 10 月 8 日开始收集 `surviagi.com` 的展示；10 月 10 日仍报告 Dataset 缺少 `license`（非严重）。Bing 10 月 8 日邮件报告 Crawl Control 设置妨碍抓取；需在 Bing Webmaster Tools 恢复默认或提高抓取速率。两项都不能由站内代码代替。
+
+本次本地改动：`robots.txt` 额外点名 Amazonbot、meta-externalagent、DuckAssistBot；通配规则本来已经允许它们，显式列出是为了让允许决定在爬虫报告中可见。数据许可仍未擅自指定，待负责人选择后再给 `Dataset` 结构化数据加 `license` 并同步条款页。
+
 ## 文章栏目（2026-10-07 实现）
 
 用户 2026-10-07 决定：做一个公开的文章栏目，不限于周报；标题写成“日期 + 一个主题”；文章按跨事件的几条线组织，每条线是几件具体的事加一句结论，最后一段直接写判断和猜测。

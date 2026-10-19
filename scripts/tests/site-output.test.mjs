@@ -625,14 +625,15 @@ test("robots.txt allows every page, keeps crawlers out of the admin and the API,
   const robots = body("robots.txt");
   assert.match(robots, /Sitemap: https:\/\/surviagi\.com\/sitemap\.xml/);
   const groups = robots.split(/\n\s*\n/).filter((group) => /User-Agent:/i.test(group));
-  assert.equal(groups.length, 13);
+  assert.equal(groups.length, 16);
   for (const group of groups) {
     assert.match(group, /^Allow: \/$/m, group);
     for (const path of ["/admin", "/zh-CN/admin", "/api/"]) assert.match(group, new RegExp(`^Disallow: ${path}$`, "m"), `${path} in ${group}`);
     assert.deepEqual([...group.matchAll(/^Disallow: (.*)$/gm)].map((m) => m[1]).sort(), ["/admin", "/api/", "/zh-CN/admin"]);
   }
   for (const bot of ["GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "Claude-SearchBot", "Claude-User",
-    "PerplexityBot", "Perplexity-User", "Google-Extended", "Applebot-Extended", "CCBot", "Bytespider"]) {
+    "PerplexityBot", "Perplexity-User", "Google-Extended", "Applebot-Extended", "CCBot", "Bytespider",
+    "Amazonbot", "meta-externalagent", "DuckAssistBot"]) {
     assert.match(robots, new RegExp(`User-Agent: ${bot}\\b`, "i"), bot);
   }
 });

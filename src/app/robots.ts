@@ -12,6 +12,9 @@ const AI_CRAWLERS = [
   "ClaudeBot", "Claude-SearchBot", "Claude-User",
   "PerplexityBot", "Perplexity-User",
   "Google-Extended", "Applebot-Extended", "CCBot", "Bytespider",
+  // These crawlers are covered by the wildcard rule already; naming them
+  // explicitly keeps the allow decision visible in operators' bot reports.
+  "Amazonbot", "meta-externalagent", "DuckAssistBot",
 ];
 
 /** Pages and endpoints that are for signed-in people only; no crawler has a reason to fetch them. */
