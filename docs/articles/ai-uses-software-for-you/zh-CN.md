@@ -4,6 +4,8 @@ description: 一张 85 美元的瑜伽课收据，用户让 ChatGPT 找出来，
 date: 2026-10-19
 ---
 
+![上周 10 月 12—18 日共 73 条更新，其中 42 条谈到一份具体工作；淡档是当天全部更新，实档是谈到具体工作的更新，一格为一条](/figures/ai-uses-software-for-you/weekly-ai-progress-v3.zh-CN.png)
+
 ## 01 一笔 85 美元的报销，AI 怎样替人办完
 
 85 美元的瑜伽课费用，收据在邮箱里，报销要去公司的费用系统 Navan。

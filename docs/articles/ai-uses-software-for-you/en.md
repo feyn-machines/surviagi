@@ -4,6 +4,8 @@ description: An $85 yoga receipt was found by ChatGPT and entered into an expens
 date: 2026-10-19
 ---
 
+![Of 73 updates from October 12 to 18, 42 named a concrete piece of work; faint rungs are every update that day, ink rungs those naming concrete work, one rung per update](/figures/ai-uses-software-for-you/weekly-ai-progress-v3.en.png)
+
 ## 1. How AI completed an $85 expense claim
 
 The $85 yoga class receipt was in the user's email. The expense had to be filed in the company's expense system, Navan.
