@@ -1,5 +1,17 @@
 [
   {
+    "slug": "ai-uses-software-for-you",
+    "date": "2026-10-19",
+    "title": {
+      "en": "Oct 19, 2026 | When AI starts using software for you, how many apps will you still open?",
+      "zh-CN": "2026 年 10 月 19 日｜当 AI 开始替你用软件，你还会打开多少个 App？"
+    },
+    "description": {
+      "en": "A $85 yoga receipt was found by ChatGPT and entered into an expense system. As AI moves between software for us, which product will we open first, and which subscriptions will we keep paying for?",
+      "zh-CN": "一张 85 美元的瑜伽课收据，用户让 ChatGPT 找出来，填进报销系统。AI 开始替人来回切换软件之后，用户会先打开谁，又会把订阅费付给谁？"
+    }
+  },
+  {
     "slug": "what-ai-took-over-2026-10-11",
     "date": "2026-10-11",
     "title": {
