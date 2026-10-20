@@ -280,6 +280,36 @@ FORWARD_SHUTDOWN_WAIT = 5
 # The tunnel can be lossy, but database-side work should still have a bounded statement/lock lifetime.
 DATABASE_STATEMENT_TIMEOUT = "3min"
 
+RELEASE_APPLICATION = "openaiwill-data-release"
+APP_ADMIN_APPLICATION = "openaiwill-app-admin"
+# A release attempt cannot outlive the operation bound in data-release.py plus its own connection; a session of
+# ours that has been in a transaction longer than this has lost its client (see clear_orphan_release_sessions).
+ORPHAN_AFTER = "10min"
+ORPHAN_QUERY = (
+    "SELECT pid FROM pg_stat_activity a WHERE a.datname = current_database() AND a.usename = current_user"
+    " AND a.application_name = %s AND a.pid <> pg_backend_pid()"
+    " AND a.xact_start < now() - %s::interval"
+    " AND EXISTS (SELECT 1 FROM pg_locks l WHERE l.pid = a.pid AND l.locktype = 'advisory' AND l.granted)")
+
+
+def clear_orphan_release_sessions(conn) -> list[int]:
+    """End this role's own release sessions whose client is gone; return their pids.
+
+    A release stopped by the operation bound can leave its backend running: through a lossy SSH forward the
+    server is never told that the client went away, so the session keeps its transaction and the release
+    advisory lock, and every later attempt waits on that lock until its own bound fires. On 2026-10-20 that
+    turned one dropped stream into three failed attempts and a stopped daily run. Only sessions that are ours
+    (same role, same application_name, not this one), hold an advisory lock and have been in a transaction far
+    longer than an attempt can live are ended.
+    """
+    rows = conn.execute(ORPHAN_QUERY, (RELEASE_APPLICATION, ORPHAN_AFTER)).fetchall()
+    ended = []
+    for row in rows:
+        pid = row["pid"] if isinstance(row, dict) else row[0]
+        conn.execute("SELECT pg_terminate_backend(%s)", (pid,))
+        ended.append(pid)
+    return ended
+
 
 def stop_forward(process: subprocess.Popen, timeout: float = FORWARD_SHUTDOWN_WAIT) -> None:
     """Close an SSH forward without letting a half-closed TCP channel hang the release forever.
@@ -325,7 +355,7 @@ def server_connection(role: str = WRITER):
         wait_for_listener(port, forward)
         conn = psycopg.connect(host="127.0.0.1", port=port, dbname=DB_NAME, user=role, password=password,
                                autocommit=True, row_factory=dict_row, connect_timeout=10,
-                               application_name="openaiwill-data-release" if role == WRITER else "openaiwill-app-admin",
+                               application_name=RELEASE_APPLICATION if role == WRITER else APP_ADMIN_APPLICATION,
                                options=options)
         try:
             yield conn

@@ -38,10 +38,20 @@ import site_release  # noqa: E402
 from site_release import ReleaseError  # noqa: E402
 
 
-def open_target(target):
+def open_target(target, clear_orphans: bool = False):
+    """A connection to the release database; `clear_orphans` ends what a stopped attempt left locked."""
     if target == "local":
         return connect()
-    return server_db.server_connection()
+
+    @contextlib.contextmanager
+    def server():
+        with server_db.server_connection() as conn:
+            ended = server_db.clear_orphan_release_sessions(conn) if clear_orphans else []
+            if ended:
+                print(f"ended {len(ended)} release session(s) an earlier attempt left holding the release lock")
+            yield conn
+
+    return server()
 
 
 def summarize(changes):
@@ -132,6 +142,10 @@ def operation_timeout(seconds: int):
         signal.signal(signal.SIGALRM, previous)
 
 
+# Commands that take the release advisory lock: an earlier attempt's dead session would block them.
+LOCKING = {"release", "promote", "rollback"}
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("command", choices=sorted([*COMMANDS, *SERVER_ONLY]))
@@ -147,7 +161,7 @@ def main(argv=None):
             server_db.setup_db()
             return 0
         with operation_timeout(SERVER_OPERATION_TIMEOUT if args.target == "server" else 0):
-            with open_target(args.target) as conn:
+            with open_target(args.target, clear_orphans=args.command in LOCKING) as conn:
                 result = COMMANDS[args.command](conn, args)
         if args.target == "server" and args.command in WATCHED and server_db.report_production(result):
             site_release.notify_indexnow(only_changed=True)

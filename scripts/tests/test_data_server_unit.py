@@ -81,6 +81,45 @@ class ForwardTest(unittest.TestCase):
                                         capture_output=True, text=True).stdout.strip(), "none")
 
 
+class OrphanReleaseSessionTest(unittest.TestCase):
+    """2026-10-20: one dropped stream left a release session alive, holding the release advisory lock; the
+    next two attempts only waited on that lock and the daily run stopped. A later attempt now ends it first."""
+
+    class Conn:
+        def __init__(self, rows):
+            self.rows = rows
+            self.calls = []
+
+        def execute(self, sql, params=None):
+            self.calls.append((sql, params))
+            rows, self.rows = self.rows, []
+
+            class Cursor:
+                def fetchall(self_inner):
+                    return rows
+            return Cursor()
+
+    def test_only_this_role_s_own_old_locked_sessions_are_ended(self):
+        conn = self.Conn([{"pid": 11}, {"pid": 12}])
+        self.assertEqual(server_db.clear_orphan_release_sessions(conn), [11, 12])
+        sql, params = conn.calls[0]
+        for guard in ("usename = current_user", "application_name = %s", "pid <> pg_backend_pid()",
+                      "locktype = 'advisory'", "datname = current_database()"):
+            self.assertIn(guard, sql)
+        self.assertEqual(params, (server_db.RELEASE_APPLICATION, server_db.ORPHAN_AFTER))
+        self.assertEqual([call[1] for call in conn.calls[1:]], [(11,), (12,)])
+        self.assertTrue(all("pg_terminate_backend" in call[0] for call in conn.calls[1:]))
+
+    def test_nothing_is_ended_when_no_session_qualifies(self):
+        conn = self.Conn([])
+        self.assertEqual(server_db.clear_orphan_release_sessions(conn), [])
+        self.assertEqual(len(conn.calls), 1)
+
+    def test_the_release_sessions_are_named_so_they_can_be_told_apart(self):
+        self.assertNotEqual(server_db.RELEASE_APPLICATION, server_db.APP_ADMIN_APPLICATION)
+        self.assertIn("application_name=RELEASE_APPLICATION", Path(server_db.__file__).read_text())
+
+
 class HeredocTest(unittest.TestCase):
     def test_the_text_is_written_byte_for_byte(self):
         script = server_db.heredoc("/x/f", "a $b `c` 'd'\n", "TAG_EOF")
