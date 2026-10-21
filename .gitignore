@@ -107,3 +107,41 @@ docs/data/*
 
 # local release staging
 /.release/
+
+# Owner policy (2026-10-21): open-source code, private data and research drafts.
+# These rules do not untrack files already in Git; the public-file gate also blocks them.
+/datasets/
+/docs/research/
+/exports/
+/export/
+/backups/
+/captures/
+/raw/
+/snapshots/
+*.csv
+*.tsv
+*.jsonl
+*.ndjson
+*.parquet
+*.arrow
+*.feather
+*.dump
+*.sql.bak
+
+# Additional credential stores and common credential filenames.
+**/.ssh/
+id_rsa*
+id_dsa*
+id_ecdsa*
+id_ed25519*
+.netrc
+.pgpass
+.pypirc
+*credentials*.json
+client_secret*.json
+*service-account*.json
+*service_account*.json
+secrets*.json
+tokens*.json
+!/design/system-v1/tokens.json
+*.kdbx

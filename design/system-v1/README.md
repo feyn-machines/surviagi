@@ -1,6 +1,6 @@
 # openaiwill / Design system v1
 
-[打开视觉样本](preview.html) · [阅读规范](../../DESIGN.md) · [方法研究](../../docs/research/ai-design-workflow-2026-09-12.md)
+[打开视觉样本](preview.html) · [阅读规范](../../DESIGN.md)
 
 这是可复用资源包，已确认的 Tensorlake 风格在这里被整理为 openaiwill 的规则。项目名称与域名于 2026-09-12 确认为 openaiwill / openaiwill.com。现有样本中的 AgentHowTo 为历史展示文案；`--ah-*` 与 `.ah-root` 保持为既有技术接口。产品业务页面尚未接入。`reference/` 中的第三方成品与这里重新编写的实现分开管理。
 

@@ -92,7 +92,8 @@
     "db:setup": "data/runtime/venv/bin/python scripts/data-release.py setup-db --target server",
     "admins:sync": "data/runtime/venv/bin/python scripts/app-db.py admins --target server",
     "submissions:pull": "data/runtime/venv/bin/python scripts/app-db.py pull --target server",
-    "votes:pull": "data/runtime/venv/bin/python scripts/app-db.py votes --target server"
+    "votes:pull": "data/runtime/venv/bin/python scripts/app-db.py votes --target server",
+    "check:public": "pnpm security:check && pnpm security:test && pnpm metadata:check && pnpm site:test:unit && pnpm i18n:test && pnpm design:check && pnpm lint && pnpm typecheck && pnpm build && pnpm site:test"
   },
   "dependencies": {
     "better-auth": "1.7.7",

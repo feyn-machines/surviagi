@@ -120,6 +120,6 @@
 
 ## 方法与适配
 
-采用 [Discover → Define → Deliver 研究](docs/research/ai-design-workflow-2026-09-12.md) 的具体参考、独立截图审阅与删减。参考方向已确认，外部随机种子仅用于同一规则内的布局草图。评审记录问题位置与影响，分数作为参考；两轮后仍有结构问题就记录并处理，不无限追分。
+采用 Discover → Define → Deliver 方法（内部研究保留本地） 的具体参考、独立截图审阅与删减。参考方向已确认，外部随机种子仅用于同一规则内的布局草图。评审记录问题位置与影响，分数作为参考；两轮后仍有结构问题就记录并处理，不无限追分。
 
 执行模板：[开发](design/system-v1/prompts/implement.md) · [独立截图审阅](design/system-v1/prompts/critic.md) · [局部探索](design/system-v1/prompts/explore.md)。默认使用任务当前模型；模型切换、收费素材服务不由规范自行指定。

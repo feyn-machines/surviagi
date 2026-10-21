@@ -45,6 +45,7 @@ class PublicFileGateTests(unittest.TestCase):
         self.write("docs/data/method.md", "Documented source and evidence policy.\n")
         self.write("design/system-v1/assets/signal.svg", "<svg></svg>\n")
         self.write("design/system-v1/fonts/OFL.txt", "Font license.\n")
+        self.write("design/system-v1/tokens.json", '{"color":"#ffffff"}\n')
         result = self.scan()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
@@ -54,6 +55,12 @@ class PublicFileGateTests(unittest.TestCase):
             "data/collection/raw.json", "local.sqlite-wal", "trace.log",
             "design/reference/example/fonts/commercial.woff2",
             "design/reference/example/motion/reference.mp4",
+            "datasets/ontology/schema/schema.json",
+            "datasets/ontology/releases/v2.4.0/concepts.jsonl",
+            "docs/research/internal-draft.md",
+            "exports/snapshot.json", "measurements.csv",
+            ".ssh/config", "id_ed25519", "client_secret_google.json",
+            "service-account.json", ".pgpass",
         ]
         self.write(".gitignore", "*\n")
         for name in names:
@@ -63,6 +70,12 @@ class PublicFileGateTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         for name in names:
             self.assertIn(name, result.stdout)
+
+    def test_migrations_and_application_configuration_are_not_data_dumps(self):
+        self.write("db/migrations/001_schema.sql", "CREATE TABLE example (id text);\n")
+        self.write("package.json", '{"name":"public-code"}\n')
+        result = self.scan()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_staged_secret_cannot_be_hidden_by_clean_working_copy(self):
         secret = "ghp_" + "b" * 36
