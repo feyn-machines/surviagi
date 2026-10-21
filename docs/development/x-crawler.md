@@ -109,6 +109,7 @@ pnpm data:ingest:x -- data/collection/official-x/<run>.json
 - 传输错误（`ConnectError`、超时等）：不判账号问题，同账号换新连接（新 IP）重试，另计 `max_transient`（默认 8）。
 - 结构变化（接口 404，或响应结构解析器不认识）：`SchemaChanged`，**整批停止**，不重试、不换号（换哪个账号都是同样结果），不判账号失效。运行文件 `schema_change` 记下出错任务与原因，原始页留在 `.pages/`，据此修 `x/parse.py` 或 `x/compat.py`。
 - 单条记录无法解析（如不可用的帖子）：该 job 记 `parse_error:*`，不重试，其余 job 继续。
+- 账号不可用（X 回 `UserUnavailable`：停用、封禁、被限制，或转为**受保护账号**以致非关注者读不到时间线）：该 job 记 `user_unavailable`，不重试、不换号、不判该账号失效，其余 job 继续。它与解析失败分开记，因为原因在账号而不在页面，且会每个窗口重复出现（每日运行把它记为提示，不阻发布；超过 5% 的 job 如此仍会阻发布）。
 - 不算解析失败的三种情况（2026-10-05）：时间线数据旁带着字段级 `errors`（如长文字段的 214）时照常读已返回的帖子；订阅者专属帖（`TweetPreviewDisplay`）跳过；没有帖子的页面即时间线到头（`empty_page`），不论是否带 cursor，因为 X 在最后一条之后仍会给 cursor。
 - twikit 自身读不懂某次响应（`KeyError` 等）按传输错误处理，换新连接重试。
 - 账号换遍仍不成 → 该 job `incomplete` 并记原因，不阻塞其余 job。单账号错误被转移消化后不影响整次 `ok`。

@@ -188,12 +188,37 @@ INCOMPLETE_JOBS_HELD = 0.05
 INGESTED = "Ingested into the collection store:"
 
 
+def _noted_reason(job: dict) -> bool:
+    """A job left short by one unparserable record or by the account itself, not by the batch."""
+    reason = str(job.get("stop_reason", ""))
+    return reason.startswith("parse_error") or reason == "user_unavailable"
+
+
+def _noted(jobs: list[dict], incomplete: list[dict]) -> list[str]:
+    """The notes a crawl leaves when every unfinished job is about its own account."""
+    refused = [j for j in incomplete if str(j.get("stop_reason", "")).startswith("parse_error")]
+    closed = [j for j in incomplete if j.get("stop_reason") == "user_unavailable"]
+    notes = []
+    if refused:
+        listed = [f"@{j.get('handle')}: {j.get('stop_reason')}" for j in refused]
+        notes.append(f"{len(refused)} of {len(jobs)} jobs refused a record: " + ", ".join(listed))
+    if closed:
+        # Not a gap in collection we can close: say what X says, so a person can decide
+        # whether the account still belongs in the panel.
+        listed = [f"@{j.get('handle')}" for j in closed]
+        notes.append(f"{len(closed)} of {len(jobs)} jobs stopped: X reports the account unavailable "
+                     f"({', '.join(listed)}); the account itself needs a person's look")
+    return notes
+
+
 def crawl_review(run_file: Path, outcome: Outcome) -> tuple[list[str], list[str]]:
     """(problems that hold the release, notes that do not) for a crawl that ran.
 
-    The crawler exits 2 for anything short of every job ending cleanly. One record it could not parse
-    (`parse_error:*`) refuses that record only; the release goes out with a note. A changed X schema, a
-    failed ingest, or more than INCOMPLETE_JOBS_HELD of the jobs left incomplete hold it."""
+    The crawler exits 2 for anything short of every job ending cleanly. Two of those reasons are facts
+    about one account rather than about the batch, and only they are notes: a record it could not parse
+    (`parse_error:*`) and an account X reports as unavailable (`user_unavailable`, which a protected or
+    suspended account answers every window). A changed X schema, a failed ingest, or more than
+    INCOMPLETE_JOBS_HELD of the jobs left incomplete hold the release."""
     if outcome.returncode == 0:
         return [], []
     if INGESTED not in outcome.stdout:
@@ -209,8 +234,8 @@ def crawl_review(run_file: Path, outcome: Outcome) -> tuple[list[str], list[str]
     listed = [f"@{j.get('handle')}: {j.get('stop_reason')}" for j in incomplete]
     if jobs and len(incomplete) / len(jobs) > INCOMPLETE_JOBS_HELD:
         return [f"{len(incomplete)} of {len(jobs)} jobs incomplete: " + ", ".join(listed[:10])], []
-    if incomplete and all(str(j.get("stop_reason", "")).startswith("parse_error") for j in incomplete):
-        return [], [f"{len(incomplete)} of {len(jobs)} jobs refused a record: " + ", ".join(listed)]
+    if incomplete and all(_noted_reason(j) for j in incomplete):
+        return [], _noted(jobs, incomplete)
     if incomplete:
         return [f"{len(incomplete)} of {len(jobs)} jobs incomplete: " + ", ".join(listed)], []
     return [], [f"the crawl exited {outcome.returncode} with every job complete"]

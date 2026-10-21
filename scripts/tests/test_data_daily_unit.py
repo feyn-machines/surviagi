@@ -221,6 +221,27 @@ class CrawlReviewTest(unittest.TestCase):
         self.assertEqual(problems, [])
         self.assertEqual(notes, ["1 of 324 jobs refused a record: @b0: parse_error:ValueError"])
 
+    def test_an_account_x_reports_unavailable_is_a_note_not_a_hold(self):
+        """2026-10-21: the panel had one protected account (@eanakashima) answering
+        UserUnavailable every window. The job is short for a reason about the account
+        itself, so the release still goes out - with a note naming the account."""
+        run = run_file(self.tmp / "panel.json", jobs(323, "user_unavailable", 1))
+        problems, notes = self.review(run)
+        self.assertEqual(problems, [])
+        self.assertEqual(len(notes), 1)
+        self.assertIn("1 of 324 jobs stopped: X reports the account unavailable", notes[0])
+        self.assertIn("@b0", notes[0])
+
+    def test_a_refused_record_and_a_closed_account_are_two_notes(self):
+        run = run_file(self.tmp / "panel.json",
+                       jobs(322, "parse_error:ValueError", 1) + [{"handle": "b9", "status": "incomplete",
+                                                                  "stop_reason": "user_unavailable"}])
+        problems, notes = self.review(run)
+        self.assertEqual(problems, [])
+        self.assertEqual(len(notes), 2)
+        self.assertIn("refused a record", notes[0])
+        self.assertIn("account unavailable", notes[1])
+
     def test_a_changed_x_schema_holds_the_release(self):
         run = run_file(self.tmp / "panel.json", jobs(10), schema_change={"detail": "404"})
         self.assertTrue(self.review(run)[0])
