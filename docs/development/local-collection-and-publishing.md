@@ -20,8 +20,9 @@
 | 路径 | 职责与发布范围 |
 | --- | --- |
 | `src/`、项目配置、锁文件 | Next.js 应用源码，可进入 Git 与正常应用构建 |
-| `datasets/` | 版本化合同、来源目录、脱敏观察与历史样例，可经检查提交；不自动等于网站当前数据 |
-| `docs/`、`CONTEXT.md`、`DESIGN.md` | 可公开的项目说明与领域／设计规范 |
+| `datasets/` | 本地私有输入，包括版本化合同、来源目录、历史样例与发布快照；整体忽略，不进入公开 Git |
+| `docs/research/` | 内部研究与交接资料，整体保留本地；形成并审定正式文档后再另行发布 |
+| 其他 `docs/`、`CONTEXT.md`、`DESIGN.md` | 经审阅可公开的项目说明与领域／设计规范，不得内嵌私有记录或导出 |
 | `design/system-v1/` | 本项目可复用设计实现及带许可证的字体；网站按实际引用打包 |
 | `design/reference/` | 第三方参考原件保留本地；只提交来源清单等允许的元数据 |
 | 根目录 `data/` | 本地原始档案、数据库、运行状态及待上传批次，整体不进入 Git |
@@ -48,6 +49,6 @@
 
 入口机制参考 [Codex 项目指引](https://learn.chatgpt.com/docs/agent-configuration/agents-md)与 [Claude Code 项目指引](https://code.claude.com/docs/en/memory)。本次核对了项目本地入口和 Next.js 自动生成器的兼容性，未启动额外收费的 Agent 会话进行验收。
 
-安装依赖使用 `pnpm install --frozen-lockfile`，启动网站使用 `pnpm dev`。代码或配置变更后运行 `pnpm check`；暂存准备提交的文件后运行 `pnpm security:staged`。设计资源改动先执行 `pnpm design:build`，然后检查生成结果。
+安装依赖使用 `pnpm install --frozen-lockfile`，启动网站使用 `pnpm dev`。公开源码检查使用 `pnpm check:public`，不要求私有数据；有可信本地数据时仍运行完整的 `pnpm check`。暂存准备提交的文件后运行 `pnpm security:staged`，其中任何数据或研究路径都会被拒绝，即使已用 `git add -f` 加入。设计资源改动先执行 `pnpm design:build`，然后检查生成结果。
 
 `pnpm check` 扫描当前公开候选文件，包括未暂存的新文件；暂存后由 `pnpm security:staged` 对 Git 索引再次扫描（仓库不使用托管 CI，这一步在本机做）。检查不会扫描和打印被忽略的本地秘密，强制暂存的禁止路径会被拦截。规则扫描仍需配合人工审阅提交内容，尤其是原始材料或未验证的数据导出。

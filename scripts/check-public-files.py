@@ -8,15 +8,17 @@ import sys
 
 PRIVATE_PARTS = {
     ".agents", ".claude", ".codex", ".lawrence", ".opencode",
-    "skills", ".venv", "venv", "__pycache__", ".cache", "cookies", "browser-state",
+    "skills", ".venv", "venv", "__pycache__", ".cache", "cookies", "browser-state", ".ssh",
 }
 PRIVATE_ROOTS = {
     "data", "private", "tmp", "logs", "node_modules", ".next",
     "out", "build", "coverage", ".vercel",
+    "datasets", "exports", "export", "backups", "captures", "raw", "snapshots",
 }
 PRIVATE_SUFFIXES = {
     ".pem", ".key", ".p12", ".pfx", ".db", ".sqlite", ".sqlite3",
     ".log", ".pyc", ".zip", ".tar", ".gz", ".tgz", ".7z", ".rar",
+    ".csv", ".tsv", ".jsonl", ".ndjson", ".parquet", ".arrow", ".feather", ".dump", ".kdbx",
 }
 REFERENCE_METADATA = {
     ".gitignore", "readme.md", "index.html", "manifest.json",
@@ -38,8 +40,10 @@ def git(root, *args):
 def private_path(path):
     parts = tuple(part.lower() for part in path.parts)
     name = parts[-1]
+    if parts[:2] == ("docs", "research"):
+        return True  # Research stays local until intentionally rewritten as public documentation.
     if parts[:2] == ("docs", "data") and path.suffix.lower() != ".md":
-        return True  # Public machine data belongs in datasets/, not private doc attachments.
+        return True  # Data attachments remain private, including historical/reference data.
     if parts[:2] == ("design", "reference"):
         tail = "/".join(parts[3:]) if len(parts) > 3 else name
         if tail not in REFERENCE_METADATA:
@@ -50,6 +54,11 @@ def private_path(path):
         or bool(re.fullmatch(r"(?:agents|claude)(?:\.[^.]+)?\.md", name))
         or name.startswith((".env", ".mcp", ".claude.json", "credentials"))
         or name in {"mcp.json", "auth.json", "storage-state.json", "storage_state.json", ".ds_store"}
+        or name in {".netrc", ".pgpass", ".pypirc"}
+        or (name in {"tokens.json", "tokens.local.json"} and parts[:2] != ("design", "system-v1"))
+        or name.startswith(("id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", "client_secret", "secrets"))
+        or any(marker in name for marker in ("credentials", "service-account", "service_account"))
+        or name.endswith(".sql.bak")
         or pathlib.PurePosixPath(name).suffix in PRIVATE_SUFFIXES
         or bool(re.search(r"\.(?:db|sqlite3?)-(?:wal|shm|journal)$", name))
         or "cookies" in name

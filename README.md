@@ -48,10 +48,10 @@ The core product estimates progress toward AI independently completing major pro
 The next data layer will connect company adoption, metric snapshots and event evidence to versioned world scope, AI state estimates and simulation updates. A future progress overview and explanatory graph should use the same evidence records; weekly reports and publication are outside the current data system. Work is forward-only from activation; historical collection is out of current scope and may later use reviewed community contributions. The production inference engine, daily scheduler, community intake and publishing integration are not implemented. A local database, synthetic regression and a real-archive pilot are now available separately. An unpublished AI-proposed scope, weights and initial pilot now exist; production scope and scores remain inactive. Social-signal calibration can proceed separately.
 
 - [100-point simulation model and adoption signals](docs/data/takeover-simulation-v0.3.md)
-- [Simulation contract v0.3](datasets/takeover-simulation.v0.3.json)
+- Simulation contract v0.3 (`datasets/takeover-simulation.v0.3.json`, local only)
 - [Retained event and community observation layer](docs/data/takeover-progress-framework-v1.md)
-- [Observable-data methodology](datasets/takeover-methodology.v0.2.json)
-- [Bounded metric-field verification](datasets/evidence/social-metric-field-probe-2026-09-12.json)
+- Observable-data methodology (`datasets/takeover-methodology.v0.2.json`, local only)
+- Bounded metric-field verification (`datasets/evidence/social-metric-field-probe-2026-09-12.json`, local only)
 - [AI-progress knowledge base v1 design](docs/data/ai-progress-knowledge-graph-v1.md)
 - [Weekly WeChat article template](docs/data/weekly-wechat-template.md)
 - [Domain glossary](CONTEXT.md)
@@ -64,17 +64,17 @@ The next data layer will connect company adoption, metric snapshots and event ev
 
 ## First data pilot
 
-The [2026-09-12 collection and simulation report](docs/data/collection-and-simulation-pilot-2026-09-12.md) contains 57 retained official X posts, 30 Reddit posts, 13 event groups, two adopter-confirmation records and a reproducible historical AI estimate. X coverage is partial after a rate limit. Its 13/16 self-designed work groups and 24.3-point result are not the v1 source baseline. V1 now preserves [a16z source groupings and provenance](docs/data/a16z-source-baseline-v1.md); production scores remain empty. The [expanded people watchlist](docs/research/ai-people-x-lists-2026-09-12.md) is separate from collection activation.
+The [2026-09-12 collection and simulation report](docs/data/collection-and-simulation-pilot-2026-09-12.md) contains 57 retained official X posts, 30 Reddit posts, 13 event groups, two adopter-confirmation records and a reproducible historical AI estimate. X coverage is partial after a rate limit. Its 13/16 self-designed work groups and 24.3-point result are not the v1 source baseline. V1 now preserves [a16z source groupings and provenance](docs/data/a16z-source-baseline-v1.md); production scores remain empty. The expanded people watchlist (`docs/research/ai-people-x-lists-2026-09-12.md`, local only) is separate from collection activation.
 
 ## Official account registry
 
 Checked on 2026-09-11: **13 companies, 51 enabled X accounts and 8 held records**. Each company can have multiple model, product, developer, research, platform and newsroom accounts. Enabled accounts have a matching numeric X user ID and identity evidence from official sites or verified official X relationships. This is an initial source list, not complete company/product coverage or a collection of verified capability events.
 
 - [Readable official account list](docs/data/official-x-accounts.md)
-- [Collector-compatible account JSON](datasets/official-x-accounts.json)
-- [Coverage gaps](datasets/official-x-account-gaps.json)
-- [Identity observations](datasets/evidence/x-account-profile-checks-2026-09-11.json)
-- [Official X account relationships](datasets/evidence/x-account-relationships-2026-09-11.json)
+- Collector-compatible account JSON (`datasets/official-x-accounts.json`, local only)
+- Coverage gaps (`datasets/official-x-account-gaps.json`, local only)
+- Identity observations (`datasets/evidence/x-account-profile-checks-2026-09-11.json`, local only)
+- Official X account relationships (`datasets/evidence/x-account-relationships-2026-09-11.json`, local only)
 
 ## Product scope
 
@@ -82,9 +82,9 @@ Track AI companies' capability and product announcements through official eviden
 
 ## Ontology v1.0.0
 
-The [standalone ontology](datasets/ontology/README.md) defines work, markets and occupations with five concept kinds and four typed relationships. It preserves all 20,796 concept IDs and 20,733 relationship IDs from the original catalog, together with source definitions and external classification mappings. It contains no event, metric, progress or weighting data.
+The standalone ontology (`datasets/ontology/README.md`, local only) defines work, markets and occupations with five concept kinds and four typed relationships. It preserves all 20,796 concept IDs and 20,733 relationship IDs from the original catalog, together with source definitions and external classification mappings. It contains no event, metric, progress or weighting data.
 
-Start with the [model](datasets/ontology/releases/v1.0.0/model.json), [JSON Schema](datasets/ontology/releases/v1.0.0/schema.json), [full catalogs](datasets/ontology/README.md) and [version rules](datasets/ontology/VERSIONING.md). `pnpm ontology:test` and `pnpm ontology:check` verify the independent contract and sealed package. Some concepts still have names and classification positions only; definition coverage is reported explicitly. The complete ontology is also imported into the [local PostgreSQL mirror](docs/development/local-data-pipeline.md).
+Start with the model (`datasets/ontology/releases/v1.0.0/model.json`, local only), JSON Schema (`datasets/ontology/releases/v1.0.0/schema.json`, local only), full catalogs (`datasets/ontology/README.md`, local only) and version rules (`datasets/ontology/VERSIONING.md`, local only). `pnpm ontology:test` and `pnpm ontology:check` verify the independent contract and sealed package. Some concepts still have names and classification positions only; definition coverage is reported explicitly. The complete ontology is also imported into the [local PostgreSQL mirror](docs/development/local-data-pipeline.md).
 
 ## Database design
 
@@ -92,18 +92,18 @@ The [first-stage PostgreSQL design](docs/superpowers/specs/2026-09-12-postgresql
 
 ## Historical platform data v0.0.1
 
-The [versioned platform dataset](datasets/platform/README.md) retains the original mixed draft: a complete O*NET 31.0 occupation/task projection (23 groups, 1,016 occupations, 18,838 tasks) and an AI-proposed market catalog (40 domains, 265 submarkets, 614 work items), with coverage references for all 22 ISIC Rev.5 sections. Initial weights carry their methods and draft status; capability progress remains unknown. The data is a sealed local draft, and the website has not yet adopted it. New ontology work uses the standalone package above; the old runtime contracts have not been revised in this ontology-only change.
+The versioned platform dataset (`datasets/platform/README.md`, local only) retains the original mixed draft: a complete O*NET 31.0 occupation/task projection (23 groups, 1,016 occupations, 18,838 tasks) and an AI-proposed market catalog (40 domains, 265 submarkets, 614 work items), with coverage references for all 22 ISIC Rev.5 sections. Initial weights carry their methods and draft status; capability progress remains unknown. The data is a sealed local draft, and the website has not yet adopted it. New ontology work uses the standalone package above; the old runtime contracts have not been revised in this ontology-only change.
 
-Read the [market catalog](datasets/platform/releases/v0.0.1/market-catalog.md), [occupation catalog](datasets/platform/releases/v0.0.1/occupation-catalog.md) and [major/minor/patch policy](datasets/platform/VERSIONING.md). `pnpm platform:test` and `pnpm platform:check` validate the contract and releases, and are included in `pnpm check`.
+Read the market catalog (`datasets/platform/releases/v0.0.1/market-catalog.md`, local only), occupation catalog (`datasets/platform/releases/v0.0.1/occupation-catalog.md`, local only) and major/minor/patch policy (`datasets/platform/VERSIONING.md`, local only). `pnpm platform:test` and `pnpm platform:check` validate the contract and releases, and are included in `pnpm check`.
 
 ## Market directory
 
-The earlier frontend directory has 20 editorial markets in six browsing groups, informed by a16z research, YC profiles and product websites. It is not an original a16z taxonomy or a measure of global economic coverage. The [v1 industry reference](datasets/a16z-industry-reference.v1.json) preserves the nine original industry headings in the a16z GDPval chart. The [app-spending reference](datasets/a16z-market-reference.v1.json) remains separate; this source correction has not changed the frontend.
+The earlier frontend directory has 20 editorial markets in six browsing groups, informed by a16z research, YC profiles and product websites. It is not an original a16z taxonomy or a measure of global economic coverage. The v1 industry reference (`datasets/a16z-industry-reference.v1.json`, local only) preserves the nine original industry headings in the a16z GDPval chart. The app-spending reference (`datasets/a16z-market-reference.v1.json`, local only) remains separate; this source correction has not changed the frontend.
 
 - [Readable market directory](docs/metadata/market-directory.md)
 - [Source and selection method](docs/metadata/methodology.md)
 - [Machine-readable directory](src/content/markets.json)
-- [YC research](docs/research/startup-market-sources.md)
+- YC research (`docs/research/startup-market-sources.md`, local only)
 
 Run `pnpm metadata:check` to validate the earlier frontend directory's bilingual content, category relationships, source references, examples, and absence of unsupported coverage verdicts. Its official-update links and replacement assessments remain empty. This command does not validate all newer datasets; see the [2026-09-12 metadata reconfirmation](docs/data/metadata-reconfirmation-2026-09-12.md) for current source references, account and people counts, pilot links and pending work.
 
@@ -111,9 +111,15 @@ Run `pnpm metadata:check` to validate the earlier frontend directory's bilingual
 
 English is the default. Current pages render on the server using the browser's `Accept-Language` preference, respecting quality weights. Chinese preferences receive Simplified Chinese; unsupported languages fall back to English. This does not infer physical location. The existing frontend headline predates the openaiwill naming decision; the new tagline is not yet finalized. Separate indexable locale URLs, manual language selection, and Traditional Chinese are future work.
 
+## Public source and private inputs
+
+The public repository contains application code and reviewed documentation. `datasets/` and `docs/research/` remain local and are not included in a fresh clone, including static reference catalogs and historical releases. Restore trusted private inputs locally only when operating the data pipeline; do not stage them. References to those paths in older documentation describe local resources.
+
+Run `pnpm install --frozen-lockfile` and `pnpm check:public` to validate the public source without private datasets. The website builds without a published snapshot and displays its existing no-data state. `pnpm check` remains the complete local validation command when private data is available. See [the publication boundary](SECURITY.md) and [local collection and publishing](docs/development/local-collection-and-publishing.md).
+
 ## Open source and security
 
-Project code is licensed under MIT; referenced datasets retain the source licenses recorded in each release. Local agent instructions, skills, environments, credentials and raw collection archives are excluded, including from the initial public history. See [SECURITY.md](SECURITY.md). Verification is local: `pnpm check` validates public paths, common credential patterns, dataset contracts, lint, types and build, and `pnpm check:full` adds the real PostgreSQL tests. The repository does not rely on hosted CI. No credentials are required to run the current scaffold.
+Project code is licensed under MIT. Local datasets retain their applicable source licenses and are not distributed here. Local agent instructions, skills, environments, credentials, collection archives and research drafts are excluded from new commits. Older public commits may retain files removed from the current tree; this cleanup does not rewrite history. See [SECURITY.md](SECURITY.md). Verification is local: `pnpm check` validates public paths, common credential patterns, dataset contracts, lint, types and build, and `pnpm check:full` adds the real PostgreSQL tests. The repository does not rely on hosted CI. No credentials are required to run the current scaffold.
 
 ## Design resources
 

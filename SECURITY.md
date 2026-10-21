@@ -9,9 +9,14 @@ Exclude these from Git and website source uploads:
 - `.env*`, API/upload tokens, proxy credentials, login cookies, browser storage state, private keys and credential files.
 - Local Agent/MCP configuration, `AGENTS*.md`, `CLAUDE*.md`, `.agents/`, `.claude/`, `.codex/`, `.lawrence/`, `.opencode/` and private `skills/`.
 - Root `data/`, raw social responses, private submissions, local databases and their journals, logs, temporary files and workspace archives.
+- The entire `datasets/` directory, including historical releases, reference catalogs, account registries, ontology instances and associated schema packages. Local tools still read these ignored inputs; they are not distributed with the public source.
+- `docs/research/`, including internal research drafts, audit reports and handoff notes. Prepare and review intentional public documentation outside that directory before publishing it.
+- Data exports and backups, including CSV, TSV, JSONL, NDJSON, Parquet, Arrow, Feather and database dumps. Keep credentials and SSH configuration local regardless of filename.
 - Third-party original design material under `design/reference/`: downloaded images, videos, website snapshots, user reference screenshots and fonts whose reuse license is not established. Reference metadata has a narrow allowlist in the public-file checker.
 
-Project-owned `design/system-v1/` assets, its Inter Tight / JetBrains Mono fonts and their OFL license files may be committed. Keep the license and provenance files with the fonts. Public Markdown under `docs/data/` is allowed; its non-Markdown local attachments are excluded. Sanitized contracts and observations belong under `datasets/`.
+Project-owned `design/system-v1/` assets, its Inter Tight / JetBrains Mono fonts and their OFL license files may be committed. Keep the license and provenance files with the fonts. Application configuration, UI labels, design tokens and SQL migrations are source code; they are not permission to embed private records. Reviewed explanatory Markdown under `docs/data/` is allowed; its non-Markdown local attachments are excluded. Static reference data is not automatically approved for public Git publication.
+
+These rules govern new commits. Removing a file from the current tree does not remove copies in older commits, branches, pull requests or existing clones. Report that distinction when cleaning up a public repository; history must not be rewritten without explicit authorization.
 
 Keep secrets in local runtime or deployment environment settings; only intentionally public values may use `NEXT_PUBLIC_`. `.gitignore` is a Git selection rule, not a general uploader or deployment filter. Upload a validated, explicitly selected data batch; never copy the whole workspace, raw archive or a workspace ZIP to the website.
 
@@ -22,6 +27,7 @@ User-submitted ideas are private by default. Do not turn submissions into public
 - `pnpm security:check` scans tracked working files and non-ignored untracked candidates, catching leaks before staging.
 - `pnpm security:staged` scans the exact indexed blobs, including unchanged tracked files. A clean working copy cannot hide a secret already staged. Run it after staging and before every commit; no hosted CI repeats it.
 - `pnpm security:test` exercises the scanner in temporary Git repositories with synthetic values. The scanner reports filenames and reasons without printing matched credential values.
+- `pnpm check:public` checks the public source, lint, types and build without requiring private datasets. `pnpm check` additionally validates locally restored data and its contracts; keep those inputs out of the index.
 - `pnpm check` also runs metadata/design validation, lint, typecheck and production build. `pnpm check:full` runs `pnpm check` and then the real PostgreSQL tests (`pnpm data:test`).
 
 The checker blocks prohibited paths and common credential patterns, including forced additions of ignored files; it does not certify that arbitrary prose, screenshots or data are non-confidential. Symbolic links and archive bundles are rejected because their contents are not independently reviewed by this gate. Review the staged diff before publishing. If a secret is exposed, revoke it before cleaning history.
