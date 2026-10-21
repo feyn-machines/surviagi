@@ -1,0 +1,48 @@
+/* A short text page: the whitepaper's type scale and measure, without its index. */
+
+.page {
+  padding: var(--ah-space-8) 0 var(--ah-space-10);
+}
+
+.doc {
+  max-width: 68ch;
+}
+
+.title {
+  font-size: var(--ah-text-h1);
+  line-height: var(--ah-leading-display);
+  letter-spacing: var(--ah-tracking-display);
+  color: var(--ah-color-text);
+  margin: 0 0 var(--ah-space-3);
+}
+
+.updated {
+  margin: 0 0 var(--ah-space-8);
+  color: var(--ah-color-muted);
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-label);
+  letter-spacing: var(--ah-tracking-label);
+  text-transform: uppercase;
+}
+
+.heading {
+  margin: var(--ah-space-8) 0 var(--ah-space-4);
+  padding-top: var(--ah-space-5);
+  border-top: 1px solid var(--ah-color-line);
+  color: var(--ah-color-text);
+  font-size: var(--ah-text-h3);
+  line-height: var(--ah-leading-heading);
+}
+
+.paragraph {
+  font-size: var(--ah-text-body);
+  line-height: var(--ah-leading-body);
+  color: var(--ah-color-muted);
+  margin: 0 0 var(--ah-space-5);
+}
+
+.paragraph a {
+  color: var(--ah-color-signal);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { Language } from "@/lib/i18n";
+import { href } from "@/lib/routes";
 import { ProgressCompare, type CompareRow } from "@/components/progress-compare";
 import { activityAnchor as anchor } from "@/lib/anchors";
 import { Screen } from "./reveal";
@@ -62,10 +63,10 @@ export type HomeEvent = {
 };
 
 /**
- * Generic in the href so the literal prefix stays checked. `HomeRow` fixed to
- * `string` would make `Route<string>` reject every dynamic route, and the usual
- * escape - casting with `as Route` at the call site - waves the prefix through
- * as well, which is exactly the rot that left three dead links in this repo.
+ * Generic in the href so a row can narrow it to one family of routes. Build the
+ * link with `href()` from `@/lib/routes` rather than casting with `as Route`,
+ * which waves a dead path through as well, the rot that left three dead links
+ * in this repo.
  */
 export type HomeRow<T extends string = string> = CompareRow<T> & { id: string };
 
@@ -331,7 +332,7 @@ export function ChainScreens<M extends string, G extends string>({
         ) : null}
 
         <p className={s.exit}>
-          <Link className="text-link" href="/updates">
+          <Link className="text-link" href={href(language, "/updates")}>
             {c.allUpdates.replace("{n}", String(updatesTotal))}
           </Link>
         </p>
@@ -355,10 +356,10 @@ export function ChainScreens<M extends string, G extends string>({
                 <span className={s.fanName}>
                   {activity?.market ? (
                     <Link
-                      href={`/markets/${activity.market.replace(/^oaw:market:/, "")}#${anchor(
+                      href={href(language, `/markets/${activity.market.replace(/^oaw:market:/, "")}#${anchor(
                         row.id,
                         activity.market,
-                      )}`}
+                      )}`)}
                     >
                       {name}
                     </Link>
@@ -427,7 +428,7 @@ export function ChainScreens<M extends string, G extends string>({
           <ProgressCompare rows={marketRows} language={language} />
         )}
         <p className={s.exit}>
-          <Link className="text-link" href="/markets">
+          <Link className="text-link" href={href(language, "/markets")}>
             {c.allMarkets.replace("{n}", String(marketsTotal))}
           </Link>
         </p>
@@ -440,7 +441,7 @@ export function ChainScreens<M extends string, G extends string>({
         <p className={s.note}>{c.s4Note.replace("{n}", String(groups.length))}</p>
         <ProgressCompare rows={groups} language={language} mark={reachedGroups} />
         <p className={s.exit}>
-          <Link className="text-link" href="/occupations">
+          <Link className="text-link" href={href(language, "/occupations")}>
             {c.findYours}
           </Link>
         </p>

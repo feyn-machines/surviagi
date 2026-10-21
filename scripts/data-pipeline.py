@@ -28,7 +28,8 @@ def run_event_extraction(conn, args):
     """Query candidates from the collection store, call DeepSeek, land the event layer."""
     from data_pipeline import deepseek
     from data_pipeline.event_extraction import (load_candidates, assemble_extraction,
-                                                ingest_extraction, load_known_occurrences)
+                                                ingest_extraction, load_known_occurrences,
+                                                load_known_events, load_prior)
     deepseek.load_env(ROOT)
     out = args.output
     if out.exists():
@@ -36,7 +37,8 @@ def run_event_extraction(conn, args):
     window = {'start': args.window_start, 'end': args.window_end} if (args.window_start or args.window_end) else None
     migrate(conn)
     candidates = load_candidates(conn, window=window,
-                                 collection_run_ids=args.collection_run or None, limit=args.limit)
+                                 collection_run_ids=args.collection_run or None, limit=args.limit,
+                                 targets=args.targets)
     if not candidates:
         raise ValueError('No extraction candidates matched (check --window-start/--end and --collection-run)')
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -48,19 +50,23 @@ def run_event_extraction(conn, args):
     cfg = deepseek.config_from_env()
     started = datetime.now(timezone.utc).isoformat()
     print(f'Extracting {len(candidates)} candidates via {cfg["model"]} (batch {args.batch_size})...', file=sys.stderr)
+    known = load_known_events(conn, candidates)
     batches, failures = deepseek.extract_events(
-        candidates, cfg, batch_size=args.batch_size,
+        candidates, cfg, batch_size=args.batch_size, known=known, workers=args.workers,
         progress=lambda done, total, n: print(f'  batch {done}/{total}: {n} events', file=sys.stderr))
     if failures and len(failures) == len(batches):
         raise ValueError(f'Every extraction batch failed; first error: {failures[0]["error"]}')
     if failures:
         print(f'  WARNING: {len(failures)} of {len(batches)} batches failed and were skipped', file=sys.stderr)
     meta = {'model': cfg['model'], 'prompt_sha256': deepseek.prompt_sha256(),
-            'params': {'batch_size': args.batch_size, 'limit': args.limit, 'failed_batches': failures},
+            'params': {'batch_size': args.batch_size, 'limit': args.limit, 'failed_batches': failures,
+                       'targets': args.targets, 'known_events': len(known)},
             'window': window, 'started_at': started,
             'finished_at': datetime.now(timezone.utc).isoformat(), 'status': 'completed'}
     doc = assemble_extraction(candidates, batches, meta,
-                              known_occurrences=load_known_occurrences(conn))
+                              known_occurrences=load_known_occurrences(conn),
+                              known_events={item['ref']: item for item in known},
+                              prior=load_prior(conn, candidates))
     save(out, doc)
     result = ingest_extraction(conn, out)
     print(json.dumps({'output': str(out), **result}, ensure_ascii=False, indent=2, default=json_default))
@@ -113,14 +119,49 @@ def main():
     extract.add_argument('--window-end')
     extract.add_argument('--collection-run', action='append')
     extract.add_argument('--limit', type=int)
-    extract.add_argument('--batch-size', type=int, default=25)
+    extract.add_argument('--batch-size', type=int, default=20)
+    extract.add_argument('--targets', choices=['official', 'panel', 'search', 'all'], default='all',
+                         help='Whose posts to read: official company accounts, the panel, authors found by search, or all')
+    extract.add_argument('--workers', type=int, default=4, help='Batches sent at once')
     extract.add_argument('--plan-only', action='store_true')
+    topics = sub.add_parser('mine-topics', help='Read a window of posts for claims and place them under topics')
+    topics.add_argument('--output', required=True, type=Path,
+                        help='The record of this run; its file name is the run id')
+    topics.add_argument('--window-start', required=True)
+    topics.add_argument('--window-end', required=True)
+    topics.add_argument('--claims-from', type=Path, help='Place the claims of an earlier run instead of reading posts again')
+    topics.add_argument('--no-store', action='store_true', help='Write the record only; leave the database as it is')
+    topics.add_argument('--collection-run', action='append', help='Read only the posts of this collection run')
+    topics.add_argument('--limit', type=int)
+    topics.add_argument('--workers', type=int, default=4, help='Batches sent at once')
+    plan = sub.add_parser('topic-queries', help='Write the phrases to search next for the topics that most need another voice')
+    plan.add_argument('--output', required=True, type=Path, help='One phrase per line, for `pnpm crawl search --queries-file`')
+    plan.add_argument('--limit', type=int, default=20, help='Topics to search for')
+    plan.add_argument('--per-topic', type=int, default=2)
+    plan.add_argument('--votes', type=Path,
+                      help='A file written by `pnpm votes:pull`; default is the newest one under data/votes/')
+    searched = sub.add_parser('topic-searched', help='Record which topics a search run was made for')
+    searched.add_argument('run', type=Path)
+    reword = sub.add_parser('topic-reword', help='Rewrite stored answers that are longer than the standard allows; ids stay')
+    reword.add_argument('--reason', required=True, help='Why the answers are being reworded; kept with the old wording')
+    evidence = sub.add_parser('topic-evidence', help='Ask the judge which answers of which topics each update is evidence for or against')
+    evidence.add_argument('--since', help='Only updates that happened on or after this time')
+    evidence.add_argument('--limit', type=int)
+    evidence.add_argument('--note', default='')
+    sub.add_parser('measure-markets', help='Say which market or occupation each market measurement is about')
+    index = sub.add_parser('search-index', help='Fill the search indexes from the database and the topics document')
+    index.add_argument('--only', action='append', choices=['topics', 'updates', 'catalog'])
+    find = sub.add_parser('search', help='Search one index by words and meaning together')
+    find.add_argument('query')
+    find.add_argument('--index', choices=['topics', 'updates', 'catalog'], default='topics')
+    find.add_argument('--limit', type=int, default=8)
+    find.add_argument('--semantic', type=float, default=0.5, help='0 words only, 1 meaning only')
     ingest_events = sub.add_parser('ingest-events')
     ingest_events.add_argument('archive', type=Path)
-    seed = sub.add_parser('seed-semantic')
+    seed = sub.add_parser('seed-ontology-data')
     seed.add_argument('--ontology-version')
     gs = sub.add_parser('gate-state')
-    gs.add_argument('--vocabulary', default='event_kind-2.0.0')
+    gs.add_argument('--vocabulary', default=None, help='One marker only; default is every version of event_kind')
     pub = sub.add_parser('publish-snapshot')
     pub.add_argument('--ontology-version')
     for name, (_, help_text) in MAPPING_PASSES.items():
@@ -154,6 +195,11 @@ def main():
     idm.add_argument('--limit', type=int)
     idm.add_argument('--batch-size', type=int, default=8)
     idm.add_argument('--report', action='store_true', help='Print the counts; no judge calls')
+    idm.add_argument('--reconcile', action='store_true',
+                     help='Fold short-name duplicates into their model and add short aliases; no judge calls')
+    cat = sub.add_parser('model-catalog',
+                         help='Import our companies\' recent models from a models.dev snapshot (no judge calls)')
+    cat.add_argument('snapshot', type=Path, nargs='?', help='Saved api.json; downloaded when omitted')
     sub.add_parser('panel-refresh',
                    help='Re-derive every panel account\'s use and state from its checks')
     state = sub.add_parser('activity-state',
@@ -198,6 +244,11 @@ def main():
             result.update({'changed': len(changed), 'by_state': states})
             print(json.dumps(result, ensure_ascii=False, indent=2, default=json_default))
         elif args.command == 'relations-backfill':
+            # The crawler is a local-only component (local/x-crawler, ignored by Git).
+            crawler_home = ROOT / 'local/x-crawler'
+            if not (crawler_home / 'crawler').is_dir():
+                raise SystemExit('relations-backfill needs the local crawler at local/x-crawler/crawler')
+            sys.path.insert(0, str(crawler_home))
             from crawler.core.errors import SchemaChanged
             from crawler.x import parse as crawler_parse
             from data_pipeline.collection_store import backfill_relations
@@ -232,10 +283,21 @@ def main():
         elif args.command == 'identify-models':
             from data_pipeline import model_identification
             migrate(conn)
-            result = (model_identification.report(conn) if args.report else
-                      model_identification.run(conn, batch_size=args.batch_size, limit=args.limit,
-                                               progress=lambda line: print(line, file=sys.stderr)))
+            if args.reconcile:
+                with conn.transaction():
+                    result = model_identification.reconcile(conn)
+                model_identification.confirm(conn)
+            elif args.report:
+                result = model_identification.report(conn)
+            else:
+                result = model_identification.run(conn, batch_size=args.batch_size, limit=args.limit,
+                                                  progress=lambda line: print(line, file=sys.stderr))
             print(json.dumps(result, ensure_ascii=False, indent=2, default=json_default))
+        elif args.command == 'model-catalog':
+            from data_pipeline import model_catalog
+            migrate(conn)
+            print(json.dumps(model_catalog.run(conn, args.snapshot), ensure_ascii=False, indent=2,
+                             default=json_default))
         elif args.command == 'migrate':
             print(json.dumps({'applied':migrate(conn)}))
         elif args.command == 'ingest':
@@ -243,7 +305,7 @@ def main():
             migrate(conn)
             result = ingest_run(conn, args.run)
             print(json.dumps(result, ensure_ascii=False, indent=2, default=json_default))
-        elif args.command == 'seed-semantic':
+        elif args.command == 'seed-ontology-data':
             from data_pipeline.type_layer import seed
             migrate(conn)
             result = seed(conn, args.ontology_version)
@@ -260,6 +322,68 @@ def main():
             print(json.dumps(result, ensure_ascii=False, indent=2, default=json_default))
         elif args.command == 'extract-events':
             run_event_extraction(conn, args)
+        elif args.command == 'mine-topics':
+            from data_pipeline import deepseek, topic_mining
+            deepseek.load_env(ROOT)
+            if args.output.exists():
+                raise ValueError(f'Output already exists (mining runs are immutable): {args.output}')
+            migrate(conn)
+            claims = json.loads(args.claims_from.read_text())['claims'] if args.claims_from else None
+            run, topics = topic_mining.mine(
+                conn, {'start': args.window_start, 'end': args.window_end}, args.output.stem, claims=claims,
+                workers=args.workers, limit=args.limit, keep=not args.no_store,
+                collection_runs=args.collection_run,
+                progress=lambda done, total, what='batch': print(f'  {what} {done}/{total}', flush=True))
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            save(args.output, {**run, 'run_id': args.output.stem, 'stored': not args.no_store, 'topics': topics})
+            print(json.dumps({**run['counts'], 'stored': not args.no_store, 'output': str(args.output)},
+                             ensure_ascii=False, indent=2))
+        elif args.command == 'topic-queries':
+            from data_pipeline import topic_mining
+            migrate(conn)
+            pulled = args.votes or max((ROOT / 'data' / 'votes').glob('votes-*.json'), default=None)
+            votes = json.loads(pulled.read_text()) if pulled else None
+            rows = topic_mining.search_plan(conn, limit=args.limit, per_topic=args.per_topic, votes=votes)
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(''.join(query + '\n' for query in dict.fromkeys(row['query'] for row in rows)))
+            print(json.dumps({'topics': len({row['topic'] for row in rows}),
+                              'queries': len({row['query'] for row in rows}),
+                              'topics_readers_voted_on': len({row['topic'] for row in rows if row['votes']}),
+                              'votes_file': pulled.name if pulled else None, 'output': str(args.output)}))
+        elif args.command == 'topic-searched':
+            from data_pipeline import topic_mining
+            migrate(conn)
+            run_doc = json.loads(args.run.read_text())
+            print(json.dumps({'run_id': args.run.stem,
+                              'searches_recorded': topic_mining.record_searches(conn, run_doc, args.run.stem)}))
+        elif args.command == 'topic-reword':
+            from data_pipeline import deepseek, topic_mining
+            deepseek.load_env(ROOT)
+            migrate(conn)
+            print(json.dumps(topic_mining.reword(conn, reason=args.reason,
+                                                 progress=lambda done, total, what: print(f'  {what} {done}/{total}', flush=True))))
+        elif args.command == 'topic-evidence':
+            from data_pipeline import deepseek, topic_evidence
+            deepseek.load_env(ROOT)
+            migrate(conn)
+            print(json.dumps(topic_evidence.run(conn, since=args.since, limit=args.limit, note=args.note,
+                                                progress=lambda line: print(line, flush=True)), ensure_ascii=False))
+        elif args.command == 'measure-markets':
+            from data_pipeline import deepseek, market_measures
+            deepseek.load_env(ROOT)
+            migrate(conn)
+            print(json.dumps(market_measures.link(
+                conn, progress=lambda done, total: print(f'  measurement {done}/{total}', flush=True)), ensure_ascii=False))
+        elif args.command == 'search-index':
+            from data_pipeline import search_index
+            from data_pipeline import topic_mining
+            topics = [topic_mining.describe(topic) for topic in topic_mining.load_topics(conn)]
+            print(json.dumps(search_index.fill_all(conn, [t for t in topics if t['status'] != 'fails'], only=args.only),
+                             ensure_ascii=False))
+        elif args.command == 'search':
+            from data_pipeline import search_index
+            for hit in search_index.search(args.index, args.query, limit=args.limit, semantic=args.semantic):
+                print(f"{hit['_rankingScore']:.3f}  {hit['title']}  |  {hit.get('title_zh') or hit.get('day') or ''}  [{hit['key']}]")
         elif args.command == 'ingest-events':
             from data_pipeline.event_extraction import ingest_extraction
             migrate(conn)

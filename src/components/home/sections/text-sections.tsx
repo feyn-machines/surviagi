@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { bilingual, type Language } from "@/lib/i18n";
 import type { HomeData } from "@/lib/home-data";
+import { LEVEL_LINE, LEVEL_MEANINGS } from "@/lib/level-names";
 import { LEVEL_NAMES } from "./levels";
 import frame from "./section.module.css";
 import s from "./text-sections.module.css";
+import { href } from "@/lib/routes";
 
 /**
  * The homepage's text modules: a statement that stays in place on the left while
@@ -16,9 +18,8 @@ const copy = bilingual({
     forTitle: "Every AI update, mapped to real work.",
     forLead: "Which work. How far AI gets with it. Who can back that up.",
     readers: "Building a product|Startups, one-person companies, independent developers|See which companies are moving into your market.|Coverage by company|#companies;Running a business|One-person companies, small teams, freelancers|See which work can be handed to AI today.|Progress by domain|#domains;Starting out with AI|Employees going independent, people exploring AI|See what AI became able to do this month.|Latest updates|#updates",
-    rulerTitle: "At L0–L2, a person is still doing the work. From L3, a person is no longer doing it.",
+    rulerTitle: LEVEL_LINE.en,
     rulerLead: "Six levels. One line that matters.",
-    levels: "A person carries out, reviews and handles exceptions.|—;AI takes some steps. A person carries out, reviews and handles exceptions.|Product launch;AI carries out every step. A person reviews each item and handles exceptions.|Product launch;AI carries out and checks its own work. A person samples and takes over on exceptions. Limited scope.|Confirmed by several sources;AI carries out, reviews and handles exceptions. Limited scope.|Production use by a named company;AI carries out, reviews and handles exceptions. Unlimited scope.|Independent measurement",
     evidence: "Evidence required",
     standing: "Standing here now",
     still: "L0–L2: a person is still doing the work",
@@ -32,16 +33,15 @@ const copy = bilingual({
     now: "{n} kinds of work",
     none: "None yet",
     endTitle: "Every AI update could change your answer.",
-    endBody: "openaiwill is an initiative to make AI’s progress toward taking over the world more transparent and credible.",
+    endBody: "SurviAGI is an initiative to make AI’s progress toward taking over the world more transparent and credible.",
     endLink: "Read the whitepaper",
   },
   "zh-CN": {
     forTitle: "每次 AI 更新，落到具体工作上。",
     forLead: "哪项工作。AI 能做到哪一步。谁能证明。",
     readers: "已经在做产品|创业公司、一人公司、独立开发者|看哪家公司的更新进了你的赛道。|各公司的覆盖|#companies;正在运营|一人公司、小团队、自由职业者|看哪些工作现在可以交给 AI。|领域的进度|#domains;想用 AI 做事|想单干的职场人、AI 爱好者|看 AI 这个月新做到了什么。|最新更新|#updates",
-    rulerTitle: "L0–L2，人仍在干这件活；L3 起，人不再干这件活。",
+    rulerTitle: LEVEL_LINE["zh-CN"],
     rulerLead: "六个级别，一条分界线。",
-    levels: "人执行、审核并处理例外。|—;AI 承担部分步骤，人执行、审核并处理例外。|产品发布;AI 执行全部步骤，人逐件审核并处理例外。|产品发布;AI 执行并自检，人抽检，例外时由人接手。范围限定。|多方印证;AI 执行、审核并处理例外。范围限定。|具名企业生产使用;AI 执行、审核并处理例外。范围不限。|独立测量",
     evidence: "所需证据",
     standing: "现在处于这一级",
     still: "L0–L2，人仍在干这件活",
@@ -55,7 +55,7 @@ const copy = bilingual({
     now: "{n} 项工作",
     none: "暂无",
     endTitle: "每一次 AI 更新，都可能会挑战你的答案。",
-    endBody: "openaiwill 是一项让 AI 接管世界的进度更透明、更可信的倡议。",
+    endBody: "SurviAGI 是一项让 AI 接管世界的进度更透明、更可信的倡议。",
     endLink: "阅读白皮书",
   },
 });
@@ -64,7 +64,7 @@ const copy = bilingual({
 export function ReadersSection({ data, language, index }: { data: HomeData; language: Language; index: string }) {
   const c = copy[language];
   const stats: [number, string][] = [
-    [data.updates.length, c.statUpdates],
+    [data.recentUpdates, c.statUpdates],
     [data.works.length, c.statWork],
     [data.orgsTracked, c.statOrgs],
   ];
@@ -103,10 +103,9 @@ export function ReadersSection({ data, language, index }: { data: HomeData; lang
  */
 export function RulerSection({ data, language, index }: { data: HomeData; language: Language; index: string }) {
   const c = copy[language];
-  const levels = c.levels.split(";").map((row, level) => {
-    const [roles, evidence] = row.split("|");
-    return { level, roles, evidence, n: data.works.filter((w) => w.level === level).length };
-  });
+  const levels = LEVEL_MEANINGS[language].map(({ roles, evidence }, level) => ({
+    level, roles, evidence, n: data.works.filter((w) => w.level === level).length,
+  }));
   return (
     <section id="levels" className={s.scene}>
       <div className={s.sceneHead}>
@@ -147,8 +146,8 @@ export function ClosingSection({ language }: { language: Language }) {
         <p className={frame.lead}>{c.endBody}</p>
       </div>
       <div className={`${s.ctas} ${frame.rise}`}>
-        <Link className={s.cta} href="/updates">{c.endMore}</Link>
-        <Link className={s.cta} href="/whitepaper">{c.endLink}</Link>
+        <Link className={s.cta} href={href(language, "/updates")}>{c.endMore}</Link>
+        <Link className={s.cta} href={href(language, "/whitepaper")}>{c.endLink}</Link>
       </div>
     </section>
   );

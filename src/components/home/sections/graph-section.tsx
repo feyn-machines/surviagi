@@ -88,9 +88,9 @@ function build(data: HomeData, language: Language) {
     const u = updateOf.get(r.update), w = workOf.get(r.work);
     if (!u || !w) continue;
     const company = add(0, u.org, u.org);
-    const update = add(1, u.id, u.title, `${u.org} · ${u.date ?? ""}`, 0, u.url, updateHref(u.id));
-    const work = add(2, w.id, pick(w.name, language), `L${w.level} ${LEVEL_NAMES[language][w.level]}`, w.level, null, workHref(w.id));
-    const market = add(3, w.market.en, pick(w.market, language), "", 0, null, marketHref(w.marketId));
+    const update = add(1, u.id, u.title, `${u.org} · ${u.date ?? ""}`, 0, u.url, updateHref(language, u.id));
+    const work = add(2, w.id, pick(w.name, language), `L${w.level} ${LEVEL_NAMES[language][w.level]}`, w.level, null, workHref(language, w.id));
+    const market = add(3, w.market.en, pick(w.market, language), "", 0, null, marketHref(language, w.marketId));
     const domain = add(4, w.domainId, pick(data.domains[w.domainId], language));
     link(company, update, 0);
     link(update, work, 1, r.accepted, r.claimed);

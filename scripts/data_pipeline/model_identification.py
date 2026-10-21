@@ -243,6 +243,74 @@ def confirm(conn):
                            WHERE c.parent_model_id = f.model_id AND c.status = 'confirmed')""")
 
 
+def short_names(models):
+    """Spellings that drop the family name: `opus 5 5` for Claude Opus 5.5.
+
+    A post often omits the brand. The short form is offered only when it starts
+    with a word and still carries a version number - `3 8 flash` or a bare `5 6`
+    names nothing on its own - and exactly one model would answer to it.
+    Returns {short name: model_id}.
+    """
+    by_id = {m["model_id"]: m for m in models}
+    found, clash = {}, set()
+    for model in models:
+        family = by_id.get(model.get("parent_model_id"))
+        if model["level"] != "release" or family is None:
+            continue
+        name, prefix = normalize(model["name"]).split(), normalize(family["name"]).split()
+        rest = name[len(prefix):]
+        if name[:len(prefix)] != prefix or len(rest) < 2 or not rest[0].isalpha() \
+                or not any(t.isdigit() for t in rest):
+            continue
+        short = " ".join(rest)
+        if short in found and found[short] != model["model_id"]:
+            clash.add(short)
+        found[short] = model["model_id"]
+    return {short: model_id for short, model_id in found.items() if short not in clash}
+
+
+def reconcile(conn):
+    """Rule-only repair of the registry; no judge is called.
+
+    A candidate that a mention opened under a short name ("Opus 5.5") is folded
+    into the model of the same owner that the short name belongs to, and every
+    short name becomes an alias so the next mention resolves directly.
+    """
+    models = conn.execute("SELECT * FROM public.models").fetchall()
+    by_id = {m["model_id"]: m for m in models}
+    aliases = {r["alias"]: r["model_id"] for r in
+               conn.execute("SELECT alias, model_id FROM public.model_aliases").fetchall()}
+    merged, added = [], 0
+    for short, target in short_names(models).items():
+        holder = aliases.get(short)
+        if holder is None:
+            conn.execute("INSERT INTO public.model_aliases (alias, model_id) VALUES (%s, %s)", (short, target))
+            added += 1
+            continue
+        duplicate = by_id[holder]
+        if holder == target or duplicate["org_id"] != by_id[target]["org_id"] or duplicate["level"] != "release" \
+                or duplicate["status"] != "candidate" or duplicate["catalog_id"] or normalize(duplicate["name"]) != short:
+            continue  # the short name already means something else; leave both alone
+        conn.execute(
+            """DELETE FROM public.event_models d USING public.event_models k
+                WHERE d.model_id = %s AND k.model_id = %s AND k.event_id = d.event_id AND k.role = d.role""",
+            (holder, target))
+        conn.execute("UPDATE public.event_models SET model_id = %s WHERE model_id = %s", (target, holder))
+        conn.execute("UPDATE public.model_aliases SET model_id = %s WHERE model_id = %s", (target, holder))
+        conn.execute("DELETE FROM public.models WHERE model_id = %s", (holder,))
+        merged.append({"from": holder, "into": target})
+    # A family opened only for a duplicate that is now gone has nothing left under it.
+    emptied = conn.execute(
+        """DELETE FROM public.models f
+            WHERE f.level = 'family' AND f.status = 'candidate' AND f.catalog_id IS NULL
+              AND NOT EXISTS (SELECT 1 FROM public.models c WHERE c.parent_model_id = f.model_id)
+              AND NOT EXISTS (SELECT 1 FROM public.event_models em WHERE em.model_id = f.model_id)
+              AND f.model_id = ANY(%s)
+        RETURNING f.model_id""",
+        ([by_id[m["from"]]["parent_model_id"] for m in merged if by_id[m["from"]]["parent_model_id"]],)).fetchall()
+    return {"merged": merged, "short_aliases_added": added, "empty_families_removed": [r["model_id"] for r in emptied]}
+
+
 def report(conn):
     one = lambda sql: conn.execute(sql).fetchone()
     return {
@@ -329,7 +397,9 @@ def run(conn, batch_size=8, limit=None, progress=print):
         conn.execute("UPDATE public.judgment_runs SET status = 'failed', finished_at = %s, decided_count = %s "
                      "WHERE run_id = %s", (datetime.now(timezone.utc), read, run_id))
         raise
+    with conn.transaction():
+        reconciled = reconcile(conn)
     confirm(conn)
     conn.execute("UPDATE public.judgment_runs SET status = 'completed', finished_at = %s, decided_count = %s "
                  "WHERE run_id = %s", (datetime.now(timezone.utc), read, run_id))
-    return {"run_id": run_id, "read": read, "unread": failed, **report(conn)}
+    return {"run_id": run_id, "read": read, "unread": failed, "reconciled": reconciled, **report(conn)}

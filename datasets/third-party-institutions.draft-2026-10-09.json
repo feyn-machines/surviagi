@@ -1,0 +1,1068 @@
+{
+  "schema_version": "ai-account-panel-draft-1",
+  "as_of": "2026-10-09",
+  "status": "draft_pending_user_review",
+  "scope_note": "Third-party institutions that measure markets, adoption or work - investment firms, consultancies, data firms, public bodies and think tanks - and people who publish for them. The owner asked for this class of account on 2026-10-09. Handles were written from memory and each profile was then read once with the crawler (data/collection/lookups/third-party-probe-2026-10-09.json): the display names here are the ones the profiles show. No web page was read to confirm a handle, so every entry is listed as third_party_list; an account is confirmed only when a lookup finds its own profile naming it (rule:identity-from-profile). Nothing here is enabled by this file.",
+  "independence_rule": "An investment firm is not independent of the companies it has invested in. Holdings are not recorded here; until they are, what a firm says about a company it funds must not be read as a third party's.",
+  "accounts": [
+    {
+      "handle": "a16z",
+      "name": "a16z",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Publishes market maps and rankings of AI products by usage (the Top 100 consumer AI apps) alongside portfolio news",
+      "segments": [
+        "Investment firm"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "sequoia",
+      "name": "Sequoia Capital",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Essays and market analyses on AI adoption and where value accrues",
+      "segments": [
+        "Investment firm"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "ycombinator",
+      "name": "Y Combinator",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Batch statistics and what its startups build with AI",
+      "segments": [
+        "Investment firm"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "lightspeedvp",
+      "name": "Lightspeed",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Market analyses of AI applications and infrastructure",
+      "segments": [
+        "Investment firm"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "khoslaventures",
+      "name": "Khosla Ventures",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Views and portfolio evidence on AI replacing professional work",
+      "segments": [
+        "Investment firm"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "GreylockVC",
+      "name": "Greylock Partners",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Market analyses of AI applications",
+      "segments": [
+        "Investment firm"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "IndexVentures",
+      "name": "Index Ventures",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Market analyses of AI applications in the US and Europe",
+      "segments": [
+        "Investment firm"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "MenloVentures",
+      "name": "Menlo Ventures",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Annual surveys of enterprise spending on generative AI",
+      "segments": [
+        "Investment firm"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "BessemerVP",
+      "name": "Bessemer",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "State of AI and cloud reports with revenue benchmarks",
+      "segments": [
+        "Investment firm"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "foundersfund",
+      "name": "Founders Fund",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Portfolio news; occasional views on where AI changes industries",
+      "segments": [
+        "Investment firm"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "kleinerperkins",
+      "name": "Kleiner Perkins",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Market analyses of AI applications",
+      "segments": [
+        "Investment firm"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "Accel",
+      "name": "Accel",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Annual reports on AI and cloud markets",
+      "segments": [
+        "Investment firm"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "Redpoint",
+      "name": "Redpoint",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Market reports and surveys on AI infrastructure and applications",
+      "segments": [
+        "Investment firm"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "NEA",
+      "name": "NEA",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Portfolio news and market analyses",
+      "segments": [
+        "Investment firm"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "insightpartners",
+      "name": "Insight Partners",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Software market analyses and AI adoption among portfolio companies",
+      "segments": [
+        "Investment firm"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "airstreet",
+      "name": "Air Street Capital",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Publishes the annual State of AI Report",
+      "segments": [
+        "Investment firm"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "McKinsey",
+      "name": "McKinsey & Company",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Surveys and estimates of AI adoption and its effect on work",
+      "segments": [
+        "Consultancy and industry research"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "McKinsey_MGI",
+      "name": "McKinsey Global Institute",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Research on automation potential by occupation and activity",
+      "segments": [
+        "Consultancy and industry research"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "BCG",
+      "name": "Boston Consulting Group",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Surveys of AI adoption in companies and experiments on consultants' work",
+      "segments": [
+        "Consultancy and industry research"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "BainandCompany",
+      "name": "Bain & Company",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Surveys of enterprise AI adoption and spending",
+      "segments": [
+        "Consultancy and industry research"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "Deloitte",
+      "name": "Deloitte",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Surveys of enterprise AI adoption",
+      "segments": [
+        "Consultancy and industry research"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "PwC",
+      "name": "PwC",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "AI jobs barometer and CEO surveys",
+      "segments": [
+        "Consultancy and industry research"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "Gartner_inc",
+      "name": "Gartner",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Market forecasts, hype cycles and adoption surveys",
+      "segments": [
+        "Consultancy and industry research"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "forrester",
+      "name": "Forrester",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Market forecasts and adoption research",
+      "segments": [
+        "Consultancy and industry research"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "IDC",
+      "name": "IDC",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Market sizing and spending forecasts",
+      "segments": [
+        "Consultancy and industry research"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "CBinsights",
+      "name": "CB Insights",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Funding data and market maps of AI companies",
+      "segments": [
+        "Consultancy and industry research"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "PitchBook",
+      "name": "PitchBook",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Private-market funding data",
+      "segments": [
+        "Consultancy and industry research"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "Similarweb",
+      "name": "Similarweb",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Web traffic to AI products and the sites they displace",
+      "segments": [
+        "Data and labour-market measurement"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "SensorTower",
+      "name": "Sensor Tower",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "App downloads, usage and revenue of AI products",
+      "segments": [
+        "Data and labour-market measurement"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "tryramp",
+      "name": "Ramp",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Publishes the Ramp AI Index of business spending on AI tools; otherwise a vendor's own account",
+      "segments": [
+        "Data and labour-market measurement"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "LightcastData",
+      "name": "Lightcast",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Job-posting data on demand for skills and occupations",
+      "segments": [
+        "Data and labour-market measurement"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "Gallup",
+      "name": "Gallup",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Surveys of AI use at work",
+      "segments": [
+        "Data and labour-market measurement"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "pewresearch",
+      "name": "Pew Research Center",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Surveys of workers' and the public's use of and views on AI",
+      "segments": [
+        "Data and labour-market measurement"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "OECD",
+      "name": "OECD",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Employment outlook and research on AI and jobs",
+      "segments": [
+        "Public body or think tank"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "IMFNews",
+      "name": "IMF",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Research on AI exposure of jobs across economies",
+      "segments": [
+        "Public body or think tank"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "wef",
+      "name": "World Economic Forum",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Future of Jobs reports",
+      "segments": [
+        "Public body or think tank"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "ilo",
+      "name": "International Labour Organization",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Estimates of occupational exposure to generative AI",
+      "segments": [
+        "Public body or think tank"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "BrookingsInst",
+      "name": "The Brookings Institution",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Research on AI exposure by occupation and region",
+      "segments": [
+        "Public body or think tank"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "nberpubs",
+      "name": "NBER",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Working papers measuring AI's effect on productivity and employment",
+      "segments": [
+        "Public body or think tank"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "DigEconLab",
+      "name": "Stanford Digital Economy Lab",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Research on AI and employment using payroll data",
+      "segments": [
+        "Public body or think tank"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "MITIDE",
+      "name": "MIT Initiative on the Digital Economy",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Research on AI, productivity and work",
+      "segments": [
+        "Public body or think tank"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "BLS_gov",
+      "name": "BLS",
+      "account_kind": "organization",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Official US employment and occupation statistics",
+      "segments": [
+        "Public body or think tank"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": []
+    },
+    {
+      "handle": "omooretweets",
+      "name": "Olivia Moore",
+      "account_kind": "person",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Co-author of a16z's Top 100 consumer AI apps ranking",
+      "segments": [
+        "People at these institutions"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": [
+        {
+          "org": "a16z",
+          "relation": "partner",
+          "as_of": "2026-10",
+          "source_url": null
+        }
+      ]
+    },
+    {
+      "handle": "venturetwins",
+      "name": "Justine Moore",
+      "account_kind": "person",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "a16z partner covering consumer and creative AI products",
+      "segments": [
+        "People at these institutions"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": [
+        {
+          "org": "a16z",
+          "relation": "partner",
+          "as_of": "2026-10",
+          "source_url": null
+        }
+      ]
+    },
+    {
+      "handle": "nathanbenaich",
+      "name": "Nathan Benaich",
+      "account_kind": "person",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Author of the State of AI Report",
+      "segments": [
+        "People at these institutions"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": [
+        {
+          "org": "Air Street",
+          "relation": "founder",
+          "as_of": "2026-10",
+          "source_url": null
+        }
+      ]
+    },
+    {
+      "handle": "saranormous",
+      "name": "Sarah Guo",
+      "account_kind": "person",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Investor; market views on AI applications",
+      "segments": [
+        "People at these institutions"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": [
+        {
+          "org": "Conviction",
+          "relation": "founder",
+          "as_of": "2026-10",
+          "source_url": null
+        }
+      ]
+    },
+    {
+      "handle": "erikbryn",
+      "name": "Erik Brynjolfsson",
+      "account_kind": "person",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Economist measuring AI's effect on productivity and employment",
+      "segments": [
+        "People at these institutions"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": [
+        {
+          "org": "Stanford",
+          "relation": "academic",
+          "as_of": "2026-10",
+          "source_url": null
+        }
+      ]
+    },
+    {
+      "handle": "amcafee",
+      "name": "Andrew McAfee",
+      "account_kind": "person",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Economist writing on technology and work",
+      "segments": [
+        "People at these institutions"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": [
+        {
+          "org": "MIT",
+          "relation": "academic",
+          "as_of": "2026-10",
+          "source_url": null
+        }
+      ]
+    },
+    {
+      "handle": "eladgil",
+      "name": "Elad Gil",
+      "account_kind": "person",
+      "primary_role": "market_researcher",
+      "roles_seen": [
+        "market_researcher"
+      ],
+      "use": "corroboration",
+      "language": "en",
+      "focus": "Investor; market analyses of AI",
+      "segments": [
+        "People at these institutions"
+      ],
+      "identity_evidence_kind": "third_party_list",
+      "identity_evidence_url": null,
+      "enabled": false,
+      "verification_status": "candidate",
+      "affiliations": [
+        {
+          "org": "Gil Capital",
+          "relation": "founder",
+          "as_of": "2026-10",
+          "source_url": null
+        }
+      ]
+    }
+  ],
+  "unresolved": [
+    {
+      "handle": "gcvp",
+      "name": "General Catalyst",
+      "reason": "no such account"
+    },
+    {
+      "handle": "BurningGlassInst",
+      "name": "Burning Glass Institute",
+      "reason": "no such account"
+    }
+  ],
+  "not_selected": [
+    {
+      "handle": "Accenture",
+      "reason": "its profile says the account is not active on X"
+    },
+    {
+      "handle": "hiringlab",
+      "reason": "46 followers and no bio; not evidently Indeed Hiring Lab's working account"
+    },
+    {
+      "handle": "benedictevans",
+      "reason": "his profile says he left the platform"
+    },
+    {
+      "handle": "Upwork",
+      "reason": "a marketing account; the Upwork Research Institute's own account was not found"
+    }
+  ]
+}

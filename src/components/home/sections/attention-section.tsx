@@ -139,7 +139,7 @@ export function AttentionSection({ data, language, index }: { data: HomeData; la
       </>
     );
     return d.u.url
-      ? <Link key={d.u.id} className={s.item} href={updateHref(d.u.id)}>{body}</Link>
+      ? <Link key={d.u.id} className={s.item} href={updateHref(language, d.u.id)}>{body}</Link>
       : <div key={d.u.id} className={s.item}>{body}</div>;
   };
 
@@ -186,7 +186,7 @@ export function AttentionSection({ data, language, index }: { data: HomeData; la
                 />
               );
               return d.u.url
-                ? <a key={d.u.id} href={updateHref(d.u.id)} aria-label={`${d.u.title} · ${compact(d.views, language)} ${c.views} · L${d.level}`} onFocus={() => setHover(d.u.id)}>{dot}</a>
+                ? <a key={d.u.id} href={updateHref(language, d.u.id)} aria-label={`${d.u.title} · ${compact(d.views, language)} ${c.views} · L${d.level}`} onFocus={() => setHover(d.u.id)}>{dot}</a>
                 : <g key={d.u.id}>{dot}</g>;
             })}
           </svg>

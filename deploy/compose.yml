@@ -1,0 +1,25 @@
+# One release. The project name (-p) decides whether it is the candidate or production.
+# The site reads its data from the server database (DATABASE_URL, in SITE_ENV_FILE) and
+# refuses to start without a loaded data release.
+services:
+  web:
+    build: .
+    image: openaiwill-web:${RELEASE_ID}
+    restart: unless-stopped
+    env_file: ${SITE_ENV_FILE:?SITE_ENV_FILE is set by the release script}
+    environment:
+      SITE_ENV: ${SITE_ENV:-preview}
+      SITE_REQUIRE_DATABASE: "1"
+      RELEASE_ID: ${RELEASE_ID}
+    networks:
+      - openaiwill
+    ports:
+      - "127.0.0.1:${HOST_PORT}:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+networks:
+  openaiwill:
+    external: true

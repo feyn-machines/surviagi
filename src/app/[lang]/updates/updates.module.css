@@ -1,0 +1,595 @@
+/* Layout for /updates.
+ *
+ * Heads, numbers, sections and bars come from src/components/blueprint.tsx.
+ * Nothing here invents a block head, a number size or an explanation block, and
+ * every colour is an --ah-* semantic token: `signal` is data, `action` is the
+ * current selection, `correction` is "the empty half is the finding", `warning`
+ * is a cap that bit.
+ *
+ * Motion follows the house rule in src/components/home/home.module.css: the
+ * final state is the plain CSS, and `[data-seen="true"]` adds a keyframe that
+ * animates INTO it. With JavaScript off no animation ever runs and the reader
+ * gets the finished page, all 581 rows included.
+ */
+
+.page {
+  padding: var(--ah-space-8) 0 var(--ah-space-9);
+}
+
+/* ------------------------------------------------------------- the readout */
+
+/* The ruled instrument panel: three numbers on one baseline, and the baseline
+   itself underneath them. */
+.readout {
+  margin-top: var(--ah-space-7);
+  padding: var(--ah-space-5) var(--ah-space-7) var(--ah-space-7);
+  border: 1px solid var(--ah-color-line);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 0 var(--ah-space-7);
+}
+
+.split {
+  margin-top: var(--ah-space-4);
+}
+
+/* Bar renders <span class=track><span class=bar></span></span>, both inline.
+   A wrapper with this class gives them a line to sit on. */
+.track {
+  display: block;
+}
+
+.track > span {
+  display: block;
+}
+
+.track > span > span {
+  transform-origin: left center;
+}
+
+/* The fill is the 256 that landed. The track behind it is the 325 that did not,
+   so it carries the correction colour instead of the neutral rule: on this page
+   the remainder is the finding, not leftover space. */
+.split .track > span {
+  background: color-mix(in srgb, var(--ah-color-correction) 32%, transparent);
+  height: 18px;
+}
+
+.split .track > span > span {
+  height: 18px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ah-space-2) var(--ah-space-6);
+  margin: var(--ah-space-3) 0 0;
+  color: var(--ah-color-muted);
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-label);
+  letter-spacing: var(--ah-tracking-label);
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ah-space-2);
+}
+
+.legend span::before {
+  content: "";
+  flex: none;
+  width: 10px;
+  height: 10px;
+  background: var(--ah-color-signal);
+}
+
+.legend .legendRest::before {
+  background: color-mix(in srgb, var(--ah-color-correction) 32%, transparent);
+}
+
+/* ----------------------------------------------------- the publisher skew */
+
+/* Carries [data-seen] for the bars below it; no box of its own. */
+.chart {
+  display: block;
+}
+
+.orgs {
+  display: grid;
+  gap: var(--ah-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.orgButton {
+  display: grid;
+  grid-template-columns: minmax(88px, 132px) 1fr 52px;
+  align-items: center;
+  gap: var(--ah-space-4);
+  width: 100%;
+  padding: var(--ah-space-2) var(--ah-space-3);
+  border: 1px solid transparent;
+  border-radius: var(--ah-radius-control);
+  background: none;
+  color: var(--ah-color-muted);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background var(--ah-motion-feedback) var(--ah-ease-out),
+    color var(--ah-motion-feedback) var(--ah-ease-out),
+    border-color var(--ah-motion-feedback) var(--ah-ease-out);
+}
+
+.orgButton:hover {
+  background: var(--ah-color-surface);
+  color: var(--ah-color-text);
+}
+
+.orgButton:focus-visible {
+  outline: 2px solid var(--ah-color-focus);
+  outline-offset: 2px;
+}
+
+.orgCurrent,
+.orgCurrent:hover {
+  border-color: var(--ah-color-action);
+  background: var(--ah-color-surface-active);
+  color: var(--ah-color-text);
+}
+
+/* The selected publisher's bar becomes the selection colour, so the chart and
+   the table below it are visibly the same statement. */
+.orgCurrent .track > span > span {
+  background: var(--ah-color-action);
+}
+
+.orgName {
+  overflow: hidden;
+  color: inherit;
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-label);
+  letter-spacing: var(--ah-tracking-label);
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.orgCount {
+  color: inherit;
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-label);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* Play once, on first sight, into the width the server already rendered. */
+[data-seen="true"] .track > span > span {
+  animation: grow-in var(--ah-motion-reveal) var(--ah-ease-out) backwards;
+}
+
+[data-seen="true"] .orgButton {
+  animation: row-in var(--ah-motion-transition) var(--ah-ease-out) backwards;
+  animation-delay: min(calc(var(--i) * 28ms), var(--ah-motion-sequence));
+}
+
+@keyframes grow-in {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* --------------------------------------------------------------- controls */
+
+.controls {
+  display: grid;
+  gap: var(--ah-space-4);
+  margin: 0 0 var(--ah-space-5);
+}
+
+.search {
+  display: grid;
+  gap: var(--ah-space-2);
+  max-width: 420px;
+}
+
+.fieldLabel {
+  color: var(--ah-color-muted);
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-label);
+  letter-spacing: var(--ah-tracking-label);
+  text-transform: uppercase;
+}
+
+.searchInput {
+  height: var(--ah-control-height);
+  padding: 0 var(--ah-space-4);
+  border: 1px solid var(--ah-color-control);
+  border-radius: var(--ah-radius-control);
+  background: var(--ah-color-surface);
+  color: var(--ah-color-text);
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-small);
+}
+
+.searchInput::placeholder {
+  color: var(--ah-color-subtle);
+}
+
+.searchInput:focus-visible {
+  outline: 2px solid var(--ah-color-focus);
+  outline-offset: 2px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ah-space-2) var(--ah-space-4);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ah-space-2);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ah-space-2);
+  min-height: var(--ah-control-height);
+  padding: 0 var(--ah-space-4);
+  border: 1px solid var(--ah-color-control);
+  border-radius: var(--ah-radius-control);
+  background: transparent;
+  color: var(--ah-color-muted);
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-label);
+  letter-spacing: var(--ah-tracking-label);
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background var(--ah-motion-feedback) var(--ah-ease-out),
+    color var(--ah-motion-feedback) var(--ah-ease-out),
+    border-color var(--ah-motion-feedback) var(--ah-ease-out);
+}
+
+.chip:hover {
+  border-color: var(--ah-color-text);
+  color: var(--ah-color-text);
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--ah-color-focus);
+  outline-offset: 2px;
+}
+
+.chipCurrent,
+.chipCurrent:hover {
+  border-color: var(--ah-color-action);
+  background: var(--ah-color-action);
+  color: var(--ah-color-ink);
+}
+
+.chipCount {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+
+/* The mark repeats what the colour says, so selection is never colour alone. */
+.chipMark {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border: 1px solid currentColor;
+}
+
+.chipCurrent .chipMark {
+  background: currentColor;
+}
+
+.result {
+  margin: 0;
+  color: var(--ah-color-muted);
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-label);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--ah-tracking-label);
+}
+
+.empty {
+  margin: var(--ah-space-6) 0 0;
+  padding: var(--ah-space-6);
+  border: 1px dashed var(--ah-color-control);
+  color: var(--ah-color-muted);
+  font-size: var(--ah-text-small);
+  line-height: var(--ah-leading-body);
+}
+
+/* ------------------------------------------------------------- the table */
+
+.tableWrap {
+  margin-top: var(--ah-space-4);
+}
+
+.rows tr {
+  animation: row-in var(--ah-motion-feedback) var(--ah-ease-out) backwards;
+}
+
+.cellWhen {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.title {
+  display: block;
+  max-width: 52ch;
+  font-weight: 400;
+}
+
+.expand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ah-space-2);
+  margin-top: var(--ah-space-2);
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--ah-color-muted);
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-label);
+  letter-spacing: var(--ah-tracking-label);
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color var(--ah-motion-feedback) var(--ah-ease-out);
+}
+
+.expand:hover {
+  color: var(--ah-color-text);
+}
+
+.expand:focus-visible {
+  outline: 2px solid var(--ah-color-focus);
+  outline-offset: 3px;
+}
+
+.expandMark {
+  flex: none;
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 6px solid currentColor;
+  transition: transform var(--ah-motion-feedback) var(--ah-ease-out);
+}
+
+.expandOpen {
+  color: var(--ah-color-text);
+}
+
+.expandOpen .expandMark {
+  transform: rotate(90deg);
+}
+
+.cellLanded {
+  display: grid;
+  justify-items: start;
+  gap: var(--ah-space-2);
+}
+
+.cellBar {
+  display: block;
+  width: 72px;
+}
+
+.cellCount {
+  color: var(--ah-color-text);
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-label);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* An update that bore on nothing is a measured zero, not a missing value: it
+   reads 0 and it reads in the colour this site gives to "the empty half is the
+   result". */
+.cellZero {
+  color: var(--ah-color-correction);
+}
+
+.level {
+  color: var(--ah-color-signal);
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-label);
+  letter-spacing: var(--ah-tracking-label);
+}
+
+.levelNone {
+  color: var(--ah-color-subtle);
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-label);
+  letter-spacing: var(--ah-tracking-label);
+}
+
+.missing {
+  color: var(--ah-color-subtle);
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-label);
+}
+
+/* ------------------------------------------------------- the opened row */
+
+.detailRow > td {
+  background: var(--ah-color-surface);
+  animation: detail-in var(--ah-motion-transition) var(--ah-ease-out);
+}
+
+@keyframes detail-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.readings {
+  display: grid;
+  gap: var(--ah-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ah-space-2) var(--ah-space-5);
+  padding-left: var(--ah-space-4);
+  border-left: 2px solid var(--ah-color-signal);
+}
+
+.readingName {
+  max-width: 58ch;
+  color: var(--ah-color-text);
+}
+
+.readingMarket {
+  display: block;
+  color: var(--ah-color-subtle);
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-label);
+}
+
+.readingRight {
+  display: grid;
+  justify-items: end;
+  gap: var(--ah-space-1);
+  text-align: right;
+}
+
+/* A tier that held the reading below what the judge proposed. */
+.cap {
+  color: var(--ah-color-warning);
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-label);
+  letter-spacing: var(--ah-tracking-label);
+  white-space: nowrap;
+}
+
+/* A phone shows each update as a card instead of five columns in a frame that scrolls sideways:
+   at 390px the 860px table cut every title off mid-word and hid the publisher, the reach and the level.
+   The header row stays for screen readers; every cell stays in its row. */
+@media (max-width: 720px) {
+  /* Two classes: the global .oaw-table (min-width: 860px) has one, and in the built site its sheet can
+     load after this one, so a single class lost to it. */
+  .tableWrap .table {
+    min-width: 0;
+  }
+
+  .table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .rows > tr:not(.detailRow) {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      "when from"
+      "update update"
+      "landed top";
+    align-items: center;
+    gap: var(--ah-space-2) var(--ah-space-4);
+    padding: var(--ah-space-4);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .rows > tr:not(.detailRow) > :is(th, td) {
+    display: block;
+    padding: 0;
+    border-bottom: 0;
+  }
+
+  .rows > tr > td:nth-child(1) {
+    grid-area: when;
+  }
+
+  .rows > tr > th {
+    grid-area: update;
+  }
+
+  .rows > tr > td:nth-child(3) {
+    grid-area: from;
+    justify-self: end;
+    color: var(--muted);
+    text-align: right;
+  }
+
+  .rows > tr > td:nth-child(4) {
+    grid-area: landed;
+  }
+
+  .rows > tr > td:nth-child(5) {
+    grid-area: top;
+    justify-self: end;
+  }
+
+  .cellLanded {
+    grid-auto-flow: column;
+    align-items: center;
+  }
+
+  .title {
+    max-width: none;
+    overflow-wrap: anywhere;
+  }
+
+  .detailRow,
+  .detailRow > td {
+    display: block;
+  }
+
+  .readout {
+    padding: var(--ah-space-5) var(--ah-space-5) var(--ah-space-6);
+  }
+
+  .orgButton {
+    grid-template-columns: 80px 1fr 44px;
+    gap: var(--ah-space-3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rows tr,
+  .detailRow > td,
+  [data-seen="true"] .orgButton,
+  [data-seen="true"] .track > span > span {
+    animation: none;
+  }
+
+  .orgButton,
+  .chip,
+  .expand,
+  .expandMark {
+    transition: none;
+  }
+}
+.more{margin:24px 0 0;text-align:center}

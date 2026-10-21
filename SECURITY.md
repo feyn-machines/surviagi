@@ -20,9 +20,9 @@ User-submitted ideas are private by default. Do not turn submissions into public
 ## Checks
 
 - `pnpm security:check` scans tracked working files and non-ignored untracked candidates, catching leaks before staging.
-- `pnpm security:staged` scans the exact indexed blobs, including unchanged tracked files. A clean working copy cannot hide a secret already staged. CI repeats this mode.
+- `pnpm security:staged` scans the exact indexed blobs, including unchanged tracked files. A clean working copy cannot hide a secret already staged. Run it after staging and before every commit; no hosted CI repeats it.
 - `pnpm security:test` exercises the scanner in temporary Git repositories with synthetic values. The scanner reports filenames and reasons without printing matched credential values.
-- `pnpm check` also runs metadata/design validation, lint, typecheck and production build.
+- `pnpm check` also runs metadata/design validation, lint, typecheck and production build. `pnpm check:full` runs `pnpm check` and then the real PostgreSQL tests (`pnpm data:test`).
 
 The checker blocks prohibited paths and common credential patterns, including forced additions of ignored files; it does not certify that arbitrary prose, screenshots or data are non-confidential. Symbolic links and archive bundles are rejected because their contents are not independently reviewed by this gate. Review the staged diff before publishing. If a secret is exposed, revoke it before cleaning history.
 

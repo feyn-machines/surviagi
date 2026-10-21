@@ -1,0 +1,154 @@
+{
+  "generated_note": "组织注册表：事件与来源的 primary_org 必须引用这里的 org_id。aliases 收录实际观测到的自由文本写法。",
+  "organizations": [
+    {
+      "org_id": "org:google",
+      "name_en": "Google",
+      "name_zh_cn": "谷歌",
+      "aliases": [
+        "Alphabet",
+        "DeepMind",
+        "Google",
+        "Google AI",
+        "Google DeepMind",
+        "GoogleDeepMind"
+      ]
+    },
+    {
+      "org_id": "org:alibaba",
+      "name_en": "Alibaba",
+      "name_zh_cn": "阿里巴巴",
+      "aliases": [
+        "Alibaba",
+        "Alibaba Cloud",
+        "Alibaba Group",
+        "Qwen",
+        "alibaba_cloud"
+      ]
+    },
+    {
+      "org_id": "org:microsoft",
+      "name_en": "Microsoft",
+      "name_zh_cn": "微软",
+      "aliases": [
+        "GitHub",
+        "Microsoft",
+        "Microsoft AI",
+        "MicrosoftAI"
+      ]
+    },
+    {
+      "org_id": "org:openai",
+      "name_en": "OpenAI",
+      "name_zh_cn": "OpenAI",
+      "aliases": [
+        "Open AI",
+        "OpenAI",
+        "OpenAIDevs"
+      ]
+    },
+    {
+      "org_id": "org:tencent",
+      "name_en": "Tencent",
+      "name_zh_cn": "腾讯",
+      "aliases": [
+        "Hunyuan",
+        "Tencent",
+        "Tencent Cloud",
+        "Tencent Hunyuan"
+      ]
+    },
+    {
+      "org_id": "org:minimax",
+      "name_en": "MiniMax",
+      "name_zh_cn": "MiniMax",
+      "aliases": [
+        "Hailuo",
+        "MiniMax",
+        "MiniMax AI"
+      ]
+    },
+    {
+      "org_id": "org:anthropic",
+      "name_en": "Anthropic",
+      "name_zh_cn": "Anthropic",
+      "aliases": [
+        "Anthropic",
+        "Claude"
+      ]
+    },
+    {
+      "org_id": "org:meta",
+      "name_en": "Meta",
+      "name_zh_cn": "Meta",
+      "aliases": [
+        "AIatMeta",
+        "Meta",
+        "Meta AI",
+        "Meta Platforms",
+        "MetaAI"
+      ]
+    },
+    {
+      "org_id": "org:xai",
+      "name_en": "xAI",
+      "name_zh_cn": "xAI",
+      "aliases": [
+        "Grok",
+        "SpaceXAI",
+        "X.AI",
+        "xAI",
+        "xAI / SpaceXAI",
+        "xAI Corp"
+      ]
+    },
+    {
+      "org_id": "org:bytedance",
+      "name_en": "ByteDance",
+      "name_zh_cn": "字节跳动",
+      "aliases": [
+        "Byte Dance",
+        "ByteDance",
+        "ByteDance Seed",
+        "Doubao",
+        "Dreamina",
+        "Seed"
+      ]
+    },
+    {
+      "org_id": "org:zhipu",
+      "name_en": "Zhipu AI",
+      "name_zh_cn": "智谱",
+      "aliases": [
+        "GLM",
+        "Z.ai",
+        "Zhipu",
+        "Zhipu / Z.ai",
+        "Zhipu AI",
+        "Zhipu AI / Z.ai"
+      ]
+    },
+    {
+      "org_id": "org:deepseek",
+      "name_en": "DeepSeek",
+      "name_zh_cn": "深度求索",
+      "aliases": [
+        "DeepSeek",
+        "DeepSeek AI"
+      ]
+    },
+    {
+      "org_id": "org:moonshot",
+      "name_en": "Moonshot AI",
+      "name_zh_cn": "月之暗面",
+      "aliases": [
+        "Kimi",
+        "Kimi AI",
+        "Moonshot",
+        "Moonshot / Kimi",
+        "Moonshot AI"
+      ]
+    }
+  ],
+  "note": "唯一的组织注册表。scripts/data_pipeline/event_extraction.py 与 scripts/data_pipeline/type_layer.py 都从这里读，不得再各留一份别名表——曾经有两份，且已经分叉：一份有 Qwen 没有 Google AI，另一份反过来，结果是只被其中一份认识的别名会让事件被静默丢弃。"
+}

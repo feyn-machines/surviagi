@@ -1,0 +1,364 @@
+/* One occupation. The two numbers first, then the hundred squares, then the
+   activity list that opens onto the updates behind each level.
+
+   Durations are --ah-motion-* tokens only, and every animation runs INTO the
+   element's default state, so with JavaScript off the page is already finished. */
+
+.page { padding-block: var(--ah-space-7) var(--ah-space-9); }
+
+.title {
+  font-size: var(--ah-text-h2);
+  line-height: var(--ah-leading-heading);
+  /* globals.css sets h1 { letter-spacing: -6px } for the homepage headline;
+     at this size it closes the word spaces in English outright. */
+  letter-spacing: -0.02em;
+  font-weight: 600;
+  color: var(--ah-color-text);
+  margin: var(--ah-space-4) 0 var(--ah-space-3);
+}
+
+.pageLead {
+  max-width: 54ch;
+  margin: 0 0 var(--ah-space-6);
+  color: var(--ah-color-muted);
+  font-size: var(--ah-text-small);
+  line-height: 1.6;
+}
+
+.answer {
+  max-width: 70ch;
+  margin: calc(-1 * var(--ah-space-4)) 0 var(--ah-space-6);
+  color: var(--ah-color-text);
+  font-size: var(--ah-text-body);
+  line-height: 1.6;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--ah-space-6) var(--ah-space-8);
+  border-top: 1px solid var(--ah-color-line);
+}
+
+.lead {
+  max-width: 54ch;
+  margin: 0 0 var(--ah-space-5);
+  color: var(--ah-color-muted);
+  font-size: var(--ah-text-small);
+  line-height: 1.6;
+}
+
+/* -------------------------------------------------------------- controls */
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--ah-space-4) var(--ah-space-6);
+  margin-bottom: var(--ah-space-5);
+}
+
+.controlLabel {
+  display: block;
+  margin: 0 0 var(--ah-space-2);
+  padding: 0;
+  color: var(--ah-color-muted);
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-label);
+  letter-spacing: var(--ah-tracking-label);
+  text-transform: uppercase;
+}
+
+.searchField { flex: 1 1 280px; min-width: 220px; }
+.chipField { flex: 0 1 auto; min-width: 0; margin: 0; padding: 0; border: 0; }
+
+.input {
+  width: 100%;
+  min-height: var(--ah-control-height);
+  padding: 0 var(--ah-space-4);
+  border: 1px solid var(--ah-color-control);
+  border-radius: var(--ah-radius-control);
+  background: var(--ah-color-surface);
+  color: var(--ah-color-text);
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-small);
+  transition: border-color var(--ah-motion-feedback) var(--ah-ease-out);
+}
+
+.input::placeholder { color: var(--ah-color-subtle); }
+.input:hover { border-color: var(--ah-color-muted); }
+.input:focus-visible {
+  outline: 2px solid var(--ah-color-focus);
+  outline-offset: 2px;
+  border-color: var(--ah-color-action);
+}
+
+.chips { display: flex; gap: var(--ah-space-2); flex-wrap: wrap; }
+
+.chip {
+  min-height: var(--ah-control-height);
+  padding: 0 var(--ah-space-4);
+  border: 1px solid var(--ah-color-control);
+  border-radius: var(--ah-radius-control);
+  background: none;
+  color: var(--ah-color-muted);
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-label);
+  letter-spacing: var(--ah-tracking-label);
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color var(--ah-motion-feedback) var(--ah-ease-out),
+    border-color var(--ah-motion-feedback) var(--ah-ease-out),
+    background var(--ah-motion-feedback) var(--ah-ease-out);
+}
+
+.chip:hover { color: var(--ah-color-text); border-color: var(--ah-color-muted); }
+.chip:focus-visible { outline: 2px solid var(--ah-color-focus); outline-offset: 2px; }
+
+.chip[aria-pressed="true"] {
+  background: var(--ah-color-action);
+  border-color: var(--ah-color-action);
+  color: var(--ah-color-ink);
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: var(--ah-space-4);
+  margin: 0 0 var(--ah-space-4);
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-label);
+  letter-spacing: var(--ah-tracking-label);
+  text-transform: uppercase;
+  color: var(--ah-color-muted);
+}
+
+.statusCount { color: var(--ah-color-text); font-variant-numeric: tabular-nums; }
+
+.clear {
+  padding: 4px var(--ah-space-3);
+  border: 1px solid var(--ah-color-control);
+  border-radius: var(--ah-radius-control);
+  background: none;
+  color: var(--ah-color-muted);
+  font: inherit;
+  cursor: pointer;
+  transition: color var(--ah-motion-feedback) var(--ah-ease-out),
+    border-color var(--ah-motion-feedback) var(--ah-ease-out);
+}
+
+.clear:hover { color: var(--ah-color-text); border-color: var(--ah-color-muted); }
+.clear:focus-visible { outline: 2px solid var(--ah-color-focus); outline-offset: 2px; }
+
+/* --------------------------------------------------------- activity rows */
+
+.rows { list-style: none; margin: 0; padding: 0; }
+
+.item { border-bottom: 1px solid color-mix(in srgb, var(--ah-color-line) 60%, transparent); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .item { animation: rowIn var(--ah-motion-transition) var(--ah-ease-out) both; }
+}
+
+@keyframes rowIn {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: none; }
+}
+
+.itemOpen { background: var(--ah-color-surface); }
+
+.rowButton {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 90px minmax(160px, 22ch) 10ch 3ch;
+  align-items: center;
+  gap: var(--ah-space-4);
+  width: 100%;
+  padding: var(--ah-space-3) var(--ah-space-2);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--ah-motion-feedback) var(--ah-ease-out);
+}
+
+.rowButton:hover { background: var(--ah-color-surface); }
+.rowButton:focus-visible { outline: none; box-shadow: inset 2px 0 0 var(--ah-color-focus); }
+
+.rowName { min-width: 0; display: grid; gap: 2px; }
+.rowLabel { color: var(--ah-color-text); font-size: var(--ah-text-small); line-height: 1.4; }
+
+.rowMarket {
+  color: var(--ah-color-subtle);
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-label);
+}
+
+.rowMeter { display: block; }
+
+.rowLevel, .rowTasks {
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-label);
+  font-variant-numeric: tabular-nums;
+  color: var(--ah-color-text);
+}
+
+.rowTasks { text-align: right; color: var(--ah-color-subtle); }
+.unit { letter-spacing: var(--ah-tracking-label); }
+
+.rowToggle {
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-h3);
+  color: var(--ah-color-control);
+  text-align: right;
+}
+
+.itemOpen .rowToggle { color: var(--ah-color-signal); }
+
+/* ------------------------------------------------------------- the panel */
+
+.panel {
+  padding: 0 var(--ah-space-2) var(--ah-space-5) var(--ah-space-5);
+  border-left: 2px solid var(--ah-color-signal);
+  margin: 0 0 var(--ah-space-3) var(--ah-space-2);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .panel:not([hidden]) {
+    animation: panelIn var(--ah-motion-transition) var(--ah-ease-out) both;
+  }
+}
+
+@keyframes panelIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+.panelMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--ah-space-4);
+  margin: 0 0 var(--ah-space-3);
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-label);
+  letter-spacing: var(--ah-tracking-label);
+}
+
+.panelLink { color: var(--ah-color-signal); text-decoration: underline; text-underline-offset: 4px; }
+
+.gateMark {
+  padding: 2px var(--ah-space-2);
+  border: 1px solid var(--ah-color-warning);
+  border-radius: var(--ah-radius-control);
+  color: var(--ah-color-warning);
+  text-transform: uppercase;
+}
+
+.panelNote {
+  margin: 0 0 var(--ah-space-3);
+  max-width: 62ch;
+  color: var(--ah-color-muted);
+  font-size: var(--ah-text-small);
+  line-height: 1.7;
+}
+
+.readings { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--ah-space-3); }
+
+.reading {
+  display: grid;
+  grid-template-columns: 11ch minmax(0, 1fr);
+  gap: var(--ah-space-4);
+  align-items: baseline;
+}
+
+.readingDate {
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-label);
+  font-variant-numeric: tabular-nums;
+  color: var(--ah-color-subtle);
+}
+
+.readingBody { min-width: 0; display: grid; gap: var(--ah-space-2); }
+
+.readingTitle { color: var(--ah-color-text); font-size: var(--ah-text-small); line-height: 1.5; }
+
+.readingNumbers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ah-space-2) var(--ah-space-4);
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-label);
+  letter-spacing: var(--ah-tracking-label);
+  color: var(--ah-color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.readingOrg { color: var(--ah-color-text); text-transform: uppercase; }
+
+/* The judge proposed more than the evidence tier allows. Showing the cut with
+   colour alone would hide it; the word "capped" beside it carries the meaning. */
+.readingCut { color: var(--ah-color-warning); }
+.readingTier { color: var(--ah-color-subtle); }
+.readingSource { color: var(--ah-color-signal); text-decoration: underline; text-underline-offset: 4px; }
+
+/* ------------------------------------------------------------- the lists */
+
+.markets, .gates { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--ah-space-2); }
+
+.marketRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px 14ch;
+  align-items: center;
+  gap: var(--ah-space-4);
+  padding: var(--ah-space-2);
+  color: inherit;
+  border-bottom: 1px solid color-mix(in srgb, var(--ah-color-line) 55%, transparent);
+  transition: background var(--ah-motion-feedback) var(--ah-ease-out);
+}
+
+.marketRow:hover { background: var(--ah-color-surface); }
+.marketRow:focus-visible { outline: none; box-shadow: inset 2px 0 0 var(--ah-color-focus); }
+
+.marketName { color: var(--ah-color-text); font-size: var(--ah-text-small); }
+.marketMeter { display: block; }
+
+.marketCount {
+  text-align: right;
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-label);
+  font-variant-numeric: tabular-nums;
+  color: var(--ah-color-subtle);
+}
+
+/* --------------------------------------------------------------- nothing */
+
+.empty {
+  padding: var(--ah-space-6);
+  border: 1px dashed var(--ah-color-control);
+  background: var(--ah-color-surface);
+}
+
+.emptyTitle {
+  margin: 0 0 var(--ah-space-3);
+  color: var(--ah-color-text);
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-label);
+  letter-spacing: var(--ah-tracking-label);
+  text-transform: uppercase;
+}
+
+.emptyWhy {
+  margin: 0;
+  max-width: 58ch;
+  color: var(--ah-color-muted);
+  font-size: var(--ah-text-small);
+  line-height: 1.7;
+}
+
+@media (max-width: 860px) {
+  .rowButton { grid-template-columns: minmax(0, 1fr) 12ch 3ch; }
+  .rowMeter, .rowTasks { display: none; }
+  .marketRow { grid-template-columns: minmax(0, 1fr) 12ch; }
+  .marketMeter { display: none; }
+}

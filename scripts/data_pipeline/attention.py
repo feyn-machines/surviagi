@@ -19,11 +19,11 @@ import statistics
 from collections import Counter, defaultdict
 from datetime import datetime
 
-from . import semantic
+from . import ontology_schema
 
 
 def _rule(model=None):
-    return semantic.rule("rule:attention-baseline", model)["expression"]
+    return ontology_schema.rule("rule:attention-baseline", model)["expression"]
 
 
 def _hours(later: datetime, earlier: datetime) -> float:
@@ -119,7 +119,7 @@ LINKS_SQL = """
     SELECT s.event_id, s.source_id
       FROM public.extracted_event_sources s
       JOIN public.extracted_events e ON e.event_id = s.event_id
-     WHERE e.kind_vocabulary = %s
+     WHERE e.kind_vocabulary = ANY(%s)
 """
 
 

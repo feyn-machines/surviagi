@@ -15,17 +15,17 @@ import json
 import re
 from datetime import date, datetime, timezone
 
-from . import semantic
+from . import ontology_schema
 
 STATES_THAT_WERE_LIVE = {"enabled", "suspended"}
 
 
 def _lifecycle(model=None):
-    return semantic.rule("rule:panel-lifecycle", model)["expression"]
+    return ontology_schema.rule("rule:panel-lifecycle", model)["expression"]
 
 
 def breaks_independence(relation, model=None):
-    return bool(semantic.term("affiliation_relation", relation, model)["breaks_independence"])
+    return bool(ontology_schema.term("affiliation_relation", relation, model)["breaks_independence"])
 
 
 def _as_date(value):
@@ -45,7 +45,7 @@ def is_independent(affiliations, org_id, on, model=None, owner_org_id=None):
     (rule:panel-independence, owner_organization_breaks).
     """
     if owner_org_id is not None and owner_org_id == org_id and \
-            semantic.rule("rule:panel-independence", model)["expression"].get("owner_organization_breaks"):
+            ontology_schema.rule("rule:panel-independence", model)["expression"].get("owner_organization_breaks"):
         return False
     on = _as_date(on)
     for aff in affiliations:
@@ -63,7 +63,7 @@ def _latest(checks, kind):
 
 
 def _grade_rank(grade, model=None):
-    return semantic.term("identity_evidence_grade", grade, model)["rank"]
+    return ontology_schema.term("identity_evidence_grade", grade, model)["rank"]
 
 
 def derive_state(account, checks, now, model=None):
@@ -124,7 +124,7 @@ def relation_of(affiliation, model=None):
     announced 2025-11)"); those become `former` rather than a current tie.
     """
     relation = affiliation.get("relation")
-    if relation not in semantic.term_ids("affiliation_relation", model):
+    if relation not in ontology_schema.term_ids("affiliation_relation", model):
         return None
     if _DEPARTED.search(affiliation.get("org") or ""):
         return "former"
@@ -520,6 +520,10 @@ def record_lookup(conn, doc):
         if new_id:
             conn.execute("UPDATE public.source_accounts SET platform_account_id = %s WHERE account_key = %s",
                          (new_id, key))
+        if record.get("status") == "found" and (record.get("avatar_url") or "").startswith("https://") \
+                and row["platform_account_id"] in (None, record.get("user_id")):
+            conn.execute("UPDATE public.source_accounts SET avatar_url = %s WHERE account_key = %s",
+                         (record["avatar_url"], key))
         for kind, outcome, detail in checks:
             _add_check(conn, key, kind, outcome, at, "crawler",
                        {**detail, "raw_sha256": record.get("raw_sha256")})
@@ -535,7 +539,7 @@ def _confirm_from_profile(conn, key, record, at):
         """SELECT a.identity_grade, a.owner_kind, a.org_name, p.name AS person_name, a.person_id
              FROM public.source_accounts a LEFT JOIN public.people p ON p.person_id = a.person_id
             WHERE a.account_key = %s""", (key,)).fetchone()
-    target = semantic.rule("rule:identity-from-profile")["expression"]["grade"]
+    target = ontology_schema.rule("rule:identity-from-profile")["expression"]["grade"]
     if acct is None or _grade_rank(acct["identity_grade"]) >= _grade_rank(target):
         return False
     orgs = [r["org_name"] for r in conn.execute(
@@ -568,7 +572,7 @@ def _name_tokens(text):
 
 def profile_confirms_identity(profile, expected_name, orgs, owner_kind="person", model=None):
     """rule:identity-from-profile. Pure."""
-    rule = semantic.rule("rule:identity-from-profile", model)["expression"]
+    rule = ontology_schema.rule("rule:identity-from-profile", model)["expression"]
     want = _name_tokens(expected_name)
     have = set(_name_tokens(profile.get("name")))
     if not want or not set(want) <= have:

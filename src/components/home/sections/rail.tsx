@@ -1,5 +1,7 @@
 "use client";
 
+import type { Route } from "next";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import s from "./rail.module.css";
 
@@ -9,8 +11,11 @@ import s from "./rail.module.css";
  * first screen and names the chapter being read; from the chapter after the
  * ruler is introduced it shows the ruler itself, so every later figure is read
  * against the same scale.
+ *
+ * It covers the place the site header scrolled out of, so it also carries the
+ * header's links: the page can be left from any chapter.
  */
-export function Rail({ levels, from }: { levels: number[]; from: number }) {
+export function Rail({ levels, from, navLabel, links }: { levels: number[]; from: number; navLabel: string; links: { href: Route; label: string }[] }) {
   const [at, setAt] = useState<{ i: number; n: number; label: string; done: number } | null>(null);
 
   useEffect(() => {
@@ -37,11 +42,12 @@ export function Rail({ levels, from }: { levels: number[]; from: number }) {
 
   const pad = (n: number) => String(n).padStart(2, "0");
   return (
-    <div className={`${s.rail} ${at ? s.on : ""}`} aria-hidden="true">
-      <div className={s.chapter}><b>{at ? pad(at.i + 1) : ""}</b> / {at ? pad(at.n) : ""}<span>{at?.label}</span></div>
-      <div className={`${s.ruler} ${at && at.i >= from ? s.shown : ""}`}>
+    <div className={`${s.rail} ${at ? s.on : ""}`} inert={!at}>
+      <div className={s.chapter} aria-hidden="true"><b>{at ? pad(at.i + 1) : ""}</b> / {at ? pad(at.n) : ""}<span>{at?.label}</span></div>
+      <div className={`${s.ruler} ${at && at.i >= from ? s.shown : ""}`} aria-hidden="true">
         {levels.map((n, level) => <i key={level} className={`${level >= 3 ? s.past : ""} ${n ? s.has : ""}`}>L{level}<em>{n || ""}</em></i>)}
       </div>
+      <nav className={s.nav} aria-label={navLabel}>{links.map((l) => <Link key={l.href} href={l.href}>{l.label}</Link>)}</nav>
       <div className={s.done} style={{ transform: `scaleX(${at?.done ?? 0})` }} />
     </div>
   );

@@ -1,0 +1,39 @@
+/* Layout for /admin. Colours are --ah-* semantic tokens; heads come from data-page. */
+
+.page { padding: var(--ah-space-8) 0 var(--ah-space-9); }
+
+.bar { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--ah-space-3) var(--ah-space-5); margin-top: var(--ah-space-5); }
+.tabs { display: flex; gap: var(--ah-space-4); }
+.tab { font-family: var(--ah-font-mono); font-size: 12px; letter-spacing: .03em; color: var(--ah-color-subtle); text-decoration: none; padding-bottom: 4px; border-bottom: 2px solid transparent; }
+.tab[aria-current="page"] { color: var(--ah-color-text); border-bottom-color: var(--ah-color-signal); }
+.tab:hover { color: var(--ah-color-signal); }
+.counts { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--ah-space-3) var(--ah-space-4); margin: 0; font-family: var(--ah-font-mono); font-size: 12px; color: var(--ah-color-subtle); }
+.counts a { color: var(--ah-color-text); text-decoration: underline; text-underline-offset: 4px; }
+.counts a:hover { color: var(--ah-color-signal); }
+
+.list { margin: var(--ah-space-5) 0 0; padding: 0; list-style: none; border: 1px solid var(--ah-color-line); background: var(--ah-color-surface); }
+.group { padding: var(--ah-space-4) var(--ah-space-5); border-bottom: 1px solid var(--ah-color-line); }
+.group:last-child { border-bottom: 0; }
+.head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--ah-space-2) var(--ah-space-5); }
+.handle { font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+.handle:hover { text-decoration: underline; text-underline-offset: 4px; }
+.meta { color: var(--ah-color-subtle); font-family: var(--ah-font-mono); font-size: 11px; letter-spacing: .03em; }
+.status[data-status="approved"] { color: var(--ah-color-signal); }
+.status[data-status="rejected"] { color: var(--ah-color-subtle); text-decoration: line-through; }
+.reasonText { margin: var(--ah-space-2) 0 0; font-size: 14px; overflow-wrap: anywhere; }
+.requests { margin-top: var(--ah-space-3); }
+.requests summary { cursor: pointer; font-family: var(--ah-font-mono); font-size: 11px; color: var(--ah-color-subtle); }
+.requests summary:focus-visible { outline: 3px solid var(--ah-color-focus); outline-offset: 3px; }
+.requests ul { margin: var(--ah-space-2) 0 0; padding: 0; list-style: none; }
+.requests li { display: flex; flex-wrap: wrap; gap: 2px var(--ah-space-4); padding: var(--ah-space-2) 0; font-size: 13px; overflow-wrap: anywhere; }
+.note { flex-basis: 100%; color: var(--ah-color-subtle); white-space: pre-line; }
+
+.decide { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ah-space-2); margin-top: var(--ah-space-3); }
+.reject { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ah-space-2); width: 100%; }
+.reason { flex: 1 1 240px; min-width: 0; font: inherit; font-size: 14px; min-height: var(--ah-control-height); padding: 0 12px; color: var(--ah-color-text); background: transparent; border: 1px solid var(--ah-color-line); border-radius: var(--ah-radius-control); }
+.button { font: inherit; font-family: var(--ah-font-mono); font-size: var(--ah-text-label); letter-spacing: var(--ah-tracking-label); color: var(--ah-color-text); background: transparent; border: 1px solid var(--ah-color-line); border-radius: var(--ah-radius-control); min-height: var(--ah-control-height); padding: 0 12px; cursor: pointer; }
+.button:hover:not(:disabled) { background: var(--ah-color-line); }
+.button:disabled { opacity: .5; cursor: default; }
+.button:focus-visible, .reason:focus-visible { outline: 3px solid var(--ah-color-focus); outline-offset: 3px; }
+.line { color: var(--ah-color-subtle); font-size: 13px; }
+.none { margin-top: var(--ah-space-5); color: var(--ah-color-subtle); }

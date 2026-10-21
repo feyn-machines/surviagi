@@ -1,13 +1,13 @@
 # X 采集爬虫运行手册
 
-项目唯一的采集组件，位于 `scripts/crawler/`，统一入口 `pnpm crawl <timeline|lookup|doctor>`（`crawl:x`、`crawl:lookup` 是前两者的别名）。Agent 通过 `crawler` 技能调度它；技能不含采集代码，新能力一律加进本组件。原技能 `social-qingguo-collector` 与单账号入口 `collect-official-x.py` 已于 2026-09-27 删除（技能归档在忽略的 `data/archive/skills/`）。设计见 [爬虫子系统设计](../superpowers/specs/2026-09-14-crawler-subsystem-design.md)。
+项目唯一的采集组件，位于 `local/x-crawler/crawler/`（2026-10-03 起只在本地维护，不进 Git；同目录还有测试 `tests/` 和 X 登录模块 `login/`），统一入口 `pnpm crawl <timeline|lookup|doctor>`（`crawl:x`、`crawl:lookup` 是前两者的别名）。Agent 通过 `crawler` 技能调度它；技能不含采集代码，新能力一律加进本组件。原技能 `social-qingguo-collector` 与单账号入口 `collect-official-x.py` 已于 2026-09-27 删除（技能归档在忽略的 `data/archive/skills/`）。设计见 [爬虫子系统设计](../superpowers/specs/2026-09-14-crawler-subsystem-design.md)。
 
-数据流分三段独立：**采集**(本手册,`scripts/crawler`)→ **入库到采集库**(`data:ingest:x`,见下)→ **市场范围计算批次**(现有 `run_batch`,单独一步,本手册不含)。采集只产运行归档、不知道市场/指标;入库把归档幂等落进独立的采集库(不带市场/权重/指标/进度);计算阶段再从采集库按范围选证据。**不做**官网发布记录对账、事件抽取或估计。
+数据流分三段独立：**采集**(本手册,`local/x-crawler/crawler`)→ **入库到采集库**(`data:ingest:x`,见下)→ **市场范围计算批次**(现有 `run_batch`,单独一步,本手册不含)。采集只产运行归档、不知道市场/指标;入库把归档幂等落进独立的采集库(不带市场/权重/指标/进度);计算阶段再从采集库按范围选证据。**不做**官网发布记录对账、事件抽取或估计。
 
 ## 组件结构
 
 ```
-scripts/crawler/
+local/x-crawler/crawler/
   cli.py          pnpm crawl 的子命令
   core/           与数据源无关的机制
     scheduler     唯一的调度器：并发 worker、按失败类型换号/冷却/重试/停批
@@ -40,7 +40,7 @@ scripts/crawler/
 
 - 代理：`X_PROXY`（或 `QINGGUO_PROXY_URL` / `SOCIAL_PROXY_URL`）在 `.env`，青果隧道入口。代理是基础设施凭据，留在 env。入口同一端口同时接受 http 与 https；入口证书 2026-09-27 过期后，自 2026-09-29 起按用户决定改用 `http://`：代理账号密码明文传输，x.com 流量仍在 CONNECT 隧道内端到端 TLS。运行文件记录 `proxy_transport`。青果必须经本机 VPN（Shadowrocket）出去，不能 DIRECT；但 VPN 会把按域名发出的明文代理连接送错地方（表现为 Cloudflare 400），按 IP 则正常，所以 `X_PROXY` 用入口 IP（2026-09-29：`overseas.tunnel.qg.net` → `overseas-us.tunnel.qg.net` → `23.236.65.26`）。青果换 IP 时 `pnpm crawl doctor` 会报错，届时用公共 DNS 重新解析。
 - 账号池：`data/secrets/x-accounts/pool.json`（gitignore、0600）。字段 `username,password,totp_secret,email,email_password,auth_token,ct0,status,cooldown_until,last_used_at,label`。仅 token（有 `auth_token`、`ct0` 为 null）的账号可用——引擎会合成 32 位 ct0（cookie 与 `x-csrf-token` 同值，X 读接口接受），已于 2026-09-14 实机验证。
-- venv：`data/runtime/crawler-venv`。首次或依赖变更后 `pnpm crawl:setup`（装 `requirements-crawler.txt`：twikit 2.3.3、httpx 0.28.1、psycopg 3.3.5）。
+- venv：`data/runtime/crawler-venv`。首次或依赖变更后 `pnpm crawl:setup`（装 `local/x-crawler/requirements.txt`：twikit 2.3.3、httpx 0.28.1、psycopg 3.3.5）。
 - 本地 PostgreSQL 已 `pnpm data:up`：读账号与自动入库都经 `core/store.py` 借用 `data_pipeline` 的连接。
 - 自检：`pnpm crawl doctor` 检查代理配置、账号池（数量、健康态、0600 权限）、本地数据库中可采集的官方号/名单账号数与 twikit，不访问 X、不打印凭据。
 
@@ -91,6 +91,10 @@ pnpm data:ingest:x -- data/collection/official-x/<run>.json
 
 真实验证(2026-09-14):把 `smoke-2handle` 运行入库,得 22 sources / 22 captures / 2 gaps(OpenAI 17、AnthropicAI 5,均 complete),互动指标(含 null)如实保留,采集库无任何凭据列,重放 `reused:true`。
 
+## 账号改名（2026-10-16）
+
+时间线上每条帖子都核对作者：数字 ID 与任务不同，隔离为 `author_identity_mismatch`；数字 ID 相同、用户名不同，是账号改了名，帖子照收并记在任务的（名单里的）用户名下，帖子上另存 `author_handle_seen`，任务和整次运行都带 `handle_changes`（`from`、`to`、`first_post_id`），命令行结束时提示更新名单。任务状态不因此改变，仍是 `search_ended`。在这之前改名账号的帖子全被隔离；`pnpm data:recover:renamed`（`--dry-run` 只报告）从保留的官方和面板运行文件里取回落在各自窗口内的这类帖子，写成一份 `renamed-recovery-<时间>.json` 并入库，不访问 X。
+
 ## 并发与代理模型
 
 青果隧道**每条新连接换一个出口 IP，连接内 IP 稳定**。因此一个账号绑一条独占连接（`max_connections=1`）= 一个稳定 IP 覆盖其整个抓取；账号之间并发即天然把足迹摊到不同 IP。约 1/5–1/6 的连接会 `ConnectError`（坏出口 IP），按 transport 错误在新连接上重试，不判账号失效。青果套餐并发上限未知（3 路已验证干净），并发度从保守值起步、可配。
@@ -105,6 +109,9 @@ pnpm data:ingest:x -- data/collection/official-x/<run>.json
 - 传输错误（`ConnectError`、超时等）：不判账号问题，同账号换新连接（新 IP）重试，另计 `max_transient`（默认 8）。
 - 结构变化（接口 404，或响应结构解析器不认识）：`SchemaChanged`，**整批停止**，不重试、不换号（换哪个账号都是同样结果），不判账号失效。运行文件 `schema_change` 记下出错任务与原因，原始页留在 `.pages/`，据此修 `x/parse.py` 或 `x/compat.py`。
 - 单条记录无法解析（如不可用的帖子）：该 job 记 `parse_error:*`，不重试，其余 job 继续。
+- 账号不可用（X 回 `UserUnavailable`：停用、封禁、被限制，或转为**受保护账号**以致非关注者读不到时间线）：该 job 记 `user_unavailable`，不重试、不换号、不判该账号失效，其余 job 继续。它与解析失败分开记，因为原因在账号而不在页面，且会每个窗口重复出现（每日运行把它记为提示，不阻发布；超过 5% 的 job 如此仍会阻发布）。
+- 不算解析失败的三种情况（2026-10-05）：时间线数据旁带着字段级 `errors`（如长文字段的 214）时照常读已返回的帖子；订阅者专属帖（`TweetPreviewDisplay`）跳过；没有帖子的页面即时间线到头（`empty_page`），不论是否带 cursor，因为 X 在最后一条之后仍会给 cursor。
+- twikit 自身读不懂某次响应（`KeyError` 等）按传输错误处理，换新连接重试。
 - 账号换遍仍不成 → 该 job `incomplete` 并记原因，不阻塞其余 job。单账号错误被转移消化后不影响整次 `ok`。
 
 ## 成败判据
@@ -129,3 +136,22 @@ pnpm data:ingest:x -- data/collection/official-x/<run>.json
 ## 相关
 
 - 与外部实现 `x-account-client` 的对比及借鉴建议，见 [X 采集实现对比 spec](../superpowers/specs/2026-09-23-x-account-client-crawler-comparison.md)。
+
+## 按搜索采集（2026-10-07）
+
+时间线采集只读名单里的账号。搜索读的是任何人就某个对象发的帖子，所以能触及名单之外的账号。
+
+```sh
+pnpm crawl search --query "Qwen3.8-Flash-Next" --query "Strata Qwen3.8-Flash-Next" \
+  --start 2026-09-29T00:00:00+00:00 --end 2026-10-07T00:00:00+00:00 \
+  --output data/collection/search/<run>.json
+```
+
+- 每个 `--query` 是一个任务；`--queries-file` 每行一个查询。时间窗口以 X 自己的 `since:`/`until:` 写进查询，并按帖子时间再过滤一次；回复不取，转发不留。
+- `--product Top`（默认）取 X 排序后的结果，`Latest` 取最新的。`--max-pages` 默认 3，搜索到这里就结束，运行文件里记为 `search_ended / page_budget`。
+- 运行文件和时间线的格式相同，照常入库；`coverage_status=provider_search`。**搜索给的是样本，不是全量**，不能据此说“共有多少人在说”。
+- **搜索的 404 是请求签名被拒，不是账号或额度问题（2026-10-11 实测，更正此前的结论）**：X 对搜索接口校验 `X-Client-Transaction-Id`（时间线接口不校验），不接受时在约 10 毫秒内返回空的 404。新建的签名约四成被拒；成败跟签名走，不跟账号走（被拒的签名换到别的账号同样被拒，被接受的签名换到别的账号同样可用）。每个账号的真实额度是每 15 分钟 50 次搜索，几乎用不到。处理：被拒时在同一账号上换一份签名重试，最多 `SIGNATURE_ATTEMPTS`（4）次；被接受的签名留给后面的会话用，失效就丢掉；连续被拒才让该账号休息 120 秒、任务换号。签名为什么有四成算错没有定位（算法来自 twikit 和 `x/compat.py` 的补丁）。
+- 此前记录的“约一半账号搜索会 404”（10-07）和“一轮约 30 个查询、14 个账号全部被搜索限流”（10-09，60 个查询完成 29 个）都是这个原因：当时每次被拒都记成限流并换号。修正后同样 60 个查询 5 分 49 秒全部完成（2026-10-11，`search-topics-2026-10-11`），仍有 9 次连续 4 份签名被拒后换号。不需要为搜索扩充账号。
+- 搜到的作者不在名单里。它的帖子在提取时产生了更新，才登记为候选账号（`rule:search-finds-candidates`）：归属未知、角色未分类、身份依据为“搜索发现”。候选账号不按时间线采集、不会被启用、不进入路由和公开的声音名单。
+- 提取搜索到的帖子：`pnpm data:extract:events --targets search --window-start … --window-end … --output data/extraction/<run>.json`。
+

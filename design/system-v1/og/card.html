@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SurviAGI share card</title>
+<link rel="stylesheet" href="../../../src/app/design-tokens.css">
+<style>
+@font-face{font-family:"Outfit";src:url("../fonts/Outfit-Variable.ttf");font-weight:100 900}
+@font-face{font-family:"Inter Tight";src:url("../fonts/InterTight-Variable.ttf");font-weight:100 900}
+html,body{margin:0;width:1200px;height:630px;overflow:hidden}
+body{background:var(--ah-color-bg);color:var(--ah-color-text);font-family:"Inter Tight","PingFang SC","Microsoft YaHei",system-ui,sans-serif;display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;padding:72px 80px;
+  background-image:linear-gradient(var(--ah-color-grid) 1px,transparent 1px),linear-gradient(90deg,var(--ah-color-grid) 1px,transparent 1px);background-size:60px 60px}
+.brand{font-family:"Outfit","PingFang SC",sans-serif;font-size:64px;font-weight:800;letter-spacing:-.035em}
+.brand-ai{color:color-mix(in srgb,var(--ah-color-signal) 62%,var(--ah-color-text))}
+.brand-will{color:var(--ah-color-signal)}
+h1{font-family:"Outfit","PingFang SC","Microsoft YaHei",sans-serif;font-size:96px;line-height:1.08;font-weight:700;letter-spacing:-.03em;margin:0;max-width:1000px}
+html[lang="zh-CN"] h1{font-size:104px;letter-spacing:0;line-height:1.2}
+</style>
+</head>
+<body>
+<div class="brand">Survi<span class="brand-will">AGI</span></div>
+<h1 id="headline"></h1>
+<script>
+  // The headlines are the titles in src/lib/seo.ts (siteCopy).
+  const titles = { en: "How far AI has taken over the world", "zh-CN": "AI 接管世界的进度" };
+  const lang = new URLSearchParams(location.search).get("lang") === "zh-CN" ? "zh-CN" : "en";
+  document.documentElement.lang = lang;
+  document.getElementById("headline").textContent = titles[lang];
+</script>
+</body>
+</html>

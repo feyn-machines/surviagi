@@ -1,0 +1,156 @@
+{
+  "package": "ontology",
+  "version": "2.4.0",
+  "schema_version": "2.4.0",
+  "status": "local_draft",
+  "created_at": "2026-10-09T07:20:29.406Z",
+  "derived_from": {
+    "package": "ontology",
+    "version": "2.3.0",
+    "manifest_sha256": "cdc38a0632bb1cc62b72b35df9946efccaeea8c072f1fef7f379ac1a97869345"
+  },
+  "counts": {
+    "concepts": 20796,
+    "coverage": 22,
+    "external_mappings": 19924,
+    "reference_activities": 2460,
+    "reference_occupation_groups": 23,
+    "reference_occupations": 1016,
+    "reference_task_activity_links": 24087,
+    "reference_tasks": 18838,
+    "reference_taxonomy_codes": 830,
+    "relations": 20733,
+    "sources": 3
+  },
+  "schema_counts": {
+    "classes": 17,
+    "properties": 109,
+    "relations": 32,
+    "vocabularies": 43,
+    "terms": 193
+  },
+  "files": [
+    {
+      "path": "CHANGELOG.md",
+      "bytes": 6448,
+      "sha256": "b9e062a6f859029631a4eae6f8aed44bbb0bcdd377c8aff00aea3d11f9e704b9"
+    },
+    {
+      "path": "concepts.jsonl",
+      "bytes": 8784809,
+      "sha256": "6593d82833c3cfdad5756174dd344d144563c60f2cfa92ec1740905d8d605f25",
+      "rows": 20796,
+      "inherited_from": "2.3.0"
+    },
+    {
+      "path": "coverage.jsonl",
+      "bytes": 6463,
+      "sha256": "8fa4b7f372024c1e50e90db87f2be1c982e9b9fc46dc5fb2eff85ede8fd57222",
+      "rows": 22,
+      "inherited_from": "2.3.0"
+    },
+    {
+      "path": "data-format.json",
+      "bytes": 12711,
+      "sha256": "eb1b484a8182488715ec8f1bec447336ee4a4ea3cd92692a1358877cd5c51133"
+    },
+    {
+      "path": "external_mappings.jsonl",
+      "bytes": 4634861,
+      "sha256": "e03a047df0c7b6d051bad7f85d3f0141cd08411f2fa0b4346f19ce526961bbc5",
+      "rows": 19924,
+      "inherited_from": "2.3.0"
+    },
+    {
+      "path": "gates.json",
+      "bytes": 13756,
+      "sha256": "3d855414d5dc43eb1632fcdb8bede010b27438a5542a7f4b6171e504c149b9d6"
+    },
+    {
+      "path": "market-catalog.md",
+      "bytes": 138514,
+      "sha256": "e4ddd8a902d1d4ad425fac397f6cb636879b7237707cf6776db67f6001c7d1a2"
+    },
+    {
+      "path": "occupation-catalog.md",
+      "bytes": 2619702,
+      "sha256": "e950210183a01bfb8ce2ae2473e0f62eebe66494b3179840159c2dff2ee317f6"
+    },
+    {
+      "path": "ontology.ttl",
+      "bytes": 161875,
+      "sha256": "eece4f39287d462d0c6a7c29382254a0ec6ccef249064373ce72f44c67f2ed83"
+    },
+    {
+      "path": "organizations.json",
+      "bytes": 3389,
+      "sha256": "2bc6b97bb7fb9162f71b45bf0d8ce4de729d9dadb619594b58a1bc733800ec4b"
+    },
+    {
+      "path": "README.md",
+      "bytes": 1251,
+      "sha256": "6ab8ec3cb126200a657830fc9e10ffbddb7f1c296ed18befbad8bea78a6ac9ec"
+    },
+    {
+      "path": "reference_activities.jsonl",
+      "bytes": 433776,
+      "sha256": "cb4c7503fb6ddb45797eb930010b921d922a89d537ae9344ab4d07c0abd2fc82",
+      "rows": 2460,
+      "inherited_from": "2.3.0"
+    },
+    {
+      "path": "reference_occupation_groups.jsonl",
+      "bytes": 2492,
+      "sha256": "188753f62c54417c54192c12167974fb606bbea537fdcf2ed1e88a793343c6a5",
+      "rows": 23,
+      "inherited_from": "2.3.0"
+    },
+    {
+      "path": "reference_occupations.jsonl",
+      "bytes": 470992,
+      "sha256": "565b8d9ef51e4f209bba4835289d3a972057402c0c68648aff325d19ebc419ea",
+      "rows": 1016,
+      "inherited_from": "2.3.0"
+    },
+    {
+      "path": "reference_task_activity_links.jsonl",
+      "bytes": 3198084,
+      "sha256": "a1ac58ab44fbff897908fe7c6bc987357db8e875a54fcd4341ef0b6f94d34253",
+      "rows": 24087,
+      "inherited_from": "2.3.0"
+    },
+    {
+      "path": "reference_tasks.jsonl",
+      "bytes": 4800110,
+      "sha256": "6870857b2f1187095fe537c4dea8c83f111e63ffa2ebbc9ec064c6ef8e270dde",
+      "rows": 18838,
+      "inherited_from": "2.3.0"
+    },
+    {
+      "path": "reference_taxonomy_codes.jsonl",
+      "bytes": 65123,
+      "sha256": "073c6327e02bfe78605e16b9d2a263d16c3ef40137c7ebb73cbbc3ac9da5898a",
+      "rows": 830,
+      "inherited_from": "2.3.0"
+    },
+    {
+      "path": "relations.jsonl",
+      "bytes": 3997621,
+      "sha256": "a7249bd8aace7d42576f068c40fe4f1fdbd5e4e9ca71ec411babd8fc6c4f2299",
+      "rows": 20733,
+      "inherited_from": "2.3.0"
+    },
+    {
+      "path": "schema.json",
+      "bytes": 194162,
+      "sha256": "3747f60e541ae1ae894a521806f29af03c569d07d4c7165eee18f1be3e32274a"
+    },
+    {
+      "path": "sources.jsonl",
+      "bytes": 1063,
+      "sha256": "0656cc67f731512c24b2a76efc6b15828c6cf8160c3b21f9a3f1498d28f837ba",
+      "rows": 3,
+      "inherited_from": "2.3.0"
+    }
+  ]
+}

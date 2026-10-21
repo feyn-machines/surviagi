@@ -1,8 +1,8 @@
-# openaiwill
+# SurviAGI
 
-Project name: **openaiwill**. Domain: **[openaiwill.com](https://openaiwill.com)**, purchased by the project owner as confirmed on 2026-09-12. Earlier names: WillAI / AgentHowTo. The repository was renamed from `willai` to `openaiwill` on 2026-09-21.
+Project name: **SurviAGI** (The AGI Survival Guide; 新人类 AI 生存指南). Domain: **[surviagi.com](https://surviagi.com)**. Earlier names: openaiwill (until 2026-10-08; openaiwill.com redirects here) / WillAI / AgentHowTo. The repository was renamed from `openaiwill` to `surviagi` on 2026-10-08. Internal identifiers (database names, container names, the language cookie) keep the earlier name.
 
-openaiwill is an initiative to make progress toward AI independently completing major work more transparent and credible. We actively collect and analyze AI developments; the website is a product carrying this initiative. Community contributions help fill gaps and correct the analysis; reporting and auditing support that purpose. See the [whitepaper](docs/whitepaper.md). Domain ownership does not establish that the website has been deployed.
+SurviAGI is an initiative to make progress toward AI independently completing major work more transparent and credible. We actively collect and analyze AI developments; the website is a product carrying this initiative. Community contributions help fill gaps and correct the analysis; reporting and auditing support that purpose. See the [whitepaper](docs/whitepaper.md). Domain ownership does not establish that the website has been deployed.
 
 ## Run locally
 
@@ -113,7 +113,7 @@ English is the default. Current pages render on the server using the browser's `
 
 ## Open source and security
 
-Project code is licensed under MIT; referenced datasets retain the source licenses recorded in each release. Local agent instructions, skills, environments, credentials and raw collection archives are excluded, including from the initial public history. See [SECURITY.md](SECURITY.md). CI validates public paths, common credential patterns, dataset contracts, lint, types and build. No credentials are required to run the current scaffold.
+Project code is licensed under MIT; referenced datasets retain the source licenses recorded in each release. Local agent instructions, skills, environments, credentials and raw collection archives are excluded, including from the initial public history. See [SECURITY.md](SECURITY.md). Verification is local: `pnpm check` validates public paths, common credential patterns, dataset contracts, lint, types and build, and `pnpm check:full` adds the real PostgreSQL tests. The repository does not rely on hosted CI. No credentials are required to run the current scaffold.
 
 ## Design resources
 

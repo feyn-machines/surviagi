@@ -2,8 +2,9 @@ import type { ReactNode } from "react";
 import type { Route } from "next";
 import Link from "next/link";
 import { bilingual, type Language } from "@/lib/i18n";
-import { manifest, snapshotExists } from "@/lib/snapshot";
-import { termName } from "./semantic-labels";
+import { href } from "@/lib/routes";
+import { manifest as dataManifest } from "@/lib/snapshot";
+import { termName } from "./ontology-labels";
 import styles from "./data-page.module.css";
 
 export { styles as dataStyles };
@@ -65,7 +66,7 @@ export function isoDate(value: string | null | undefined): string | null {
 /**
  * "Stage 3" in English, "阶段 3 · 自主试点" in Chinese: the number is the value
  * and the name comes from the published autonomy_stage vocabulary, which is
- * written in Chinese only in semantic model 2.0.0.
+ * written in Chinese only in this version of the schema.
  */
 export function stageLabel(stage: number, language: Language, prefix: string): string {
   const name = termName("autonomy_stage", String(stage), language);
@@ -92,7 +93,7 @@ const shared = bilingual({
     snapshotVersion: "Snapshot",
     generatedAt: "Generated",
     ontologyVersion: "Ontology",
-    semanticVersion: "Semantic model",
+    schemaVersion: "Ontology schema",
     methodVersion: "Method version",
     contentHash: "Content SHA-256",
     rowCounts: "Rows in this snapshot",
@@ -118,7 +119,7 @@ const shared = bilingual({
     snapshotVersion: "快照版本",
     generatedAt: "生成时间",
     ontologyVersion: "本体版本",
-    semanticVersion: "语义模型",
+    schemaVersion: "本体 schema",
     methodVersion: "方法版本",
     contentHash: "内容 SHA-256",
     rowCounts: "本快照记录数",
@@ -147,6 +148,8 @@ const countLabels = bilingual({
     tasks: "work-to-task edges",
     events: "updates",
     models: "models",
+    sources: "source accounts",
+    topics: "topics",
     coverage: "coverage record",
     progress: "progress record",
   },
@@ -160,6 +163,8 @@ const countLabels = bilingual({
     tasks: "工作—任务边",
     events: "更新",
     models: "模型",
+    sources: "来源账号",
+    topics: "话题",
     coverage: "覆盖面记录",
     progress: "进度记录",
   },
@@ -191,19 +196,29 @@ export function Section({
   eyebrow,
   title,
   note,
+  action,
   children,
 }: {
   id?: string;
   eyebrow?: string;
   title: string;
   note?: ReactNode;
+  /** Shown at the end of the title row. */
+  action?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <section className={styles.section} id={id}>
       <div className={styles.sectionHead}>
         {eyebrow ? <p className={styles.eyebrow}>{eyebrow}</p> : null}
-        <h2 className={styles.sectionTitle}>{title}</h2>
+        {action ? (
+          <div className={styles.sectionTitleRow}>
+            <h2 className={styles.sectionTitle}>{title}</h2>
+            {action}
+          </div>
+        ) : (
+          <h2 className={styles.sectionTitle}>{title}</h2>
+        )}
         {note ? <p className={styles.note}>{note}</p> : null}
       </div>
       {children}
@@ -301,7 +316,7 @@ export function Gap({
  */
 export function Caveats({ language }: { language: Language }) {
   const c = shared[language];
-  const list = manifest?.caveats?.[language] ?? [];
+  const list = dataManifest()?.caveats?.[language] ?? [];
   if (list.length === 0) return null;
   return (
     <aside className={styles.caveats} aria-label={c.caveatsTitle}>
@@ -327,6 +342,7 @@ export function Caveats({ language }: { language: Language }) {
 /** The versions and the hash behind everything on the page. */
 export function Provenance({ language }: { language: Language }) {
   const c = shared[language];
+  const manifest = dataManifest();
   if (!manifest) return null;
   const counts = Object.entries(manifest.counts);
   return (
@@ -344,8 +360,8 @@ export function Provenance({ language }: { language: Language }) {
           </dd>
           <dt>{c.ontologyVersion}</dt>
           <dd className={styles.mono}>{manifest.ontology_version}</dd>
-          <dt>{c.semanticVersion}</dt>
-          <dd className={styles.mono}>{manifest.semantic_version}</dd>
+          <dt>{c.schemaVersion}</dt>
+          <dd className={styles.mono}>{manifest.schema_version}</dd>
           <dt>{c.methodVersion}</dt>
           <dd className={styles.mono}>{manifest.method_version}</dd>
           <dt>{c.contentHash}</dt>
@@ -380,7 +396,6 @@ export function NoSnapshot({ language }: { language: Language }) {
   );
 }
 
-export const hasSnapshot = snapshotExists;
 
 /** Cross links between the five data pages, in the order of the header nav. */
 export function DataPageLinks({
@@ -394,9 +409,9 @@ export function DataPageLinks({
 }) {
   const c = shared[language];
   const all = [
-    { key: "markets" as const, href: "/markets", label: c.markets },
-    { key: "occupations" as const, href: "/occupations", label: c.occupations },
-    { key: "updates" as const, href: "/updates", label: c.updates },
+    { key: "markets" as const, href: href(language, "/markets"), label: c.markets },
+    { key: "occupations" as const, href: href(language, "/occupations"), label: c.occupations },
+    { key: "updates" as const, href: href(language, "/updates"), label: c.updates },
   ] satisfies { key: typeof current; href: Route; label: string }[];
   return (
     <nav className={styles.links} aria-label={c.moreTitle}>
@@ -434,8 +449,8 @@ export function OriginalLanguage({
   const note =
     reading === "en"
       ? shown === "zh-CN"
-        ? "Published in Chinese only in this version of the semantic model; the original is shown above, unchanged."
-        : "Published in English only in this version of the semantic model; the original is shown above, unchanged."
+        ? "Published in Chinese only in this version of the ontology schema; the original is shown above, unchanged."
+        : "Published in English only in this version of the ontology schema; the original is shown above, unchanged."
       : shown === "en"
         ? "在当前版本的语义模型中，该词条只发布了英文；上方为原文，未作改动。"
         : "在当前版本的语义模型中，该词条只发布了中文；上方为原文，未作改动。";

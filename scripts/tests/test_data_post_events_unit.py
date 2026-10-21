@@ -115,5 +115,15 @@ class Mentions(unittest.TestCase):
         self.assertNotIn(("astra", "p"), got)
 
 
+class AttachedByReading(unittest.TestCase):
+    def test_a_post_the_extractor_attached_is_linked(self):
+        rows = post_events.with_attached([("e1", "s1", "source", 0, None)], [("e1", "p9")])
+        self.assertIn(("e1", "p9", "attached", 1, None), rows)
+
+    def test_a_raw_link_is_not_replaced_by_an_attachment(self):
+        rows = post_events.with_attached([("e1", "p9", "reply", 1, "s1")], [("e1", "p9")])
+        self.assertEqual(rows, [("e1", "p9", "reply", 1, "s1")])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,4 +1,5 @@
-import { LANGUAGES, bilingual, getLocale, getRequestUrl, languageHref, languageName, type Language } from "@/lib/i18n";
+import { LANGUAGES, LANGUAGE_PARAM, bilingual, languageName, type Language } from "@/lib/i18n";
+import { getLocale } from "@/lib/locale";
 
 const copy = bilingual({
   en: {
@@ -23,11 +24,17 @@ const SWITCH_KEY: Record<Language, "toEnglish" | "toChinese"> = {
 
 /**
  * Language switch for the header. Plain anchors: no login, no JavaScript, and
- * no prefetching, so following one always reaches the server that saves the
- * choice. The current path and query are preserved.
+ * no prefetching, so following one always reaches the proxy, which turns
+ * `?lang=` into the path address and saves the choice. A query-only `href`
+ * resolves against the address the reader is on, so the path is kept.
+ *
+ * `nofollow`: each of these addresses only redirects to the other language's
+ * page, which the head already names with `hreflang`. Followed, they are two
+ * redirecting addresses per page for a crawler, reported by Search Console as
+ * "Page with redirect".
  */
 export async function LanguageSwitch() {
-  const [{ language }, url] = await Promise.all([getLocale(), getRequestUrl()]);
+  const { language } = await getLocale();
   const c = copy[language];
   return (
     <nav className="oaw-lang" aria-label={c.switchLabel}>
@@ -37,7 +44,8 @@ export async function LanguageSwitch() {
           <a
             key={option}
             className={current ? "oaw-lang-option oaw-lang-option-current" : "oaw-lang-option"}
-            href={languageHref(url, option)}
+            href={`?${LANGUAGE_PARAM}=${option}`}
+            rel="nofollow"
             hrefLang={option}
             lang={option}
             aria-current={current ? "true" : undefined}

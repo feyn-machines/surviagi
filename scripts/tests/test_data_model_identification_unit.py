@@ -6,6 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from data_pipeline import model_identification as mi
+from data_pipeline import ontology_schema
 
 
 def mention(text, name=None, family=None, version=None, variant=None, owner="Google", role="subject",
@@ -15,6 +16,55 @@ def mention(text, name=None, family=None, version=None, variant=None, owner="Goo
 
 
 FLASH = dict(family="Gemini", version="3.8", variant="Flash")
+
+
+class AgreesWithTheSemanticModel(unittest.TestCase):
+    """The schema defines the roles; the prompt and the code restate nothing else."""
+
+    def test_roles_are_the_vocabulary(self):
+        self.assertEqual(list(mi.ROLES), ontology_schema.term_ids("model_role"))
+
+    def test_the_prompt_gives_each_role_its_definition(self):
+        for role in mi.ROLES:
+            self.assertIn(ontology_schema.term("model_role", role)["definition"]["en"], mi.SYSTEM)
+
+    def test_release_kinds_are_event_kinds(self):
+        self.assertLessEqual(set(mi.RELEASE_KINDS), set(ontology_schema.term_ids("event_kind")))
+        rule = next(r for r in ontology_schema.load_schema()["constraints"] if r["id"] == "rule:model-confirmed-by-owner-release")
+        self.assertEqual(rule["expression"]["event_kinds"], list(mi.RELEASE_KINDS))
+
+
+class ShortNames(unittest.TestCase):
+    @staticmethod
+    def registry(*releases):
+        rows = [{"model_id": "f:claude", "level": "family", "name": "Claude", "parent_model_id": None},
+                {"model_id": "f:gemini", "level": "family", "name": "Gemini", "parent_model_id": None},
+                {"model_id": "f:qwen", "level": "family", "name": "Qwen", "parent_model_id": None}]
+        return rows + [{"model_id": f"r:{name}", "level": "release", "name": name, "parent_model_id": family}
+                       for name, family in releases]
+
+    def test_the_family_name_is_dropped(self):
+        shorts = mi.short_names(self.registry(("Claude Opus 5.5", "f:claude")))
+        self.assertEqual(shorts, {"opus 5 5": "r:Claude Opus 5.5"})
+
+    def test_a_short_name_two_models_share_belongs_to_neither(self):
+        shorts = mi.short_names(self.registry(("Gemini Flash 4", "f:gemini"), ("Qwen Flash 4", "f:qwen"),
+                                              ("Claude Opus 5.5", "f:claude")))
+        self.assertEqual(shorts, {"opus 5 5": "r:Claude Opus 5.5"})
+
+    def test_a_short_name_starts_with_a_word(self):
+        shorts = mi.short_names(self.registry(("Gemini 3.8 Flash", "f:gemini"), ("Qwen 3.7", "f:qwen")))
+        self.assertEqual(shorts, {})
+
+    def test_a_short_name_needs_a_version_and_more_than_one_word(self):
+        shorts = mi.short_names(self.registry(("Claude Opus", "f:claude"), ("Claude 5", "f:claude"),
+                                              ("Opus 5.5", "f:claude")))
+        self.assertEqual(shorts, {})
+
+    def test_a_family_and_a_release_without_one_have_no_short_name(self):
+        rows = self.registry() + [{"model_id": "r:x", "level": "release", "name": "Claude Opus 5.5",
+                                   "parent_model_id": None}]
+        self.assertEqual(mi.short_names(rows), {})
 
 
 class Normalising(unittest.TestCase):

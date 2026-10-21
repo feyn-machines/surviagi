@@ -1,0 +1,22 @@
+{"isic_section":"A","coverage_note":"通过农业种植畜牧与林业渔业两个领域，保留种苗、田间与畜禽生产、林地经营、捕捞养殖及生产支持；初级农场处理和工厂深加工分别归属。","domain_ids":["oaw:market:agriculture","oaw:market:forestry-fisheries"]}
+{"isic_section":"B","coverage_note":"矿业领域覆盖资源勘查、煤和金属矿、砂石工业矿物、油气生产及矿业支持；退出恢复规划同时保留，危险工艺不提供操作参数。","domain_ids":["oaw:market:mining"]}
+{"isic_section":"C","coverage_note":"以食品、日用、材料化工、机械交通、电子电气和药品六个领域展开制造链；覆盖本地来源 10–33 分支的主要产品方向，包含烟草、印刷、仪器和工业设备安装检修，尚非每一工业产品的穷尽目录。","domain_ids":["oaw:market:food-manufacturing","oaw:market:consumer-manufacturing","oaw:market:materials-chemicals","oaw:market:machinery-transport","oaw:market:electronics-hardware","oaw:market:pharmaceuticals"]}
+{"isic_section":"D","coverage_note":"能源领域分别保留发电、电网、储能、终端燃气和冷热供应；燃料开采、管道干线货运与硬件制造另列。","domain_ids":["oaw:market:energy"]}
+{"isic_section":"E","coverage_note":"水务环境领域覆盖供水、污水、收运、资源回收、最终处置与污染场地修复；规划、检测和现场处置以具体交付区分。","domain_ids":["oaw:market:water-environment"]}
+{"isic_section":"F","coverage_note":"施工领域保留房屋、土木基础设施和专业施工三类主线，并展开场地基础、结构、机电、装修及拆改；独立设计另列。","domain_ids":["oaw:market:construction"]}
+{"isic_section":"G","coverage_note":"贸易领域保留批发与零售主线，兼顾门店、电商、工业品、车辆、二手商品、生鲜与药品健康用品；零售不等于生产或运输。","domain_ids":["oaw:market:trade"]}
+{"isic_section":"H","coverage_note":"货运物流与客运出行两个领域覆盖陆海空运输、管道、仓储、节点支持和邮政快递；各运输模式与末端服务均有具体工作。","domain_ids":["oaw:market:freight-logistics","oaw:market:passenger-mobility"]}
+{"isic_section":"I","coverage_note":"住宿餐饮领域包括酒店接待与客房、现制后厨、堂食饮品及团餐外送；食品工业加工另列。","domain_ids":["oaw:market:hospitality-food-service"]}
+{"isic_section":"J","coverage_note":"媒体领域覆盖文字出版、新闻、影视音频和广播分发，游戏及软件的出版活动另有自有入口；与 K 或 S 的关系是候选范围，不自动合并计分。","domain_ids":["oaw:market:media-publishing","oaw:market:games","oaw:market:software"]}
+{"isic_section":"K","coverage_note":"软件与通信计算领域分别覆盖研发实施和通信云设施信息服务，游戏研发保留交叉入口；自有工作分类不冒称来源逐项等价。","domain_ids":["oaw:market:games","oaw:market:software","oaw:market:telecom-computing"]}
+{"isic_section":"L","coverage_note":"金融与保险分别展开账户、融资、支付、投资及金融辅助服务，保险核保理赔、再保险和养老金也有明确位置；强制社会保障保留在 P。","domain_ids":["oaw:market:finance","oaw:market:insurance"]}
+{"isic_section":"M","coverage_note":"房产租赁领域明确房源交易、房屋租赁、资产经营和估价；设备租赁属于其 O 候选范围，不能将整个自有领域等同 M。","domain_ids":["oaw:market:property-rental"]}
+{"isic_section":"N","coverage_note":"法律、会计、管理咨询、工程检测、科学研究、营销设计语言服务及兽医均有位置；兽医在生活服务域中明确单列，领域到门类的关系待逐项裁决。","domain_ids":["oaw:market:legal","oaw:market:accounting","oaw:market:business-services","oaw:market:engineering-design","oaw:market:science-research","oaw:market:marketing-creative","oaw:market:personal-repair"]}
+{"isic_section":"O","coverage_note":"企业支持、人力服务、资产租赁、旅行会展、设施清洁园艺和安保调查均明确覆盖；同一自有领域可能还关联其他门类，范围引用不分配世界权重。","domain_ids":["oaw:market:property-rental","oaw:market:business-services","oaw:market:travel-events","oaw:market:facilities-security"]}
+{"isic_section":"P","coverage_note":"公共服务保留行政财政监管、司法警务、应急国防和强制社会保障；属于公共职能，不声称都可成为商业产品或自动获得公权力授权。","domain_ids":["oaw:market:public-services"]}
+{"isic_section":"Q","coverage_note":"教育领域覆盖学前学校高等职业成人与特殊教育，增加艺术体育兴趣教学及教育支持，区别教学、赛事和娱乐场所运营。","domain_ids":["oaw:market:education"]}
+{"isic_section":"R","coverage_note":"医疗与照护社会工作两个领域分别保留诊疗护理、住宿照护及非住宿支持；个人心理医疗与社会支持、临床照护与生活照护按服务目的区分。","domain_ids":["oaw:market:healthcare","oaw:market:care-social-work"]}
+{"isic_section":"S","coverage_note":"文化体育领域覆盖艺术表演、文化馆藏、图书档案、赛事休闲及受监管博彩；游戏活动和旅游景区的 S 关联仅作候选，需对具体经营形态再确认。","domain_ids":["oaw:market:games","oaw:market:culture-sports","oaw:market:travel-events"]}
+{"isic_section":"T","coverage_note":"社会团体与生活维修服务覆盖会员组织、个人物品车辆维修及美容洗护殡葬宠物等服务；专业兽医单独关联 N。","domain_ids":["oaw:market:personal-repair","oaw:market:civil-society"]}
+{"isic_section":"U","coverage_note":"家庭领域保留家庭直雇人员的实际服务及雇主管理，同时保留自用生产、无偿家务育儿和依赖者照护。自有范围比统计分类的特定家庭生产口径更易于浏览，不能把全部无偿活动逐项视为官方一对一对应。","domain_ids":["oaw:market:household-work"]}
+{"isic_section":"V","coverage_note":"国际组织领域保留国际机构、多边项目、国际统计及符合来源范围的驻外使领馆和域外公务机构；是非商业工作范围，非政府团体与一般跨境企业不能因跨境就归入 V。","domain_ids":["oaw:market:international-organizations"]}

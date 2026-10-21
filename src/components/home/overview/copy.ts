@@ -1,4 +1,5 @@
 import { bilingual, type Language } from "@/lib/i18n";
+import { plural } from "@/lib/plural";
 import type { NodeKind } from "./scene";
 
 // Level and source-type names are shared by every homepage module.
@@ -15,8 +16,10 @@ export const copy = bilingual({
     headline: "How far AI has taken over the world",
     subtitle: "Will AI kill your idea? Replace what you do?",
     supporting: "Every AI update could change your answer.",
-    ticker: "{n} updates this day",
-    dayOf: "{weekday} · Day {day} of {days}",
+    ticker: "{n} {n|update|updates} this day",
+    dayOf: "{weekday} · Day {day} of {days} · UTC",
+    dayPanel: "Updates that day",
+    dayEmpty: "No updates",
     cUpdate: "Updates",
     cWork: "Work reached by an update",
     cWorkSub: "{n} in the catalogue",
@@ -46,7 +49,7 @@ export const copy = bilingual({
     dayUpdates: "{date}: {n} updates",
     accepted: "Accepted",
     claimed: "Claimed",
-    updatesN: "{n} updates",
+    updatesN: "{n} {n|update|updates}",
     undated: "undated",
     backOverview: "← Back to overview",
     backTo: "← Back: {name}",
@@ -67,7 +70,9 @@ export const copy = bilingual({
     subtitle: "AI 会杀死你的想法？取代你的工作能力？",
     supporting: "每一次 AI 更新，都可能会挑战你的答案。",
     ticker: "当天 {n} 条更新",
-    dayOf: "{weekday} · 第 {day} / {days} 天",
+    dayOf: "{weekday} · 第 {day} / {days} 天 · UTC",
+    dayPanel: "当天更新",
+    dayEmpty: "没有更新",
     cUpdate: "更新",
     cWork: "已有更新涉及的工作",
     cWorkSub: "目录中 {n} 项",
@@ -114,7 +119,7 @@ export const copy = bilingual({
   },
 });
 
-/** Fills `{name}` slots in a copy string. */
+/** Fills `{name}` slots in a copy string, after `{n|one|other}` agreement (see `plural`). */
 export function fill(text: string, values: Record<string, string | number>): string {
-  return text.replace(/\{(\w+)\}/g, (slot, key: string) => (key in values ? String(values[key]) : slot));
+  return plural(text, values).replace(/\{(\w+)\}/g, (slot, key: string) => (key in values ? String(values[key]) : slot));
 }

@@ -62,6 +62,19 @@
   line-height: 1.25;
 }
 
+.sectionTitleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.sectionTitleRow .sectionTitle {
+  margin: 0;
+}
+
 .subTitle {
   margin: 28px 0 10px;
   font-size: 17px;

@@ -16,10 +16,10 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 
-from . import attention, checkpoint, semantic
+from . import attention, checkpoint, ontology_schema
 from .activity_state import ACTIVITY_LEVEL_SQL, IS_TASK, readings_sql
 from .pipeline import digest
-from .semantic import EVENT_KIND_VOCABULARY
+from .ontology_schema import EVENT_KIND_VOCABULARIES
 
 ROOT = Path(__file__).resolve().parents[2]
 PUBLISHED = ROOT / "datasets/published"
@@ -65,6 +65,211 @@ def _plain(value):
 
 def _clean(rows):
     return [{k: _plain(v) for k, v in row.items()} for row in rows]
+
+
+LATEST_POSTS_PER_SOURCE = 3
+
+
+def sources(conn) -> list[dict]:
+    """The accounts being collected, with who owns each and what it last wrote.
+
+    Only enabled, non-excluded accounts: a candidate has not had its identity
+    confirmed, and publishing it beside the others would say we follow it.
+    `latest` holds the account's own posts - replies and reposts are left out,
+    because a repost is someone else's words under this account's name. The text
+    is the stored public excerpt in its original language, never a translation.
+    `posts` and `latest_post_at` are null for an account nothing was collected
+    from, which is not the same as an account that wrote nothing.
+    """
+    accounts = _clean(_rows(conn, """
+        SELECT a.account_key, a.handle, a.platform, a.owner_kind, a.panel_role, a.identity_grade,
+               a.identity_url, a.language, a.focus, a.avatar_url, a.platform_account_id,
+               a.person_id, a.org_id,
+               COALESCE(p.name, o.canonical_name_en, a.org_name) AS name,
+               CASE WHEN a.owner_kind = 'organization' THEN o.canonical_name_zh_cn END AS name_zh_cn
+          FROM public.source_accounts a
+          LEFT JOIN public.people p ON p.person_id = a.person_id
+          LEFT JOIN public.org_registry o ON o.org_id = a.org_id
+         WHERE a.panel_state = 'enabled' AND NOT a.excluded
+         ORDER BY a.account_key"""))
+    affiliations = {}
+    for r in _rows(conn, """
+            SELECT f.person_id, f.org_id, COALESCE(o.canonical_name_en, f.org_name) AS org_name,
+                   f.relation, f.role_title
+              FROM public.person_affiliations f
+              LEFT JOIN public.org_registry o ON o.org_id = f.org_id
+             WHERE f.relation <> 'former' AND f.ended_on IS NULL
+             ORDER BY f.person_id, f.started_on DESC NULLS LAST, f.affiliation_id"""):
+        affiliations.setdefault(r["person_id"], []).append(
+            {k: r[k] for k in ("org_id", "org_name", "relation", "role_title")})
+    totals = {r["account_external_id"]: r for r in _clean(_rows(conn, """
+        SELECT account_external_id, count(*) AS posts, max(published_at) AS latest_post_at
+          FROM public.collected_sources GROUP BY account_external_id"""))}
+    latest = {}
+    for r in _clean(_rows(conn, """
+            SELECT * FROM (
+              SELECT s.account_external_id, s.source_id, s.canonical_url, s.published_at,
+                     c.public_excerpt AS excerpt, c.language, c.metrics, c.captured_at,
+                     row_number() OVER (PARTITION BY s.account_external_id
+                                        ORDER BY s.published_at DESC, s.source_id) AS n
+                FROM public.collected_sources s
+                JOIN LATERAL (SELECT public_excerpt, language, metrics, captured_at
+                                FROM public.collected_captures c
+                               WHERE c.source_id = s.source_id
+                               ORDER BY c.captured_at DESC LIMIT 1) c ON TRUE
+               WHERE NOT s.is_reply AND NOT s.is_repost AND c.public_excerpt IS NOT NULL
+                 -- A company's own account is shown as it posts. Anyone else's
+                 -- post is shown only when the extractor read it and it states an
+                 -- update or says something about one (rule:post-outcome): most of
+                 -- what people post is not about AI at all.
+                 AND (EXISTS (SELECT 1 FROM public.source_accounts a
+                               WHERE a.platform_account_id = s.account_external_id
+                                 AND a.panel_role = 'official')
+                      OR EXISTS (SELECT 1 FROM public.extracted_event_sources es
+                                  WHERE es.source_id = s.source_id)
+                      OR EXISTS (SELECT 1 FROM public.extracted_event_attachments ea
+                                  WHERE ea.source_id = s.source_id))
+            ) ranked WHERE n <= %s ORDER BY account_external_id, n""", (LATEST_POSTS_PER_SOURCE,))):
+        latest.setdefault(r.pop("account_external_id"), []).append(
+            {"source_id": r["source_id"], "url": r["canonical_url"], "published_at": r["published_at"],
+             "excerpt": r["excerpt"], "language": r["language"],
+             "likes": (r["metrics"] or {}).get("likes"), "views": (r["metrics"] or {}).get("views"),
+             "metrics_at": r["captured_at"]})
+    # Followers as the platform reported them at the account's last lookup: an
+    # observed audience size with its own date, not a measure of being right.
+    followers = {r["account_key"]: r for r in _clean(_rows(conn, """
+        SELECT DISTINCT ON (account_key) account_key,
+               (detail->>'followers')::bigint AS followers, checked_at
+          FROM public.source_account_checks
+         WHERE check_kind = 'profile' AND outcome = 'pass' AND detail->>'followers' IS NOT NULL
+         ORDER BY account_key, checked_at DESC"""))}
+    for account in accounts:
+        seen = followers.get(account["account_key"])
+        account["followers"] = seen["followers"] if seen else None
+        account["followers_at"] = seen["checked_at"] if seen else None
+        external = account.pop("platform_account_id")
+        total = totals.get(external)
+        account["affiliations"] = affiliations.get(account["person_id"], []) if account["person_id"] else []
+        account["posts"] = total["posts"] if total else None
+        account["latest_post_at"] = total["latest_post_at"] if total else None
+        account["latest"] = latest.get(external, [])
+    return accounts
+
+
+def topics(conn) -> list[dict]:
+    """The open questions, each with its answers, who argued them and what weighs on them.
+
+    A topic carries no answer (rule:topic-carries-no-answer): what is published
+    is who argued each answer in the posts collected, and which updates a judge
+    found to weigh for or against it. The counts say nothing about how many
+    people think so. A topic that failed the standard it was written to, or
+    was merged or closed, is not published.
+
+    An account the panel has not confirmed is published with its claim and
+    marked as such: we know only that this account said so.
+    """
+    from . import topic_mining
+
+    found = [topic_mining.describe(t) for t in topic_mining.load_topics(conn, lambda sql: _rows(conn, sql))]
+    found = [t for t in found if t["status"] != "fails"]
+    in_panel = {r["handle"].lower(): r["account_key"] for r in _rows(conn, """
+        SELECT handle, account_key FROM public.source_accounts
+         WHERE panel_state = 'enabled' AND NOT excluded""")}
+    entries = {r["id"]: r for r in _rows(conn, """
+        SELECT id, kind, label_en, label_zh_cn FROM public.ontology_concepts
+         WHERE ontology_version = (SELECT max(ontology_version) FROM public.ontology_concepts)
+           AND kind IN ('occupation', 'occupation_group', 'market', 'market_group')""")}
+    kinds = {key: row["kind"] for key, row in entries.items()}
+    # The group an occupation or a market sits in: what a reader browses topics by.
+    parents = {r["child_id"]: r["parent_id"] for r in _rows(conn, """
+        SELECT child_id, parent_id FROM public.ontology_relations
+         WHERE kind IN ('has_occupation', 'has_market')
+           AND ontology_version = (SELECT max(ontology_version) FROM public.ontology_relations)""")}
+
+    def group_of(anchor):
+        found = anchor if kinds.get(anchor) in ("occupation_group", "market_group") else parents.get(anchor)
+        row = entries.get(found)
+        return row and {"id": found, "en": row["label_en"], "zh-CN": row["label_zh_cn"] or row["label_en"]}
+    weighing: dict[str, list] = {}
+    for r in _clean(_rows(conn, """
+            SELECT w.topic_id, o.position, w.sign, w.confidence, e.event_id, e.title, e.kind,
+                   COALESCE(e.occurred_at, e.announced_at) AS occurred_at,
+                   COALESCE(org.canonical_name_en, a.handle) AS by_name,
+                   (SELECT min(cs.canonical_url) FROM public.extracted_event_sources es
+                      JOIN public.collected_sources cs ON cs.source_id = es.source_id
+                     WHERE es.event_id = e.event_id AND cs.canonical_url IS NOT NULL) AS source_url
+              FROM public.topic_option_evidence w
+              JOIN public.topic_options o ON o.option_id = w.option_id
+              JOIN public.extracted_events e ON e.event_id = w.event_id
+              LEFT JOIN public.org_registry org ON org.org_id = e.primary_org_id
+              LEFT JOIN public.source_accounts a ON a.account_key = e.actor_account_key
+             WHERE w.status <> 'rejected' AND NOT o.retired
+             ORDER BY w.topic_id, o.position, w.confidence DESC, e.event_id""")):
+        weighing.setdefault(r.pop("topic_id"), []).append(
+            {"event_id": r["event_id"], "option": "abcdefgh"[r["position"] - 1], "sign": r["sign"],
+             "confidence": r["confidence"], "title": r["title"], "kind": r["kind"],
+             "occurred_at": r["occurred_at"], "by": r["by_name"], "source_url": r["source_url"]})
+    out = []
+    for topic in found:
+        evidence = weighing.get(topic["id"], [])
+        claims = [{"source_id": c["id"], "option": c["option"], "handle": c["handle"],
+                   "account_key": in_panel.get(str(c["handle"]).lower()),
+                   "url": c["url"], "published_at": c["published_at"], "says": c["claim"],
+                   "quote": c["quote"], "views": c["views"] or None}
+                  for c in sorted(topic["claims"], key=lambda c: (c["published_at"], c["id"]))]
+        options = []
+        for position, option in enumerate(topic["options"], 1):
+            mine = [c for c in claims if c["option"] == option["key"]]
+            options.append({
+                "option_id": topic_mining.option_id(topic["id"], option["key"]), "key": option["key"],
+                "position": position, "text": {"en": option["en"], "zh-CN": option["zh-CN"]},
+                "accounts": len({c["handle"] for c in mine}),
+                "panel_accounts": len({c["handle"] for c in mine if c["account_key"]}),
+                "supports": sum(1 for e in evidence if e["option"] == option["key"] and e["sign"] == "supports"),
+                "contradicts": sum(1 for e in evidence if e["option"] == option["key"] and e["sign"] == "contradicts"),
+            })
+        anchor = topic["anchor"]
+        out.append({
+            "topic_id": topic["id"],
+            # The id without its prefix, for an address: topic:replacement:accountant:0f5f53ad.
+            "slug": topic["id"].split(":", 1)[1].replace(":", "-"),
+            "question_type": topic["question_type"], "object": topic["object"],
+            "question": topic["question"], "state": topic["state"], "origin": topic["origin"],
+            # Two or more answers each have someone arguing them, or only one does.
+            "sides": "open" if topic["status"] == "open" else "one_sided",
+            "about": anchor and {"id": anchor, "kind": kinds.get(anchor), **topic["anchor_name"]},
+            # Null when the catalog has no entry for what the topic is about.
+            "group": group_of(anchor) if anchor else None,
+            "opened_at": topic["opened_at"],
+            "latest_claim_at": max((c["published_at"] for c in claims), default=None),
+            "accounts": topic["accounts"], "posts": topic["posts"],
+            "options": options, "claims": claims, "evidence": evidence,
+            "by_quarter": topic["by_quarter"],
+        })
+    out.sort(key=lambda t: t["topic_id"])
+    return out
+
+
+# X ids carry their own time: milliseconds since this epoch, shifted left 22 bits.
+X_EPOCH_MS = 1288834974657
+
+
+def confirmation(row: dict) -> dict:
+    """One post that confirmed a vendor's reading, as a page can cite it."""
+    handle, source_id = row.get("handle"), str(row["source_id"])
+    posted = (datetime.fromtimestamp(((int(source_id) >> 22) + X_EPOCH_MS) / 1000, timezone.utc).isoformat()
+              if source_id.isdigit() else None)
+    return {
+        "source_id": source_id,
+        "account_key": row["account_key"],
+        "handle": handle,
+        "url": f"https://x.com/{handle}/status/{source_id}" if handle and source_id.isdigit() else None,
+        "posted_at": posted,
+        "post_nature": row["post_nature"],
+        "evidence_tier": row["evidence_tier"],
+        "observed_level": row["observed_level"],
+        "level": row["level"],
+    }
 
 
 def build(conn, ontology_version: str | None = None) -> dict:
@@ -141,6 +346,23 @@ def build(conn, ontology_version: str | None = None) -> dict:
          WHERE ae.ontology_version = %s AND ae.status IN ('candidate', 'reviewed')
          ORDER BY e.occurred_at DESC NULLS LAST, ae.activity_id""", (ontology_version,)))
 
+    # What posts by others said about a vendor's claim (the evidence panel). These
+    # readings count toward an activity's level - a third party's hands-on test can
+    # carry what the vendor's own T3 claim could not - and until 2026-10-16 none of
+    # them was published, so a work page could stand at L3 with only L2 readings
+    # listed under it. The filter and the cap are those of `readings_sql`, so what
+    # is published here is exactly what was counted.
+    confirmations = _clean(_rows(conn, f"""
+        SELECT ve.event_id, ve.activity_id, ve.source_id, ve.account_key, sa.handle,
+               ve.post_nature, ve.evidence_tier, ve.observed_level,
+               LEAST(ve.observed_level, {ontology_schema.level_cap_sql("ve.evidence_tier")},
+                     {ontology_schema.nature_cap_sql("ve.post_nature")}) AS level
+          FROM public.verification_evidence ve
+          LEFT JOIN public.source_accounts sa ON sa.account_key = ve.account_key
+         WHERE ve.ontology_version = %s AND ve.status IN ('candidate', 'reviewed')
+           AND ve.evidence_tier IS NOT NULL AND ve.observed_level IS NOT NULL
+         ORDER BY ve.event_id, ve.activity_id, ve.source_id""", (ontology_version,)))
+
     gates = _clean(_rows(conn, """
         SELECT g.gate_id, g.gate_type, g.label_en, g.label_zh_cn,
                g.definition_en, g.definition_zh_cn,
@@ -162,6 +384,10 @@ def build(conn, ontology_version: str | None = None) -> dict:
                e.occurred_at, e.confidence, e.primary_org_id,
                coalesce(o.canonical_name_en, e.primary_org) AS org_name,
                o.canonical_name_zh_cn AS org_name_zh_cn,
+               e.subject, e.basis, e.task, e.result, e.quote, e.schema_version,
+               (SELECT json_agg(json_build_object('value', f.value, 'unit', f.unit, 'what', f.what,
+                                                  'quote', f.quote) ORDER BY f.fact_id)
+                  FROM public.extracted_event_facts f WHERE f.event_id = e.event_id) AS facts,
                (SELECT count(*) FROM public.extracted_event_sources s
                  WHERE s.event_id = e.event_id) AS source_count,
                (SELECT json_agg(cs.canonical_url ORDER BY cs.canonical_url)
@@ -171,9 +397,9 @@ def build(conn, ontology_version: str | None = None) -> dict:
                    AND cs.canonical_url IS NOT NULL) AS source_urls
         FROM public.extracted_events e
         LEFT JOIN public.org_registry o ON o.org_id = e.primary_org_id
-        WHERE e.kind_vocabulary = %s
+        WHERE e.kind_vocabulary = ANY(%s) AND e.primary_org_id IS NOT NULL
         ORDER BY e.occurred_at DESC NULLS LAST, e.event_id
-        LIMIT 2000""", (EVENT_KIND_VOCABULARY,)))
+        LIMIT 2000""", (EVENT_KIND_VOCABULARIES,)))
 
     # How much notice each update drew (rule:attention-baseline): its loudest
     # source post, read at a comparable age and against its own account's
@@ -181,7 +407,7 @@ def build(conn, ontology_version: str | None = None) -> dict:
     # evidence - it ranks what deserves a reader's attention and which updates
     # are worth checking with third parties. Missing stays null, never zero.
     noticed = attention.compute(_rows(conn, attention.CAPTURES_SQL),
-                                _rows(conn, attention.LINKS_SQL, (EVENT_KIND_VOCABULARY,)))
+                                _rows(conn, attention.LINKS_SQL, (EVENT_KIND_VOCABULARIES,)))
     series = attention.series_sizes(events)
     for event in events:
         event["attention"] = noticed.get(event["event_id"])
@@ -206,14 +432,14 @@ def build(conn, ontology_version: str | None = None) -> dict:
         SELECT count(*) AS n FROM (
             SELECT s.source_id FROM public.extracted_events e
               JOIN public.extracted_event_sources s ON s.event_id = e.event_id
-             WHERE e.kind_vocabulary <> %s
+             WHERE e.kind_vocabulary <> ALL(%s)
             INTERSECT
             SELECT s.source_id FROM public.extracted_events e
               JOIN public.extracted_event_sources s ON s.event_id = e.event_id
-             WHERE e.kind_vocabulary = %s) x""",
-        (EVENT_KIND_VOCABULARY, EVENT_KIND_VOCABULARY))[0]["n"]
+             WHERE e.kind_vocabulary = ANY(%s)) x""",
+        (EVENT_KIND_VOCABULARIES, EVENT_KIND_VOCABULARIES))[0]["n"]
     for row in generations:
-        row["published"] = row["vocabulary"] == EVENT_KIND_VOCABULARY
+        row["published"] = row["vocabulary"] in EVENT_KIND_VOCABULARIES
         row["source_posts_also_in_current"] = None if row["published"] else shared_posts
 
     # Coverage is part of the finding, not a footnote. A page that shows edges
@@ -254,7 +480,7 @@ def build(conn, ontology_version: str | None = None) -> dict:
     # names work without distinguishing it. Neither is a finding, and a page that
     # reports edge counts without this reports the flattering half.
     #
-    # The threshold is passed in from the semantic layer rather than written into
+    # The threshold is passed in from the schema rather than written into
     # this SQL: a literal here would be a second copy of the rule.
     # Two judges over the same pairs. The full sweep is one judge's work, so the
     # --- what was looked at, and what was not ----------------------------------
@@ -352,7 +578,7 @@ def build(conn, ontology_version: str | None = None) -> dict:
         best AS (SELECT activity_id, max(level) AS level FROM capped GROUP BY 1),
         activity AS (
           SELECT b.activity_id,
-                 CASE WHEN g.activity_id IS NOT NULL THEN LEAST(b.level, {semantic.gate_level_cap()}) ELSE b.level END AS level
+                 CASE WHEN g.activity_id IS NOT NULL THEN LEAST(b.level, {ontology_schema.gate_level_cap()}) ELSE b.level END AS level
             FROM best b
             LEFT JOIN LATERAL (
               SELECT ge.activity_id FROM public.activity_gate_edges ge
@@ -501,13 +727,13 @@ def build(conn, ontology_version: str | None = None) -> dict:
         # with no rows would simply not be drawn. The ladder, its wording and its
         # caps all come from the activity_level vocabulary, so the site draws the
         # same scale the judge was asked and never carries its own copy.
-        "stages": semantic.level_ids(),
-        "levels": semantic.level_labels(),
-        "level_definitions": semantic.level_definitions(),
+        "stages": ontology_schema.level_ids(),
+        "levels": ontology_schema.level_labels(),
+        "level_definitions": ontology_schema.level_definitions(),
         "states": ["assessed", "unknown", "untouched"],
         # What each kind of evidence is allowed to support. Published so a reader
         # can see why nothing sits above L2 while the evidence is vendor claims.
-        "tier_caps": {tier: int(cap) for tier, cap in semantic.level_caps().items()},
+        "tier_caps": {tier: int(cap) for tier, cap in ontology_schema.level_caps().items()},
         "work_items_total": sum(r["work_items"] for r in global_buckets),
         "assessed": sum(r["work_items"] for r in global_buckets
                         if r["coverage"] == "assessed"),
@@ -535,7 +761,7 @@ def build(conn, ontology_version: str | None = None) -> dict:
     #
     # It replaces those three files rather than sitting beside them. Two copies
     # of the same 710 readings would eventually disagree.
-    caps = semantic.level_caps()
+    caps = ontology_schema.level_caps()
 
     def published_level(row):
         """What the site shows, as against what the judge said.
@@ -550,13 +776,17 @@ def build(conn, ontology_version: str | None = None) -> dict:
         score = row.get("observed_level")
         # rule:score-below-one-is-not-a-level: "related, but short of L1" is
         # kept on the row as observed_score and counts for nothing.
-        if score is None or float(score) < semantic.min_level_score():
+        if score is None or float(score) < ontology_schema.min_level_score():
             return None
-        observed = semantic.level_of_score(score)
+        observed = ontology_schema.level_of_score(score)
         cap = caps.get(row.get("evidence_tier"))
         if cap is None:
             return None
         return min(observed, int(cap))
+
+    confirmed = {}
+    for row in confirmations:
+        confirmed.setdefault((row["event_id"], row["activity_id"]), []).append(confirmation(row))
 
     chain_evidence = [
         {
@@ -564,13 +794,16 @@ def build(conn, ontology_version: str | None = None) -> dict:
             "activity_id": row["activity_id"],
             # The level the judge's reading reached, and the raw score it came
             # from. Only the level is a category a page may show.
-            "observed_level": semantic.level_of_score(row["observed_level"]),
+            "observed_level": ontology_schema.level_of_score(row["observed_level"]),
             "observed_score": row["observed_level"],
             "level": published_level(row),
             "evidence_tier": row["evidence_tier"],
             "confidence": row["confidence"],
             "rationale": row["rationale"],
             "status": row["status"],
+            # Only on the rows someone confirmed, so the other readings stay byte for byte
+            # what they were, and a site that predates the field reads past it.
+            **({"confirmations": confirmed[key]} if (key := (row["event_id"], row["activity_id"])) in confirmed else {}),
         }
         for row in evidence
         if row["evidence_sign"] == "positive"
@@ -665,13 +898,15 @@ def build(conn, ontology_version: str | None = None) -> dict:
 
     payload = {
         "chain": chain, "markets": markets, "tasks": tasks,
-        "events": events, "models": models, "coverage": coverage, "progress": progress,
+        "events": events, "models": models, "sources": sources(conn),
+        "topics": topics(conn),
+        "coverage": coverage, "progress": progress,
     }
     manifest = {
         "snapshot_version": SNAPSHOT_VERSION,
         "generated_at": generated_at.isoformat(),
         "ontology_version": ontology_version,
-        "semantic_version": semantic.SEMANTIC_VERSION,
+        "schema_version": ontology_schema.SCHEMA_VERSION,
         "method_version": METHOD_VERSION,
         # chain is four lists in one file, so counting it as "1" would publish a
         # manifest that cannot be checked against the file it describes.

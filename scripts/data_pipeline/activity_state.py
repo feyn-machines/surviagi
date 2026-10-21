@@ -27,17 +27,17 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from . import semantic
+from . import ontology_schema
 
 # What the strongest evidence of each kind is allowed to support. A claim with
 # nothing behind it cannot put work past "AI helps in places", however confident
 # the claim sounds. Read from evidence_tier.level_cap rather than written here:
-# these numbers used to live in Python in three places while the semantic layer
+# these numbers used to live in Python in three places while the schema
 # carried a DIFFERENT set for the retired 0-4 scale, and only T3 agreeing at 2
 # in both kept the divergence invisible.
-TIER_CAP = semantic.level_caps()
+TIER_CAP = ontology_schema.level_caps()
 
-LEVELS = semantic.level_ids()
+LEVELS = ontology_schema.level_ids()
 
 # A task and an activity are both kind='work'. The ontology separates them by
 # relation, not by kind: a task is the child of a has_task edge, an activity the
@@ -64,18 +64,18 @@ def readings_sql(versioned: bool = False) -> str:
     version = lambda t: f"AND {t}.ontology_version = %s" if versioned else ""
     return f"""
   SELECT ae.activity_id,
-         LEAST({semantic.level_of_score_sql("ae.observed_level")}, {semantic.level_cap_sql()}) AS level,
+         LEAST({ontology_schema.level_of_score_sql("ae.observed_level")}, {ontology_schema.level_cap_sql()}) AS level,
          ae.evidence_tier
     FROM public.activity_evidence ae
    WHERE ae.evidence_sign = 'positive'
      AND ae.status IN ('candidate', 'reviewed')
      AND ae.observed_level IS NOT NULL
-     AND ae.observed_level >= {semantic.min_level_score()}
+     AND ae.observed_level >= {ontology_schema.min_level_score()}
      {version("ae")}
   UNION ALL
   SELECT ve.activity_id,
-         LEAST(ve.observed_level, {semantic.level_cap_sql("ve.evidence_tier")},
-               {semantic.nature_cap_sql("ve.post_nature")}) AS level,
+         LEAST(ve.observed_level, {ontology_schema.level_cap_sql("ve.evidence_tier")},
+               {ontology_schema.nature_cap_sql("ve.post_nature")}) AS level,
          ve.evidence_tier
     FROM public.verification_evidence ve
    WHERE ve.status IN ('candidate', 'reviewed')
@@ -94,7 +94,7 @@ best AS (
 ),
 gated AS (
   SELECT b.activity_id,
-         CASE WHEN g.activity_id IS NOT NULL THEN LEAST(b.level, {semantic.gate_level_cap()}) ELSE b.level END AS level,
+         CASE WHEN g.activity_id IS NOT NULL THEN LEAST(b.level, {ontology_schema.gate_level_cap()}) ELSE b.level END AS level,
          b.best_tier, b.evidence_rows,
          (g.activity_id IS NOT NULL) AS gated
     FROM best b

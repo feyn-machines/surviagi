@@ -433,9 +433,9 @@ TIER_CRITERIA = {
 
 
 def autonomy_levels() -> list[str]:
-    """The autonomy rubric, read from the semantic layer rather than restated here."""
-    from .semantic import load_model
-    terms = load_model()["vocabularies"]["autonomy_stage"]["terms"]
+    """The autonomy rubric, read from the schema rather than restated here."""
+    from .ontology_schema import load_schema
+    terms = load_schema()["vocabularies"]["autonomy_stage"]["terms"]
     return [
         f"{terms[str(i)]['label']['zh-CN']}: {terms[str(i)]['definition']['zh-CN']}"
         for i in range(5)

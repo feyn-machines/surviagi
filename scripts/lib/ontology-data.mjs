@@ -1,5 +1,5 @@
 import Ajv2020 from "ajv/dist/2020.js";
-import { ontologyCollections, ontologyModel, ontologySchema } from "./ontology-schema.mjs";
+import { ontologyCollections, ontologyModel, ontologySchema } from "./ontology-data-format.mjs";
 
 const ajv = new Ajv2020({ allErrors: false });
 ajv.addFormat("uri", (value) => {

@@ -21,15 +21,15 @@ from data_pipeline import publish  # noqa: E402
 from data_pipeline.pipeline import digest  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
-SEMANTIC_MODEL = json.loads(
-    (ROOT / "datasets/semantic/semantic-model.v2.json").read_text(encoding="utf-8"))
+SCHEMA = json.loads(
+    (ROOT / "datasets/ontology/schema/schema.json").read_text(encoding="utf-8"))
 METHOD_VERSION = publish.METHOD_VERSION
 
 # Everything in the snapshot except the manifest is the hashed payload. Derived
 # from the snapshot rather than restated, so a new section cannot slip out of
 # the hash and the counts without failing a test.
 REQUIRED_MANIFEST_FIELDS = {
-    "snapshot_version", "generated_at", "ontology_version", "semantic_version",
+    "snapshot_version", "generated_at", "ontology_version", "schema_version",
     "method_version", "counts", "content_sha256", "caveats"}
 
 
@@ -141,6 +141,23 @@ def squeeze(sql):
 # Checked in order; the first substring that matches names the query. Order
 # matters because several queries mention the same tables in subselects.
 ROUTES = (
+    # Topics read their own tables, and the accounts and catalog tables other
+    # queries read too; each is matched on a phrase only it contains.
+    ("topics", "FROM topics t"),
+    ("topic_options", "FROM topic_options WHERE NOT retired"),
+    ("topic_claims", "FROM topic_claims k"),
+    ("topic_queries", "FROM topic_queries"),
+    ("topic_panel", "SELECT handle, account_key FROM public.source_accounts"),
+    ("topic_kinds", "SELECT id, kind, label_en, label_zh_cn FROM public.ontology_concepts"),
+    ("topic_parents", "SELECT child_id, parent_id FROM public.ontology_relations"),
+    ("topic_evidence", "FROM public.topic_option_evidence w"),
+    # The sources export reads the collection tables too, so its queries are
+    # matched first, each on a phrase only it contains.
+    ("source_accounts", "FROM public.source_accounts a LEFT JOIN public.people"),
+    ("source_affiliations", "FROM public.person_affiliations f"),
+    ("source_totals", "FROM public.collected_sources GROUP BY account_external_id"),
+    ("source_latest", "PARTITION BY s.account_external_id"),
+    ("source_followers", "check_kind = 'profile'"),
     # The attention queries read the capture tables and the event-source links;
     # matched first so the events route below cannot swallow the link query.
     ("attention_captures", "JOIN public.collected_captures cc ON cc.source_id = cs.source_id"),
@@ -162,6 +179,7 @@ ROUTES = (
     ("markets", "FROM public.market_occupation_edges e"),
     ("tasks", "FROM public.activity_task_edges t"),
     ("evidence", "FROM public.activity_evidence ae"),
+    ("confirmations", "LEFT JOIN public.source_accounts sa ON sa.account_key = ve.account_key"),
     ("gates", "FROM public.gates g"),
     ("gate_edges", "FROM public.activity_gate_edges ge"),
     # by_org joins the same two tables as events, so it has to be matched first
@@ -394,7 +412,7 @@ class BuildManifestTests(unittest.TestCase):
         self.assertLessEqual(REQUIRED_MANIFEST_FIELDS, set(self.manifest))
         self.assertEqual(self.manifest["snapshot_version"], publish.SNAPSHOT_VERSION)
         self.assertEqual(self.manifest["ontology_version"], "1.0.0")
-        self.assertEqual(self.manifest["semantic_version"], SEMANTIC_MODEL["version"])
+        self.assertEqual(self.manifest["schema_version"], SCHEMA["version"])
         self.assertEqual(self.manifest["method_version"], METHOD_VERSION)
 
     def test_every_reading_is_published_not_only_one_runs_worth(self):
@@ -545,6 +563,43 @@ class CaveatTests(unittest.TestCase):
         self.assertIn("绝不说明 AI 与它无关", self.one("zh-CN", "分布很不均匀"))
 
 
+class ConfirmationTests(unittest.TestCase):
+    """A post that confirmed a vendor's claim is published on the reading it confirmed.
+
+    These readings count toward the activity's level, and until 2026-10-16 none was
+    published: one work page stood at L3 with only L2 readings listed under it.
+    """
+
+    def setUp(self):
+        self.conn, self.snapshot = build(dataset(confirmations=[
+            {"event_id": "evt:1", "activity_id": "oaw:market:audit-evidence",
+             "source_id": "2102916558712705427", "account_key": "x:tester", "handle": "Tester",
+             "post_nature": "hands_on_test", "evidence_tier": "T1", "observed_level": 4,
+             "level": Decimal("3")},
+        ]))
+
+    def test_the_confirmation_sits_on_the_reading_it_confirms_with_its_post(self):
+        [reading] = self.snapshot["chain"]["evidence"]
+        self.assertEqual(reading["confirmations"], [{
+            "source_id": "2102916558712705427", "account_key": "x:tester", "handle": "Tester",
+            "url": "https://x.com/Tester/status/2102916558712705427",
+            # Read from the post id itself, which carries its time.
+            "posted_at": "2026-09-24T00:22:32.554000+00:00",
+            "post_nature": "hands_on_test", "evidence_tier": "T1", "observed_level": 4, "level": 3.0,
+        }])
+
+    def test_the_query_counts_what_the_level_counts(self):
+        sql = self.conn.sql["confirmations"]
+        self.assertIn("ve.evidence_tier IS NOT NULL AND ve.observed_level IS NOT NULL", sql)
+        self.assertIn("ve.status IN ('candidate', 'reviewed')", sql)
+        self.assertEqual(self.conn.params_for("confirmations"), ("1.0.0",))
+
+    def test_a_reading_nobody_confirmed_has_no_field_at_all(self):
+        """So its document, and the release diff, stay as they were."""
+        _, snapshot = build()
+        self.assertNotIn("confirmations", snapshot["chain"]["evidence"][0])
+
+
 class BuildPayloadTests(unittest.TestCase):
     def setUp(self):
         self.conn, self.snapshot = build()
@@ -686,8 +741,9 @@ class EventGenerationTests(unittest.TestCase):
     def test_only_the_current_vocabulary_is_published(self):
         conn = FakeConn(dataset())
         publish.build(conn, "1.0.0")
-        self.assertIn(publish.EVENT_KIND_VOCABULARY, conn.params_for("events"))
-        self.assertIn("WHERE e.kind_vocabulary = %s", conn.sql["events"])
+        # Every version of the current lineage, and only a company's own updates.
+        self.assertIn(publish.EVENT_KIND_VOCABULARIES, conn.params_for("events"))
+        self.assertIn("WHERE e.kind_vocabulary = ANY(%s) AND e.primary_org_id IS NOT NULL", conn.sql["events"])
 
     def test_a_second_generation_would_be_declared_not_hidden(self):
         """If one ever appears again, the page says so rather than quietly
@@ -844,6 +900,109 @@ class WorkProgressTests(unittest.TestCase):
         # The minimum, not the maximum: a task needs all of its work done, and
         # taking the highest is what put baggage porters at 59%.
         self.assertIn("min(level)", sql)
+
+
+
+class TopicsTests(unittest.TestCase):
+    """A topic is published with who argued each answer and what weighs on it, and with no answer of its own."""
+
+    TOPIC = "topic:replacement:accountant:b5615a30"
+
+    def published(self, **more):
+        checks = {"specific": True, "closed": True, "exclusive": True, "movable": True}
+        data = dataset(
+            topics=[{"topic_id": self.TOPIC, "question_type": "replacement", "object_key": "accountant",
+                     "about_concept_id": "oaw:occupation:13-2011.00", "anchor_en": "Accountants and Auditors",
+                     "anchor_zh": "会计师与审计师", "question_en": "Will AI replace most accountants?",
+                     "question_zh_cn": "AI 会取代大多数会计吗？", "state": "proposed", "origin": "mined",
+                     "checks": more.get("checks", checks), "opened_at": "2026-10-01T19:26:48+00:00"}],
+            topic_options=[{"topic_id": self.TOPIC, "position": 1, "text_en": "Far fewer accountants are needed", "text_zh_cn": "会计需求大幅减少"},
+                           {"topic_id": self.TOPIC, "position": 2, "text_en": "AI cannot do accounting work reliably", "text_zh_cn": "AI 做不了会计工作"}],
+            topic_claims=[{"topic_id": self.TOPIC, "source_id": "1", "says": "says so", "quote": "The billable hour is in trouble.",
+                           "position": 1, "account_handle": "Stranger", "canonical_url": "https://x.com/s/1",
+                           "published_at": "2026-10-02T00:00:00+00:00", "views": 9},
+                          {"topic_id": self.TOPIC, "source_id": "2", "says": "says so too", "quote": None,
+                           "position": 1, "account_handle": "emollick", "canonical_url": "https://x.com/e/2",
+                           "published_at": "2026-10-03T00:00:00+00:00", "views": None}],
+            topic_panel=[{"handle": "emollick", "account_key": "x:emollick"}],
+            topic_kinds=[{"id": "oaw:occupation:13-2011.00", "kind": "occupation", "label_en": "Accountants and Auditors", "label_zh_cn": "会计师与审计师"},
+                         {"id": "oaw:occupation-group:13", "kind": "occupation_group", "label_en": "Business and Financial Operations", "label_zh_cn": None}],
+            topic_parents=[{"child_id": "oaw:occupation:13-2011.00", "parent_id": "oaw:occupation-group:13"}],
+            topic_evidence=[{"topic_id": self.TOPIC, "position": 2, "sign": "contradicts", "confidence": 0.91,
+                             "event_id": "e9", "title": "Models beat 12 licensed accountants", "kind": "benchmark_result",
+                             "occurred_at": "2026-10-01T19:26:48+00:00", "by_name": "mercor", "source_url": "https://x.com/m/9"}],
+        )
+        return publish.build(FakeConn(data), "1.0.0")["topics"]
+
+    def test_each_answer_says_who_argued_it_and_what_weighs_on_it(self):
+        (topic,) = self.published()
+        self.assertEqual(topic["slug"], "replacement-accountant-b5615a30")
+        self.assertEqual(topic["about"], {"id": "oaw:occupation:13-2011.00", "kind": "occupation",
+                                          "en": "Accountants and Auditors", "zh-CN": "会计师与审计师"})
+        first, second = topic["options"]
+        self.assertEqual((first["accounts"], first["panel_accounts"], first["supports"], first["contradicts"]), (2, 1, 0, 0))
+        self.assertEqual((second["accounts"], second["supports"], second["contradicts"]), (0, 0, 1))
+        self.assertEqual(topic["group"], {"id": "oaw:occupation-group:13", "en": "Business and Financial Operations",
+                                          "zh-CN": "Business and Financial Operations"})
+        self.assertEqual(topic["sides"], "one_sided")
+        self.assertEqual(topic["by_quarter"], {"2026-Q4": {"a": 2}})
+
+    def test_an_account_the_panel_has_not_confirmed_is_marked_by_having_no_key(self):
+        claims = {c["handle"]: c for c in self.published()[0]["claims"]}
+        self.assertIsNone(claims["Stranger"]["account_key"])
+        self.assertEqual(claims["emollick"]["account_key"], "x:emollick")
+
+    def test_no_field_names_a_right_answer(self):
+        (topic,) = self.published()
+        for field in ("answer", "resolution", "outcome", "winner", "probability"):
+            self.assertNotIn(field, topic)
+            for option in topic["options"]:
+                self.assertNotIn(field, option)
+
+    def test_a_topic_that_failed_its_standard_is_not_published(self):
+        self.assertEqual(self.published(checks={"specific": False, "closed": True, "exclusive": True, "movable": True}), [])
+
+
+class SourcesTests(unittest.TestCase):
+    def account(self, **over):
+        return {"account_key": "x:examplelab", "handle": "ExampleLab", "platform": "x",
+                "owner_kind": "person", "panel_role": "executive", "identity_grade": "official_bio",
+                "identity_url": None, "language": "en", "focus": None,
+                "avatar_url": "https://img.example/a.jpg", "platform_account_id": "42",
+                "person_id": "person:1", "org_id": None, "name": "Example Person", "name_zh_cn": None, **over}
+
+    def test_account_carries_its_owner_and_its_own_latest_posts(self):
+        at = datetime(2026, 9, 1, tzinfo=timezone.utc)
+        _, snapshot = build(dataset(
+            source_accounts=[self.account()],
+            source_affiliations=[{"person_id": "person:1", "org_id": "org:example", "org_name": "Example",
+                                  "relation": "founder", "role_title": "CEO"}],
+            source_totals=[{"account_external_id": "42", "posts": 7, "latest_post_at": at}],
+            source_latest=[{"account_external_id": "42", "source_id": "src:1", "canonical_url": "https://x.com/e/1",
+                            "published_at": at, "excerpt": "hello", "language": "en",
+                            "metrics": {"likes": 3, "views": 90}, "captured_at": at, "n": 1}],
+            source_followers=[{"account_key": "x:examplelab", "followers": 1000, "checked_at": at}]))
+        source = snapshot["sources"][0]
+        self.assertNotIn("platform_account_id", source)
+        self.assertEqual(source["affiliations"], [{"org_id": "org:example", "org_name": "Example",
+                                                   "relation": "founder", "role_title": "CEO"}])
+        self.assertEqual((source["posts"], source["followers"], source["avatar_url"]),
+                         (7, 1000, "https://img.example/a.jpg"))
+        self.assertEqual(source["latest"][0]["excerpt"], "hello")
+        self.assertEqual(source["latest"][0]["views"], 90)
+        self.assertIn("NOT s.is_reply AND NOT s.is_repost", build()[0].sql["source_latest"])
+
+    def test_nothing_collected_is_null_not_zero(self):
+        _, snapshot = build(dataset(source_accounts=[self.account()]))
+        source = snapshot["sources"][0]
+        self.assertIsNone(source["posts"])
+        self.assertIsNone(source["latest_post_at"])
+        self.assertIsNone(source["followers"])
+        self.assertEqual(source["latest"], [])
+
+    def test_only_enabled_accounts_are_published(self):
+        conn, _ = build(dataset())
+        self.assertIn("a.panel_state = 'enabled' AND NOT a.excluded", conn.sql["source_accounts"])
 
 
 if __name__ == "__main__":

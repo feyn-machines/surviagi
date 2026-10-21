@@ -16,14 +16,14 @@ import re
 from collections import defaultdict, deque
 from datetime import datetime, timedelta, timezone
 
-from . import semantic
-from .semantic import EVENT_KIND_VOCABULARY
+from . import ontology_schema
+from .ontology_schema import EVENT_KIND_VOCABULARIES
 
 UPSTREAM = (("reply_to", "reply"), ("quote_of", "quote"), ("repost_of", "repost"))
 
 
 def _rule(model=None):
-    return semantic.rule("rule:post-links-to-event", model)["expression"]
+    return ontology_schema.rule("rule:post-links-to-event", model)["expression"]
 
 
 def mentions(text, terms):
@@ -103,7 +103,7 @@ SEEDS_SQL = """
     SELECT s.event_id, s.source_id, e.occurred_at, e.subject_key
       FROM public.extracted_event_sources s
       JOIN public.extracted_events e ON e.event_id = s.event_id
-     WHERE e.kind_vocabulary = %s
+     WHERE e.kind_vocabulary = ANY(%s)
 """
 
 POSTS_SQL = """
@@ -118,14 +118,34 @@ POSTS_SQL = """
 """
 
 
+ATTACHED_SQL = """
+    SELECT a.event_id, a.source_id FROM public.extracted_event_attachments a
+      JOIN public.extracted_events e ON e.event_id = a.event_id
+     WHERE e.kind_vocabulary = ANY(%s)
+"""
+
+
+def with_attached(rows, attached):
+    """Add posts the extractor attached by reading them; a link already found stays.
+
+    A post that replies to the announcement and was also read as saying
+    something about it is one post of that event, and the raw link is the fact.
+    """
+    linked = {(row[0], row[1]) for row in rows}
+    return rows + [(event_id, source_id, "attached", 1, None)
+                   for event_id, source_id in attached if (event_id, source_id) not in linked]
+
+
 def rebuild(conn, model=None):
     """Recompute event_posts from the collected facts. Returns counts by link."""
     seeds, events = defaultdict(list), {}
-    for r in conn.execute(SEEDS_SQL, (EVENT_KIND_VOCABULARY,)).fetchall():
+    for r in conn.execute(SEEDS_SQL, (EVENT_KIND_VOCABULARIES,)).fetchall():
         seeds[r["event_id"]].append(r["source_id"])
         events[r["event_id"]] = {"occurred_at": r["occurred_at"], "terms": subject_terms(r["subject_key"])}
     posts = {r["source_id"]: dict(r) for r in conn.execute(POSTS_SQL).fetchall()}
     rows = build_links(seeds, posts, events, model)
+    rows = with_attached(rows, [(r["event_id"], r["source_id"])
+                                for r in conn.execute(ATTACHED_SQL, (EVENT_KIND_VOCABULARIES,)).fetchall()])
     built = datetime.now(timezone.utc)
     with conn.transaction():
         conn.execute("DELETE FROM public.event_posts")

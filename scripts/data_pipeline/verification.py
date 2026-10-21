@@ -19,11 +19,11 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from secrets import token_hex
 
-from . import attention, panel, semantic
+from . import attention, panel, ontology_schema
 from .post_events import mentions, subject_terms  # noqa: F401  (re-exported)
 from .judge import JudgeError, TYPESAFE_URL, _post, build_judge
 from .pipeline import digest
-from .semantic import EVENT_KIND_VOCABULARY
+from .ontology_schema import EVENT_KIND_VOCABULARIES
 
 METHOD_VERSION = "verification-2"  # asks whether the post is about the claimed product first
 NOT_SHOWN = "not_shown"
@@ -40,7 +40,7 @@ LEVEL_QUESTION = (
 
 
 def _rule(name, model=None):
-    return semantic.rule(name, model)["expression"]
+    return ontology_schema.rule(name, model)["expression"]
 
 
 def tier_for(nature, independent, model=None):
@@ -89,7 +89,7 @@ TRIGGER_SQL = """
            LEAST(floor(ae.observed_level), {cap})::int AS kept
       FROM public.activity_evidence ae
       JOIN public.extracted_events e ON e.event_id = ae.event_id
-     WHERE e.kind_vocabulary = %s
+     WHERE e.kind_vocabulary = ANY(%s)
        AND ae.evidence_sign = 'positive' AND ae.status IN ('candidate', 'reviewed')
        AND ae.observed_level >= {min_score}
        AND floor(ae.observed_level) > LEAST(floor(ae.observed_level), {cap})
@@ -110,10 +110,10 @@ PANEL_SQL = """
 
 def triggers(conn, model=None):
     """Events worth verifying, each with its held-down readings."""
-    sql = TRIGGER_SQL.format(cap=semantic.level_cap_sql(), min_score=semantic.min_level_score(model))
-    readings = conn.execute(sql, (EVENT_KIND_VOCABULARY,)).fetchall()
+    sql = TRIGGER_SQL.format(cap=ontology_schema.level_cap_sql(), min_score=ontology_schema.min_level_score(model))
+    readings = conn.execute(sql, (EVENT_KIND_VOCABULARIES,)).fetchall()
     noticed = attention.compute(conn.execute(attention.CAPTURES_SQL).fetchall(),
-                                conn.execute(attention.LINKS_SQL, (EVENT_KIND_VOCABULARY,)).fetchall())
+                                conn.execute(attention.LINKS_SQL, (EVENT_KIND_VOCABULARIES,)).fetchall())
     by_event = defaultdict(list)
     for r in readings:
         by_event[r["event_id"]].append(r)
@@ -126,9 +126,9 @@ def triggers(conn, model=None):
 
 def judge_post(judge, post, event, activities, timeout=120):
     """Two choice questions per post, one level question per held-down activity."""
-    natures = {t: (semantic.term("post_nature", t) or {}).get("definition", {}).get("en", t)
-               for t in semantic.term_ids("post_nature")}
-    level_choices = {f"L{i}": label for i, label in enumerate(semantic.level_scale())}
+    natures = {t: (ontology_schema.term("post_nature", t) or {}).get("definition", {}).get("en", t)
+               for t in ontology_schema.term_ids("post_nature")}
+    level_choices = {f"L{i}": label for i, label in enumerate(ontology_schema.level_scale())}
     level_choices[NOT_SHOWN] = "The post does not show how far the product goes on this work."
     questions = {"nature": {"type": "choice", "instructions": NATURE_QUESTION, "criteria": natures}}
     for i, act in enumerate(activities):
@@ -192,7 +192,7 @@ def run(conn, ontology_version="1.0.0", limit_events=None, progress=print):
               params, started_at, status, item_count, decided_count, run_sha256)
            VALUES (%s, 'typesafe', %s, 'verification', %s, %s, %s, %s::jsonb, %s, 'running', %s, 0, %s)""",
         (run_id, judge.model, digest({"nature": NATURE_QUESTION, "level": LEVEL_QUESTION}),
-         digest(semantic.rule("rule:verification-tier")), METHOD_VERSION,
+         digest(ontology_schema.rule("rule:verification-tier")), METHOD_VERSION,
          json.dumps({"events": [e for e, _ in picked]}), datetime.now(timezone.utc), len(picked),
          digest({"events": [e for e, _ in picked], "method_version": METHOD_VERSION})))
     totals = {"events": len(picked), "accounts": len(accounts), "posts": 0, "evidence": 0, "judge_errors": 0,

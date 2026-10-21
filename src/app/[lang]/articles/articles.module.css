@@ -1,0 +1,29 @@
+.list { margin: var(--ah-space-5) 0 0; padding: 0; list-style: none; }
+.item { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: var(--ah-space-4); padding: var(--ah-space-4) 0; border-top: 1px solid var(--ah-color-line); }
+.item:last-child { border-bottom: 1px solid var(--ah-color-line); }
+.date { color: var(--ah-color-subtle); font-family: var(--ah-font-mono); font-size: 12px; letter-spacing: 0.04em; padding-top: 4px; }
+.title { margin: 0; font-size: 20px; line-height: 1.3; font-weight: 500; letter-spacing: 0; }
+.title a { color: var(--ah-color-text); text-decoration: none; }
+.title a:hover { color: var(--ah-color-signal); }
+.summary { margin: var(--ah-space-2) 0 0; color: var(--ah-color-muted); font-size: 14px; line-height: 1.6; max-width: 68ch; }
+.draft { margin-left: var(--ah-space-2); color: var(--ah-color-subtle); font-family: var(--ah-font-mono); font-size: 11px; letter-spacing: 0.06em; }
+.article { max-width: 720px; margin: 0 auto; padding: var(--ah-space-7) var(--ah-space-5) var(--ah-space-8); }
+.back { color: var(--ah-color-subtle); font-family: var(--ah-font-mono); font-size: 12px; text-decoration: none; }
+.back:hover { color: var(--ah-color-signal); }
+/* The global h1 rule tracks at -6px for the homepage headline; at this size that collapses the words. */
+.headline { margin: var(--ah-space-4) 0 var(--ah-space-3); font-size: 34px; line-height: 1.25; font-weight: 600; letter-spacing: -0.4px; }
+.lead { margin: 0 0 var(--ah-space-6); color: var(--ah-color-muted); font-size: 16px; line-height: 1.6; }
+.body h2 { margin: var(--ah-space-7) 0 var(--ah-space-3); font-size: 22px; line-height: 1.3; font-weight: 600; letter-spacing: 0; }
+.body h3 { margin: var(--ah-space-6) 0 var(--ah-space-2); font-size: 17px; font-weight: 500; }
+.body p, .body li { font-size: 16px; line-height: 1.75; color: var(--ah-color-text); }
+.body p { margin: 0 0 var(--ah-space-4); }
+.body ul, .body ol { margin: 0 0 var(--ah-space-4); padding-left: 1.3em; }
+.body li { margin-bottom: var(--ah-space-2); }
+.body a { color: var(--ah-color-signal); text-underline-offset: 3px; }
+.body em { color: var(--ah-color-muted); }
+.figure { display: block; width: 100%; height: auto; margin: 0 0 var(--ah-space-5); border: 1px solid var(--ah-color-line); }
+.body hr { margin: var(--ah-space-6) 0; border: 0; border-top: 1px solid var(--ah-color-line); }
+@media (max-width: 640px) {
+  .item { grid-template-columns: 1fr; gap: var(--ah-space-1); }
+  .headline { font-size: 26px; }
+}

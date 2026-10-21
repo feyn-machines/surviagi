@@ -1,3 +1,4 @@
+import { plural } from "@/lib/plural";
 import type { Route } from "next";
 import Link from "next/link";
 import type { Language } from "@/lib/i18n";
@@ -17,12 +18,11 @@ import s from "./progress-compare.module.css";
  */
 
 /**
- * `href` is generic so the literal prefix stays checked. A row's link is built
- * from data - `/occupations/g/${groupSlug(id)}` - so the slug can never be
- * verified, but the part before it can, and that is the part that rots: three
- * hrefs in this repo pointed at routes that had been deleted. Widening this to
- * `string`, or casting at the call site with `as Route`, would wave the prefix
- * through too.
+ * `href` is a `Route`, so a bare string cannot be passed: a row's link is built
+ * with `href()` or an entity helper from `@/lib/routes`, which checks the path
+ * against the route tree and carries the reader's language. Three hrefs in this
+ * repo once pointed at routes that had been deleted; casting with `as Route` at
+ * the call site would wave that rot through again.
  */
 export type CompareRow<T extends string = string> = {
   id: string;
@@ -39,7 +39,7 @@ const COPY = {
     colSector: "Sector",
     colFrontier: "L5 ← 4 ← 3 ← 2 ← 1 ← 0 ← unknown ← untouched",
     colShare: "L2+",
-    tasks: "tasks",
+    tasks: "{n|task|tasks}",
     median: "median",
     shareNote: "share of tasks AI produces the bulk of, leaving a person to check",
   },
@@ -114,7 +114,7 @@ export function ProgressCompare<T extends string>({
                 {marked ? <span className={s.markDot} aria-hidden="true" /> : null}
                 {row.label}
                 <span className={s.sub}>
-                  {new Intl.NumberFormat("en-US").format(row.tasks)} {c.tasks}
+                  {new Intl.NumberFormat("en-US").format(row.tasks)} {plural(c.tasks, { n: row.tasks })}
                 </span>
               </span>
               <span

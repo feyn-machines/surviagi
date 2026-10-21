@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Manage the workspace's loopback local infra (PostgreSQL + MLflow) and Python data runtime."""
+"""Manage the workspace's loopback local infra (PostgreSQL, MLflow, embeddings, Meilisearch) and Python data runtime."""
 
 import argparse
+import hashlib
 import os
 from pathlib import Path
 import secrets
@@ -13,6 +14,11 @@ import venv
 ROOT = Path(__file__).resolve().parents[1]
 PASSWORD = ROOT / "data/postgres/password"
 PYTHON = ROOT / "data/runtime/venv/bin/python"
+SEARCH_ENV = ROOT / "data/meilisearch/env"
+# The embedding model llama.cpp serves; the digest is the file's own.
+MODEL = ROOT / "infra/data/models/embeddinggemma-2-Q8_0.gguf"
+MODEL_URL = "https://huggingface.co/ggml-org/embeddinggemma-2-GGUF/resolve/main/embeddinggemma-2-Q8_0.gguf"
+MODEL_SHA256 = "2188ac1deca4b77dffefd603c2776a9d76d9d74ec01841392982ebb840b09135"
 COMPOSE = ["docker", "compose", "--project-name", "openaiwill-data-local",
            "--project-directory", str(ROOT / "infra"),
            "--file", str(ROOT / "infra/docker-compose.yml")]
@@ -39,8 +45,49 @@ def private_password():
             handle.write(secrets.token_urlsafe(48) + "\n")
 
 
+def search_key():
+    """The Meilisearch master key, generated once into an ignored file only Compose and the pipeline read."""
+    run(["git", "check-ignore", "--quiet", str(SEARCH_ENV)])
+    if SEARCH_ENV.is_symlink():
+        raise RuntimeError("Refusing a search key file symlink")
+    SEARCH_ENV.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    try:
+        descriptor = os.open(SEARCH_ENV, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError:
+        if not SEARCH_ENV.read_text().startswith("MEILI_MASTER_KEY="):
+            raise RuntimeError("Existing search key file is invalid") from None
+        SEARCH_ENV.chmod(0o600)
+    else:
+        with os.fdopen(descriptor, "w") as handle:
+            handle.write("MEILI_MASTER_KEY=" + secrets.token_urlsafe(48) + "\n")
+
+
+def model_digest():
+    digest = hashlib.sha256()
+    with MODEL.open("rb") as handle:
+        for block in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def models():
+    """Download the embedding model if it is not there, and check it is the file we expect."""
+    run(["git", "check-ignore", "--quiet", str(MODEL)])
+    if not MODEL.exists():
+        MODEL.parent.mkdir(parents=True, exist_ok=True)
+        run(["curl", "--location", "--fail", "--retry", "3", "--continue-at", "-",
+             "--output", str(MODEL) + ".part", MODEL_URL])
+        (MODEL.parent / (MODEL.name + ".part")).rename(MODEL)
+    if model_digest() != MODEL_SHA256:
+        raise RuntimeError(f"{MODEL.name} is not the expected file; remove it and run again")
+    print(f"{MODEL.name} is in place")
+
+
 def up():
     private_password()
+    search_key()
+    if not MODEL.exists():
+        raise RuntimeError("The embedding model is missing; run `pnpm data:models` first")
     running = run(COMPOSE + ["ps", "--status", "running", "--quiet", "postgres"],
                   capture_output=True, text=True).stdout.strip()
     if not running:
@@ -54,13 +101,14 @@ def up():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("setup", "up", "status", "down", "psql"))
+    parser.add_argument("command", choices=("setup", "up", "status", "down", "psql", "models"))
     parser.add_argument("psql_args", nargs=argparse.REMAINDER)
     args = parser.parse_args()
     if args.psql_args and args.command != "psql":
         parser.error("Additional arguments are accepted only for psql")
     if args.command == "setup":
         private_password()
+        models()
         if not PYTHON.exists():
             venv.create(PYTHON.parents[1], with_pip=True)
         run([str(PYTHON), "-m", "pip", "install", "--disable-pip-version-check",
@@ -71,11 +119,13 @@ def main():
              "conn=connect(); print('Migrations applied:', migrate(conn)); conn.close()"])
     elif args.command == "up":
         up()
+    elif args.command == "models":
+        models()
     elif args.command == "status":
         run(COMPOSE + ["ps"])
     elif args.command == "down":
         run(COMPOSE + ["down"])
-        print("Local PostgreSQL stopped; its named data volume was retained.")
+        print("Local services stopped; their data under infra/data was retained.")
     else:
         extra = args.psql_args
         if extra[:1] == ["--"]:

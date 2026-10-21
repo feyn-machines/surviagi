@@ -50,6 +50,55 @@ services:
       start_period: 20s
     restart: unless-stopped
 
+  # Sentence embeddings (EmbeddingGemma 2, 768 dimensions) served by llama.cpp
+  # with the OpenAI-compatible /v1/embeddings. The pipeline uses it to shortlist
+  # what a judge reads; Meilisearch calls it to embed documents and queries.
+  # The model file is downloaded by `pnpm data:models` into infra/data/models.
+  embeddings:
+    image: ghcr.io/ggml-org/llama.cpp@sha256:33868c035b21dc63f7c60b7438774283fd99215bc319114eb03de5df4ce7cd6b
+    command: >
+      --model /models/embeddinggemma-2-Q8_0.gguf --alias embeddinggemma-2
+      --embedding --ctx-size 8192 --batch-size 8192 --ubatch-size 8192 --parallel 4
+      --host 0.0.0.0 --port 8080
+    ports:
+      - "127.0.0.1:7546:8080"
+    volumes:
+      - ./data/models:/models:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    restart: unless-stopped
+
+  # Search over what the pipeline produced (topics, claims, updates, the catalog):
+  # keyword and vector search together. The key is generated into the ignored
+  # data/meilisearch/env by scripts/data-local.py.
+  meilisearch:
+    image: getmeili/meilisearch@sha256:a9eb29ee09ab4943db3b4c68620bd6f3382e6b2b0ac4431c0e607b48dbcd4c14
+    env_file: ../data/meilisearch/env
+    environment:
+      MEILI_ENV: production
+      MEILI_NO_ANALYTICS: "true"
+      # Meilisearch refuses to call private addresses unless told which; the
+      # embedding server is on this Compose network.
+      MEILI_EXPERIMENTAL_ALLOWED_IP_NETWORKS: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+    ports:
+      - "127.0.0.1:7547:7700"
+    volumes:
+      - ./data/meilisearch:/meili_data
+    depends_on:
+      embeddings:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:7700/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    restart: unless-stopped
+
 secrets:
   postgres_password:
     file: ../data/postgres/password

@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { projectOntology, validateOntology } from "../lib/ontology-data.mjs";
-import { ontologyCollections, ontologyModel, ontologySchema } from "../lib/ontology-schema.mjs";
+import { ontologyCollections, ontologyModel, ontologySchema } from "../lib/ontology-data-format.mjs";
 import { verifyRelease } from "../lib/platform-data.mjs";
 import { collections as legacyCollections } from "../lib/platform-schema.mjs";
 

@@ -1,7 +1,7 @@
 """Seed the gate type layer and the organisation registry.
 
-Definitions come from datasets/semantic/gates.v1.json and the vocabulary that
-governs them comes from the semantic model; this module only projects them into
+Definitions come from datasets/ontology/data/gates.json and the vocabulary that
+governs them comes from the schema; this module only projects them into
 PostgreSQL. Re-running with the same model is a no-op; re-running after the
 model changed is an error, because a seeded row that silently changed meaning is
 worse than a failed run.
@@ -23,17 +23,17 @@ from psycopg.types.json import Jsonb
 from .pipeline import canonical, digest
 
 ROOT = Path(__file__).resolve().parents[2]
-MODEL_PATH = ROOT / "datasets/semantic/semantic-model.v2.json"
-GATES_PATH = ROOT / "datasets/semantic/gates.v1.json"
-ORG_PATH = ROOT / "datasets/semantic/organizations.json"
+SCHEMA_PATH = ROOT / "datasets/ontology/schema/schema.json"
+GATES_PATH = ROOT / "datasets/ontology/data/gates.json"
+ORG_PATH = ROOT / "datasets/ontology/data/organizations.json"
 
 SEED_RUN_ID = "judgment-interactive-review-1"
 METHOD_VERSION = "real-evidence-review-1"
 SEED_LOCK = 7543006
 
 
-def load_model() -> dict:
-    return json.loads(MODEL_PATH.read_text())
+def load_schema() -> dict:
+    return json.loads(SCHEMA_PATH.read_text())
 
 
 def load_organizations() -> list[dict]:
@@ -91,7 +91,7 @@ def gate_rows(model: dict) -> list[dict]:
 
 def seed_document(model: dict, ontology_version: str) -> dict:
     return {
-        "semantic_version": model["version"],
+        "schema_version": model["version"],
         "ontology_version": ontology_version,
         "organizations": org_rows(),
         "gates": gate_rows(model),
@@ -125,7 +125,7 @@ def _insert(cursor, table: str, rows: list[dict], conflict: str, upsert: bool = 
 
 
 def seed(conn, ontology_version: str | None = None) -> dict:
-    model = load_model()
+    model = load_schema()
     with conn.cursor() as cursor:
         if ontology_version is None:
             cursor.execute("SELECT version FROM public.ontology_releases ORDER BY version DESC LIMIT 1")

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { lstat, mkdir, mkdtemp, open, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { isDeepStrictEqual } from "node:util";
-import { ontologyCollections, ontologyModel, ontologySchema } from "./ontology-schema.mjs";
+import { ontologyCollections, ontologyModel, ontologySchema } from "./ontology-data-format.mjs";
 import { validateOntology } from "./ontology-data.mjs";
 
 export const ontologyVersion = "1.0.0";

@@ -1,0 +1,432 @@
+{
+  "generated_from": "datasets/ontology/releases/v2.4.0",
+  "groups": {
+    "oaw:market:accounting": {
+      "en": "Accounting tax and financial management",
+      "zh": "会计税务与财务管理"
+    },
+    "oaw:market:agriculture": {
+      "en": "Crop and livestock production",
+      "zh": "农业种植与畜牧"
+    },
+    "oaw:market:business-services": {
+      "en": "Management and business support services",
+      "zh": "企业管理与商务支持"
+    },
+    "oaw:market:care-social-work": {
+      "en": "Care and social work",
+      "zh": "照护与社会工作"
+    },
+    "oaw:market:civil-society": {
+      "en": "Membership organizations and civil society",
+      "zh": "会员组织与社会团体"
+    },
+    "oaw:market:construction": {
+      "en": "Building and infrastructure construction",
+      "zh": "建筑施工与基础设施建造"
+    },
+    "oaw:market:consumer-manufacturing": {
+      "en": "Textiles home goods and consumer manufacturing",
+      "zh": "纺织家居与日用制造"
+    },
+    "oaw:market:culture-sports": {
+      "en": "Arts culture sports and recreation",
+      "zh": "文化艺术体育与休闲"
+    },
+    "oaw:market:education": {
+      "en": "Education teaching and learning services",
+      "zh": "教育教学与学习服务"
+    },
+    "oaw:market:electronics-hardware": {
+      "en": "Electronics electrical and precision hardware",
+      "zh": "电子电气与精密硬件"
+    },
+    "oaw:market:energy": {
+      "en": "Power gas and thermal energy services",
+      "zh": "电力燃气与热能供应"
+    },
+    "oaw:market:engineering-design": {
+      "en": "Engineering design and technical testing",
+      "zh": "工程设计与技术检测"
+    },
+    "oaw:market:facilities-security": {
+      "en": "Facilities grounds and security services",
+      "zh": "设施环境与安保服务"
+    },
+    "oaw:market:finance": {
+      "en": "Banking payments and investment services",
+      "zh": "银行支付与投资服务"
+    },
+    "oaw:market:food-manufacturing": {
+      "en": "Food beverage and agricultural processing",
+      "zh": "食品饮料与农产品加工"
+    },
+    "oaw:market:forestry-fisheries": {
+      "en": "Forestry and fisheries",
+      "zh": "林业与渔业"
+    },
+    "oaw:market:freight-logistics": {
+      "en": "Freight warehousing and delivery",
+      "zh": "货运仓储与配送"
+    },
+    "oaw:market:games": {
+      "en": "Game development and operations",
+      "zh": "游戏开发与运营"
+    },
+    "oaw:market:healthcare": {
+      "en": "Medical diagnosis and treatment services",
+      "zh": "医疗诊断与治疗服务"
+    },
+    "oaw:market:hospitality-food-service": {
+      "en": "Accommodation and food services",
+      "zh": "住宿与餐饮服务"
+    },
+    "oaw:market:household-work": {
+      "en": "Household management and unpaid work",
+      "zh": "家庭管理与无偿劳动"
+    },
+    "oaw:market:insurance": {
+      "en": "Insurance reinsurance and pension services",
+      "zh": "保险再保险与养老金服务"
+    },
+    "oaw:market:international-organizations": {
+      "en": "International organizations and cross-border public cooperation",
+      "zh": "国际组织与跨境公共协作"
+    },
+    "oaw:market:legal": {
+      "en": "Legal services",
+      "zh": "法律服务"
+    },
+    "oaw:market:machinery-transport": {
+      "en": "Machinery robotics and transport equipment",
+      "zh": "机械机器人与交通装备"
+    },
+    "oaw:market:marketing-creative": {
+      "en": "Marketing design and language services",
+      "zh": "营销设计与语言服务"
+    },
+    "oaw:market:materials-chemicals": {
+      "en": "Materials chemicals and metals production",
+      "zh": "材料化工与金属制造"
+    },
+    "oaw:market:media-publishing": {
+      "en": "Publishing news and audiovisual content",
+      "zh": "出版新闻与视听内容"
+    },
+    "oaw:market:mining": {
+      "en": "Mining and oil and gas extraction",
+      "zh": "矿产与油气开采"
+    },
+    "oaw:market:passenger-mobility": {
+      "en": "Passenger transport and mobility",
+      "zh": "客运与出行服务"
+    },
+    "oaw:market:personal-repair": {
+      "en": "Personal services and everyday repair",
+      "zh": "生活服务与日常维修"
+    },
+    "oaw:market:pharmaceuticals": {
+      "en": "Pharmaceutical and biological manufacturing",
+      "zh": "药品与生物制品制造"
+    },
+    "oaw:market:property-rental": {
+      "en": "Real estate and asset rental",
+      "zh": "房地产与资产租赁"
+    },
+    "oaw:market:public-services": {
+      "en": "Public administration and public protection",
+      "zh": "公共管理与公共保障"
+    },
+    "oaw:market:science-research": {
+      "en": "Scientific research and development",
+      "zh": "科学研究与研发"
+    },
+    "oaw:market:software": {
+      "en": "Software products and digital systems",
+      "zh": "软件产品与数字系统"
+    },
+    "oaw:market:telecom-computing": {
+      "en": "Telecommunications and computing services",
+      "zh": "通信网络与计算服务"
+    },
+    "oaw:market:trade": {
+      "en": "Wholesale retail and commerce",
+      "zh": "批发零售与电商"
+    },
+    "oaw:market:travel-events": {
+      "en": "Travel planning and convention services",
+      "zh": "旅游行程与会展服务"
+    },
+    "oaw:market:water-environment": {
+      "en": "Water waste and environmental restoration",
+      "zh": "水务废弃物与环境修复"
+    }
+  },
+  "group_of_market": {
+    "oaw:market:accounting-audit-assurance": "oaw:market:accounting",
+    "oaw:market:accounting-bookkeeping": "oaw:market:accounting",
+    "oaw:market:accounting-financial-advisory": "oaw:market:accounting",
+    "oaw:market:accounting-management-finance": "oaw:market:accounting",
+    "oaw:market:accounting-payroll": "oaw:market:accounting",
+    "oaw:market:accounting-tax-compliance": "oaw:market:accounting",
+    "oaw:market:agriculture-crop-planning": "oaw:market:agriculture",
+    "oaw:market:agriculture-farm-health": "oaw:market:agriculture",
+    "oaw:market:agriculture-farm-support": "oaw:market:agriculture",
+    "oaw:market:agriculture-field-crops": "oaw:market:agriculture",
+    "oaw:market:agriculture-horticulture": "oaw:market:agriculture",
+    "oaw:market:agriculture-livestock": "oaw:market:agriculture",
+    "oaw:market:business-services-commercial-support": "oaw:market:business-services",
+    "oaw:market:business-services-corporate-management": "oaw:market:business-services",
+    "oaw:market:business-services-customer-operations": "oaw:market:business-services",
+    "oaw:market:business-services-office-administration": "oaw:market:business-services",
+    "oaw:market:business-services-operations-consulting": "oaw:market:business-services",
+    "oaw:market:business-services-people-operations": "oaw:market:business-services",
+    "oaw:market:business-services-recruitment-employment": "oaw:market:business-services",
+    "oaw:market:care-social-work-casework": "oaw:market:care-social-work",
+    "oaw:market:care-social-work-child-family-support": "oaw:market:care-social-work",
+    "oaw:market:care-social-work-disability-support": "oaw:market:care-social-work",
+    "oaw:market:care-social-work-home-community-care": "oaw:market:care-social-work",
+    "oaw:market:care-social-work-residential-care": "oaw:market:care-social-work",
+    "oaw:market:care-social-work-social-assistance": "oaw:market:care-social-work",
+    "oaw:market:civil-society-civic-organizations": "oaw:market:civil-society",
+    "oaw:market:civil-society-professional-societies": "oaw:market:civil-society",
+    "oaw:market:civil-society-religious-communities": "oaw:market:civil-society",
+    "oaw:market:civil-society-trade-associations": "oaw:market:civil-society",
+    "oaw:market:civil-society-worker-organizations": "oaw:market:civil-society",
+    "oaw:market:construction-building-structure": "oaw:market:construction",
+    "oaw:market:construction-building-systems": "oaw:market:construction",
+    "oaw:market:construction-civil-infrastructure": "oaw:market:construction",
+    "oaw:market:construction-demolition-renovation": "oaw:market:construction",
+    "oaw:market:construction-interior-fitout": "oaw:market:construction",
+    "oaw:market:construction-site-foundation": "oaw:market:construction",
+    "oaw:market:construction-site-management": "oaw:market:construction",
+    "oaw:market:consumer-manufacturing-apparel-leather": "oaw:market:consumer-manufacturing",
+    "oaw:market:consumer-manufacturing-craft-instruments": "oaw:market:consumer-manufacturing",
+    "oaw:market:consumer-manufacturing-household-goods": "oaw:market:consumer-manufacturing",
+    "oaw:market:consumer-manufacturing-paper-printing": "oaw:market:consumer-manufacturing",
+    "oaw:market:consumer-manufacturing-textiles": "oaw:market:consumer-manufacturing",
+    "oaw:market:consumer-manufacturing-wood-furniture": "oaw:market:consumer-manufacturing",
+    "oaw:market:culture-sports-art-creation": "oaw:market:culture-sports",
+    "oaw:market:culture-sports-heritage-museums": "oaw:market:culture-sports",
+    "oaw:market:culture-sports-libraries-archives": "oaw:market:culture-sports",
+    "oaw:market:culture-sports-performing-arts": "oaw:market:culture-sports",
+    "oaw:market:culture-sports-recreation": "oaw:market:culture-sports",
+    "oaw:market:culture-sports-regulated-gaming": "oaw:market:culture-sports",
+    "oaw:market:culture-sports-sports": "oaw:market:culture-sports",
+    "oaw:market:education-adult-learning": "oaw:market:education",
+    "oaw:market:education-arts-sports": "oaw:market:education",
+    "oaw:market:education-early-education": "oaw:market:education",
+    "oaw:market:education-education-operations": "oaw:market:education",
+    "oaw:market:education-higher-education": "oaw:market:education",
+    "oaw:market:education-inclusive-education": "oaw:market:education",
+    "oaw:market:education-school-education": "oaw:market:education",
+    "oaw:market:education-vocational-training": "oaw:market:education",
+    "oaw:market:electronics-hardware-batteries": "oaw:market:electronics-hardware",
+    "oaw:market:electronics-hardware-computing-devices": "oaw:market:electronics-hardware",
+    "oaw:market:electronics-hardware-electrical-equipment": "oaw:market:electronics-hardware",
+    "oaw:market:electronics-hardware-medical-devices": "oaw:market:electronics-hardware",
+    "oaw:market:electronics-hardware-optics-instruments": "oaw:market:electronics-hardware",
+    "oaw:market:electronics-hardware-semiconductors": "oaw:market:electronics-hardware",
+    "oaw:market:energy-dispatchable-generation": "oaw:market:energy",
+    "oaw:market:energy-gas-supply": "oaw:market:energy",
+    "oaw:market:energy-power-grid": "oaw:market:energy",
+    "oaw:market:energy-renewable-generation": "oaw:market:energy",
+    "oaw:market:energy-storage-services": "oaw:market:energy",
+    "oaw:market:energy-thermal-utilities": "oaw:market:energy",
+    "oaw:market:engineering-design-architecture": "oaw:market:engineering-design",
+    "oaw:market:engineering-design-civil-design": "oaw:market:engineering-design",
+    "oaw:market:engineering-design-electrical-control": "oaw:market:engineering-design",
+    "oaw:market:engineering-design-industrial-process": "oaw:market:engineering-design",
+    "oaw:market:engineering-design-mechanical-design": "oaw:market:engineering-design",
+    "oaw:market:engineering-design-survey-testing": "oaw:market:engineering-design",
+    "oaw:market:facilities-security-commercial-cleaning": "oaw:market:facilities-security",
+    "oaw:market:facilities-security-facility-coordination": "oaw:market:facilities-security",
+    "oaw:market:facilities-security-grounds-landscape": "oaw:market:facilities-security",
+    "oaw:market:facilities-security-investigation-support": "oaw:market:facilities-security",
+    "oaw:market:facilities-security-pest-management": "oaw:market:facilities-security",
+    "oaw:market:facilities-security-private-security": "oaw:market:facilities-security",
+    "oaw:market:finance-banking-accounts": "oaw:market:finance",
+    "oaw:market:finance-capital-markets": "oaw:market:finance",
+    "oaw:market:finance-credit-lending": "oaw:market:finance",
+    "oaw:market:finance-financial-controls": "oaw:market:finance",
+    "oaw:market:finance-investment-management": "oaw:market:finance",
+    "oaw:market:finance-market-infrastructure": "oaw:market:finance",
+    "oaw:market:finance-payments": "oaw:market:finance",
+    "oaw:market:food-manufacturing-animal-food": "oaw:market:food-manufacturing",
+    "oaw:market:food-manufacturing-beverages": "oaw:market:food-manufacturing",
+    "oaw:market:food-manufacturing-feed-regulated": "oaw:market:food-manufacturing",
+    "oaw:market:food-manufacturing-food-quality": "oaw:market:food-manufacturing",
+    "oaw:market:food-manufacturing-prepared-food": "oaw:market:food-manufacturing",
+    "oaw:market:food-manufacturing-staple-processing": "oaw:market:food-manufacturing",
+    "oaw:market:forestry-fisheries-aquaculture": "oaw:market:forestry-fisheries",
+    "oaw:market:forestry-fisheries-capture-fishing": "oaw:market:forestry-fisheries",
+    "oaw:market:forestry-fisheries-forest-establishment": "oaw:market:forestry-fisheries",
+    "oaw:market:forestry-fisheries-forest-management": "oaw:market:forestry-fisheries",
+    "oaw:market:forestry-fisheries-timber-harvest": "oaw:market:forestry-fisheries",
+    "oaw:market:freight-logistics-air-freight": "oaw:market:freight-logistics",
+    "oaw:market:freight-logistics-land-freight": "oaw:market:freight-logistics",
+    "oaw:market:freight-logistics-logistics-support": "oaw:market:freight-logistics",
+    "oaw:market:freight-logistics-pipeline-transport": "oaw:market:freight-logistics",
+    "oaw:market:freight-logistics-postal-delivery": "oaw:market:freight-logistics",
+    "oaw:market:freight-logistics-sea-freight": "oaw:market:freight-logistics",
+    "oaw:market:freight-logistics-warehousing": "oaw:market:freight-logistics",
+    "oaw:market:games-animation-effects": "oaw:market:games",
+    "oaw:market:games-game-art": "oaw:market:games",
+    "oaw:market:games-game-design": "oaw:market:games",
+    "oaw:market:games-game-engineering": "oaw:market:games",
+    "oaw:market:games-game-publishing": "oaw:market:games",
+    "oaw:market:games-game-testing": "oaw:market:games",
+    "oaw:market:games-narrative-npc": "oaw:market:games",
+    "oaw:market:games-world-levels": "oaw:market:games",
+    "oaw:market:healthcare-clinical-nursing": "oaw:market:healthcare",
+    "oaw:market:healthcare-clinical-pharmacy": "oaw:market:healthcare",
+    "oaw:market:healthcare-dental-care": "oaw:market:healthcare",
+    "oaw:market:healthcare-diagnostics": "oaw:market:healthcare",
+    "oaw:market:healthcare-emergency-care": "oaw:market:healthcare",
+    "oaw:market:healthcare-health-operations": "oaw:market:healthcare",
+    "oaw:market:healthcare-maternal-child": "oaw:market:healthcare",
+    "oaw:market:healthcare-mental-health": "oaw:market:healthcare",
+    "oaw:market:healthcare-primary-care": "oaw:market:healthcare",
+    "oaw:market:healthcare-rehabilitation": "oaw:market:healthcare",
+    "oaw:market:healthcare-specialist-treatment": "oaw:market:healthcare",
+    "oaw:market:hospitality-food-service-catering-contract": "oaw:market:hospitality-food-service",
+    "oaw:market:hospitality-food-service-dining-beverages": "oaw:market:hospitality-food-service",
+    "oaw:market:hospitality-food-service-guest-services": "oaw:market:hospitality-food-service",
+    "oaw:market:hospitality-food-service-housekeeping": "oaw:market:hospitality-food-service",
+    "oaw:market:hospitality-food-service-lodging-reservations": "oaw:market:hospitality-food-service",
+    "oaw:market:hospitality-food-service-restaurant-kitchen": "oaw:market:hospitality-food-service",
+    "oaw:market:household-work-domestic-employment": "oaw:market:household-work",
+    "oaw:market:household-work-household-planning": "oaw:market:household-work",
+    "oaw:market:household-work-household-production": "oaw:market:household-work",
+    "oaw:market:household-work-unpaid-childcare": "oaw:market:household-work",
+    "oaw:market:household-work-unpaid-dependent-care": "oaw:market:household-work",
+    "oaw:market:household-work-unpaid-housework": "oaw:market:household-work",
+    "oaw:market:insurance-claims": "oaw:market:insurance",
+    "oaw:market:insurance-pension-administration": "oaw:market:insurance",
+    "oaw:market:insurance-policy-service": "oaw:market:insurance",
+    "oaw:market:insurance-product-actuarial": "oaw:market:insurance",
+    "oaw:market:insurance-reinsurance": "oaw:market:insurance",
+    "oaw:market:insurance-underwriting": "oaw:market:insurance",
+    "oaw:market:international-organizations-development-humanitarian": "oaw:market:international-organizations",
+    "oaw:market:international-organizations-extraterritorial-missions": "oaw:market:international-organizations",
+    "oaw:market:international-organizations-global-information": "oaw:market:international-organizations",
+    "oaw:market:international-organizations-institution-governance": "oaw:market:international-organizations",
+    "oaw:market:international-organizations-international-coordination": "oaw:market:international-organizations",
+    "oaw:market:international-organizations-international-support": "oaw:market:international-organizations",
+    "oaw:market:legal-contract-drafting": "oaw:market:legal",
+    "oaw:market:legal-contract-review": "oaw:market:legal",
+    "oaw:market:legal-corporate-transactions": "oaw:market:legal",
+    "oaw:market:legal-dispute-resolution": "oaw:market:legal",
+    "oaw:market:legal-intellectual-property": "oaw:market:legal",
+    "oaw:market:legal-legal-documents": "oaw:market:legal",
+    "oaw:market:legal-legal-research": "oaw:market:legal",
+    "oaw:market:legal-private-client": "oaw:market:legal",
+    "oaw:market:legal-regulatory-advice": "oaw:market:legal",
+    "oaw:market:machinery-transport-aerospace": "oaw:market:machinery-transport",
+    "oaw:market:machinery-transport-industrial-machinery": "oaw:market:machinery-transport",
+    "oaw:market:machinery-transport-industrial-service": "oaw:market:machinery-transport",
+    "oaw:market:machinery-transport-rail-marine": "oaw:market:machinery-transport",
+    "oaw:market:machinery-transport-road-vehicles": "oaw:market:machinery-transport",
+    "oaw:market:machinery-transport-robotics": "oaw:market:machinery-transport",
+    "oaw:market:machinery-transport-special-machinery": "oaw:market:machinery-transport",
+    "oaw:market:marketing-creative-advertising": "oaw:market:marketing-creative",
+    "oaw:market:marketing-creative-brand-design": "oaw:market:marketing-creative",
+    "oaw:market:marketing-creative-language-services": "oaw:market:marketing-creative",
+    "oaw:market:marketing-creative-market-research": "oaw:market:marketing-creative",
+    "oaw:market:marketing-creative-photography": "oaw:market:marketing-creative",
+    "oaw:market:marketing-creative-public-relations": "oaw:market:marketing-creative",
+    "oaw:market:materials-chemicals-basic-metals": "oaw:market:materials-chemicals",
+    "oaw:market:materials-chemicals-chemical-products": "oaw:market:materials-chemicals",
+    "oaw:market:materials-chemicals-metal-products": "oaw:market:materials-chemicals",
+    "oaw:market:materials-chemicals-mineral-materials": "oaw:market:materials-chemicals",
+    "oaw:market:materials-chemicals-polymers": "oaw:market:materials-chemicals",
+    "oaw:market:materials-chemicals-refining-coke": "oaw:market:materials-chemicals",
+    "oaw:market:media-publishing-audio-music": "oaw:market:media-publishing",
+    "oaw:market:media-publishing-books-periodicals": "oaw:market:media-publishing",
+    "oaw:market:media-publishing-broadcasting": "oaw:market:media-publishing",
+    "oaw:market:media-publishing-content-distribution": "oaw:market:media-publishing",
+    "oaw:market:media-publishing-news-production": "oaw:market:media-publishing",
+    "oaw:market:media-publishing-screen-development": "oaw:market:media-publishing",
+    "oaw:market:media-publishing-screen-post": "oaw:market:media-publishing",
+    "oaw:market:mining-mine-closure": "oaw:market:mining",
+    "oaw:market:mining-mine-services": "oaw:market:mining",
+    "oaw:market:mining-oil-gas": "oaw:market:mining",
+    "oaw:market:mining-quarrying": "oaw:market:mining",
+    "oaw:market:mining-resource-exploration": "oaw:market:mining",
+    "oaw:market:mining-solid-mineral": "oaw:market:mining",
+    "oaw:market:passenger-mobility-air-passenger": "oaw:market:passenger-mobility",
+    "oaw:market:passenger-mobility-mobility-operations": "oaw:market:passenger-mobility",
+    "oaw:market:passenger-mobility-rail-passenger": "oaw:market:passenger-mobility",
+    "oaw:market:passenger-mobility-transport-hubs": "oaw:market:passenger-mobility",
+    "oaw:market:passenger-mobility-urban-road": "oaw:market:passenger-mobility",
+    "oaw:market:passenger-mobility-water-passenger": "oaw:market:passenger-mobility",
+    "oaw:market:personal-repair-beauty-grooming": "oaw:market:personal-repair",
+    "oaw:market:personal-repair-device-home-repair": "oaw:market:personal-repair",
+    "oaw:market:personal-repair-funeral-services": "oaw:market:personal-repair",
+    "oaw:market:personal-repair-laundry": "oaw:market:personal-repair",
+    "oaw:market:personal-repair-personal-wellness": "oaw:market:personal-repair",
+    "oaw:market:personal-repair-pet-services": "oaw:market:personal-repair",
+    "oaw:market:personal-repair-vehicle-repair": "oaw:market:personal-repair",
+    "oaw:market:personal-repair-veterinary": "oaw:market:personal-repair",
+    "oaw:market:pharmaceuticals-active-ingredients": "oaw:market:pharmaceuticals",
+    "oaw:market:pharmaceuticals-biologics": "oaw:market:pharmaceuticals",
+    "oaw:market:pharmaceuticals-dosage-forms": "oaw:market:pharmaceuticals",
+    "oaw:market:pharmaceuticals-pharma-quality": "oaw:market:pharmaceuticals",
+    "oaw:market:pharmaceuticals-process-transfer": "oaw:market:pharmaceuticals",
+    "oaw:market:property-rental-equipment-rental": "oaw:market:property-rental",
+    "oaw:market:property-rental-leasing-management": "oaw:market:property-rental",
+    "oaw:market:property-rental-property-assets": "oaw:market:property-rental",
+    "oaw:market:property-rental-property-brokerage": "oaw:market:property-rental",
+    "oaw:market:property-rental-property-valuation": "oaw:market:property-rental",
+    "oaw:market:property-rental-vehicle-rental": "oaw:market:property-rental",
+    "oaw:market:public-services-defense-administration": "oaw:market:public-services",
+    "oaw:market:public-services-emergency-management": "oaw:market:public-services",
+    "oaw:market:public-services-justice": "oaw:market:public-services",
+    "oaw:market:public-services-policy-administration": "oaw:market:public-services",
+    "oaw:market:public-services-public-finance": "oaw:market:public-services",
+    "oaw:market:public-services-public-regulation": "oaw:market:public-services",
+    "oaw:market:public-services-public-safety": "oaw:market:public-services",
+    "oaw:market:public-services-social-security": "oaw:market:public-services",
+    "oaw:market:science-research-agri-ecology": "oaw:market:science-research",
+    "oaw:market:science-research-biomedical": "oaw:market:science-research",
+    "oaw:market:science-research-chemical-materials": "oaw:market:science-research",
+    "oaw:market:science-research-computing-engineering": "oaw:market:science-research",
+    "oaw:market:science-research-earth-environment": "oaw:market:science-research",
+    "oaw:market:science-research-physical-mathematical": "oaw:market:science-research",
+    "oaw:market:science-research-research-operations": "oaw:market:science-research",
+    "oaw:market:science-research-social-humanities": "oaw:market:science-research",
+    "oaw:market:software-application-code": "oaw:market:software",
+    "oaw:market:software-cybersecurity": "oaw:market:software",
+    "oaw:market:software-data-systems": "oaw:market:software",
+    "oaw:market:software-intelligent-systems": "oaw:market:software",
+    "oaw:market:software-it-consulting": "oaw:market:software",
+    "oaw:market:software-product-requirements": "oaw:market:software",
+    "oaw:market:software-software-delivery": "oaw:market:software",
+    "oaw:market:software-software-testing": "oaw:market:software",
+    "oaw:market:telecom-computing-access-networks": "oaw:market:telecom-computing",
+    "oaw:market:telecom-computing-cloud-hosting": "oaw:market:telecom-computing",
+    "oaw:market:telecom-computing-data-centers": "oaw:market:telecom-computing",
+    "oaw:market:telecom-computing-information-processing": "oaw:market:telecom-computing",
+    "oaw:market:telecom-computing-network-operations": "oaw:market:telecom-computing",
+    "oaw:market:telecom-computing-telecom-customer": "oaw:market:telecom-computing",
+    "oaw:market:trade-b2b-distribution": "oaw:market:trade",
+    "oaw:market:trade-ecommerce": "oaw:market:trade",
+    "oaw:market:trade-fresh-specialty": "oaw:market:trade",
+    "oaw:market:trade-merchandise-planning": "oaw:market:trade",
+    "oaw:market:trade-resale-intermediation": "oaw:market:trade",
+    "oaw:market:trade-store-operations": "oaw:market:trade",
+    "oaw:market:trade-vehicle-trade": "oaw:market:trade",
+    "oaw:market:trade-wholesale-sourcing": "oaw:market:trade",
+    "oaw:market:travel-events-conventions-events": "oaw:market:travel-events",
+    "oaw:market:travel-events-guiding": "oaw:market:travel-events",
+    "oaw:market:travel-events-travel-booking": "oaw:market:travel-events",
+    "oaw:market:travel-events-travel-design": "oaw:market:travel-events",
+    "oaw:market:travel-events-visitor-attractions": "oaw:market:travel-events",
+    "oaw:market:water-environment-drinking-water": "oaw:market:water-environment",
+    "oaw:market:water-environment-resource-recovery": "oaw:market:water-environment",
+    "oaw:market:water-environment-sewerage": "oaw:market:water-environment",
+    "oaw:market:water-environment-site-remediation": "oaw:market:water-environment",
+    "oaw:market:water-environment-waste-collection": "oaw:market:water-environment",
+    "oaw:market:water-environment-waste-treatment": "oaw:market:water-environment"
+  }
+}

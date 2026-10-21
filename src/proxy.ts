@@ -1,20 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
-import {
-  LANGUAGE_COOKIE,
-  LANGUAGE_COOKIE_MAX_AGE,
-  LANGUAGE_HEADER,
-  REQUEST_URL_HEADER,
-  urlLanguage,
-} from "./lib/i18n";
-
-/** Next's own parameter on client navigations; never part of a shareable URL. */
-const RSC_PARAM = "_rsc";
+import { apexLocation, isRedirectedHost } from "./lib/site-origin";
+import { LANGUAGE_COOKIE, LANGUAGE_COOKIE_MAX_AGE, languageRoute } from "./lib/i18n";
 
 /**
  * Only a top-level navigation is a reader choosing a language. Speculative
- * prefetches and client-side data requests must not rewrite the saved choice.
- * Next strips its `RSC` / `Next-Router-Prefetch` headers before the proxy runs,
- * so the browser's own fetch metadata is what is left to read.
+ * prefetches and client-side data requests must not rewrite the saved choice
+ * or be bounced to another language.
  */
 function isNavigation(request: NextRequest) {
   const destination = request.headers.get("sec-fetch-dest");
@@ -23,37 +14,90 @@ function isNavigation(request: NextRequest) {
 }
 
 /**
- * A root layout cannot read `searchParams`, so an explicit `?lang=` in a shared
- * link is validated here and handed to the render as a request header. The path
- * travels with it so the language switch can keep the reader where they are.
- *
- * An explicit choice is also saved, so following one bilingual link does not
- * leave the rest of the site in the other language.
+ * Files that are not pages are named one by one. "Anything with an extension"
+ * would be wrong: occupation addresses such as /occupations/11-1011.00 contain
+ * a dot. The 32-hex `.txt` is the IndexNow key file in `public/`.
  */
-export function proxy(request: NextRequest) {
-  const requested = urlLanguage(request.nextUrl.search);
+const FILE_PATH = /^\/(?:og\/|figures\/|robots\.txt$|sitemap\.xml$|llms\.txt$|icon\.svg$|[0-9a-f]{32}\.txt$)/;
 
-  const url = new URL(request.nextUrl);
-  url.searchParams.delete(RSC_PARAM);
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set(REQUEST_URL_HEADER, `${url.pathname}${url.search}`);
-  // Never trust an inbound value for this header.
-  if (requested) requestHeaders.set(LANGUAGE_HEADER, requested);
-  else requestHeaders.delete(LANGUAGE_HEADER);
+const REWRITTEN = "x-openaiwill-rewritten";
+// A value only this process knows. A fixed value would let any client send the header and skip
+// the language rules (duplicate /en/... pages, no redirects), so only our own rewrite can match.
+const MARKER = crypto.randomUUID();
 
-  const response = NextResponse.next({ request: { headers: requestHeaders } });
-  if (requested && isNavigation(request)) {
-    response.cookies.set({
-      name: LANGUAGE_COOKIE,
-      value: requested,
-      path: "/",
-      maxAge: LANGUAGE_COOKIE_MAX_AGE,
-      sameSite: "lax",
-    });
-  }
+function withMarker(headers: Headers) {
+  const marked = new Headers(headers);
+  marked.set(REWRITTEN, MARKER);
+  return marked;
+}
+
+function passThrough() {
+  const response = NextResponse.next();
+  if (process.env.SITE_ENV !== "production") response.headers.set("X-Robots-Tag", "noindex");
   return response;
 }
 
+/**
+ * English is served at unprefixed addresses and Chinese under `/zh-CN`; the
+ * pages themselves live under `/[lang]`. The rules are in `languageRoute`.
+ */
+export function proxy(request: NextRequest) {
+  // www.<site> and the site's earlier address are sent to the apex before anything else: cookies and the
+  // sign-in origin check belong to the apex. Behind the tunnel the app sees the public Host. The Location is the
+  // fixed apex origin plus this request's own path and query, never a value taken from a header.
+  if (isRedirectedHost(request.headers.get("host"))) {
+    return NextResponse.redirect(apexLocation(request.nextUrl.pathname, request.nextUrl.search), 308);
+  }
+  // `/api/*` reaches this function only for the redirect above; it has no language.
+  if (request.nextUrl.pathname.startsWith("/api/")) return passThrough();
+  // Nor do the files beside the pages: on the apex they are served untouched.
+  if (FILE_PATH.test(request.nextUrl.pathname)) return NextResponse.next();
+
+  // The server runs this proxy again on the address a rewrite produced. That second
+  // pass is ours, not a reader asking for /en/..., so it must not be sent back.
+  if (request.headers.get(REWRITTEN) === MARKER) return passThrough();
+
+  const route = languageRoute({
+    pathname: request.nextUrl.pathname,
+    search: request.nextUrl.search,
+    savedLanguage: request.cookies.get(LANGUAGE_COOKIE)?.value,
+    navigation: isNavigation(request),
+  });
+
+  let response: NextResponse;
+  if (route.kind === "redirect") {
+    // `route.location` is a path on this host (see `languageRoute`). Next
+    // resolves the Location it is given against the request, so it needs an
+    // absolute URL here and turns a same-host one back into a relative Location.
+    response = NextResponse.redirect(new URL(route.location, request.url), route.status);
+    if (route.save) {
+      response.cookies.set({
+        name: LANGUAGE_COOKIE,
+        value: route.save,
+        path: "/",
+        maxAge: LANGUAGE_COOKIE_MAX_AGE,
+        sameSite: "lax",
+      });
+    }
+  } else if (route.kind === "rewrite") {
+    const url = request.nextUrl.clone();
+    url.pathname = route.pathname;
+    response = NextResponse.rewrite(url, { request: { headers: withMarker(request.headers) } });
+  } else {
+    response = NextResponse.next();
+  }
+
+  // Only the production service may be indexed; a candidate build must not be.
+  if (process.env.SITE_ENV !== "production") response.headers.set("X-Robots-Tag", "noindex");
+  return response;
+}
+
+/**
+ * Everything goes through the proxy so that every address of a redirected host is redirected, files included;
+ * the files (`FILE_PATH`) and `/api/*` are then passed through without a language. Left out: Next's own
+ * assets, which only pages on the apex ask for, and `/healthz`, which the server's health check asks for on
+ * 127.0.0.1. Route handlers under `/api/` have no language: rewritten to `/en/api/...` they would be a 404.
+ */
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg).*)"],
+  matcher: ["/((?!_next/|healthz$).*)"],
 };

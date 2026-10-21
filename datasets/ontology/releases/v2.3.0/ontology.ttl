@@ -1,0 +1,2627 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+<https://openaiwill.com/ontology>
+  a owl:Ontology ;
+  rdfs:label "openaiwill" ;
+  owl:versionInfo "2.3.0" ;
+  rdfs:comment "The one type definition: classes, properties, relations, controlled vocabularies and constraints. Data formats, SQL checks, prompts and site labels are generated from or checked against it. It holds no instances, no measurements and no dates."@en, "唯一的类型定义：类、属性、关系、受控词表、约束。数据文件格式、SQL 约束、提示词、站点标签都由它生成或与它核对。不含实例、不含测量结果、不含日期。"@zh-cn .
+
+<https://openaiwill.com/ontology#Concept>
+  a owl:Class ;
+  rdfs:label "Concept"@en, "概念"@zh-cn ;
+  rdfs:comment "A sealed, identified entry of the world catalog: a market group, market, work, occupation group or occupation. The whole id is its identity."@en, "世界目录里一个封存的、有标识的条目：赛道组、赛道、工作、职业大类或职业。整个 ID 就是它的身份。"@zh-cn .
+
+<https://openaiwill.com/ontology#MarketGroup>
+  a owl:Class ;
+  rdfs:label "Market group"@en, "领域"@zh-cn ;
+  rdfs:comment "An editorial domain organizing related markets; not an industry weight or capability score."@en, "归拢相关赛道的编辑领域；不是行业权重，也不是能力分数。"@zh-cn ;
+  rdfs:subClassOf <https://openaiwill.com/ontology#Concept> .
+
+<https://openaiwill.com/ontology#Market>
+  a owl:Class ;
+  rdfs:label "Market"@en, "赛道"@zh-cn ;
+  rdfs:comment "An editorial market or service area grouping work that serves a related production or service need."@en, "一个编辑赛道或服务领域，把服务于同一类生产或服务需求的工作归在一起。"@zh-cn ;
+  rdfs:subClassOf <https://openaiwill.com/ontology#Concept> .
+
+<https://openaiwill.com/ontology#Work>
+  a owl:Class ;
+  rdfs:label "Work"@en, "工作"@zh-cn ;
+  rdfs:comment "A named scope of work, either an editorial work item or a source occupation task; matching labels do not establish identity."@en, "一项有名字的工作范围：编辑的工作条目，或来源职业的任务。名称相同不代表是同一项。"@zh-cn ;
+  rdfs:subClassOf <https://openaiwill.com/ontology#Concept> .
+
+<https://openaiwill.com/ontology#OccupationGroup>
+  a owl:Class ;
+  rdfs:label "Occupation group"@en, "职业大类"@zh-cn ;
+  rdfs:comment "An O*NET occupation family used to organize source occupations."@en, "用来组织来源职业的 O*NET 职业大类。"@zh-cn ;
+  rdfs:subClassOf <https://openaiwill.com/ontology#Concept> .
+
+<https://openaiwill.com/ontology#Occupation>
+  a owl:Class ;
+  rdfs:label "Occupation"@en, "职业"@zh-cn ;
+  rdfs:comment "An O*NET occupation with its source identity and occupational description."@en, "一个 O*NET 职业，带来源身份和职业描述。"@zh-cn ;
+  rdfs:subClassOf <https://openaiwill.com/ontology#Concept> .
+
+<https://openaiwill.com/ontology#Gate>
+  a owl:Class ;
+  rdfs:label "Gate"@en, "闸门"@zh-cn ;
+  rdfs:comment "A non-capability condition that prevents autonomous completion even when every required capability is met."@en, "即使所需能力全部达成，仍然阻止自主完成的条件。闸门不会因为模型变强而解除，需要制度、法规或物理条件改变。"@zh-cn .
+
+<https://openaiwill.com/ontology#Organization>
+  a owl:Class ;
+  rdfs:label "Organization"@en, "公司"@zh-cn ;
+  rdfs:comment "A company or institution we follow. Referred to by id everywhere (rule:org-must-be-id); the registry is datasets/semantic/organizations.json."@en, "我们跟踪的公司或机构。任何地方都用 ID 引用（rule:org-must-be-id），名单在 datasets/semantic/organizations.json。"@zh-cn .
+
+<https://openaiwill.com/ontology#Person>
+  a owl:Class ;
+  rdfs:label "Person"@en, "人物"@zh-cn ;
+  rdfs:comment "A person whose public account we may collect, with the source of their identity."@en, "我们可能采集其公开账号的一个人，带身份出处。"@zh-cn .
+
+<https://openaiwill.com/ontology#SourceAccount>
+  a owl:Class ;
+  rdfs:label "Source account"@en, "来源账号"@zh-cn ;
+  rdfs:comment "A social account we collect from. It belongs to one person or one organization; a verified badge proves nothing about what it claims."@en, "一个被采集的社交账号，属于一个人或一个机构。认证标记不证明它说的内容。"@zh-cn .
+
+<https://openaiwill.com/ontology#Post>
+  a owl:Class ;
+  rdfs:label "Post"@en, "帖子"@zh-cn ;
+  rdfs:comment "A post's identity. Each collection run's snapshot of it is an observation, not another post."@en, "一条帖子的身份。每次采集得到的快照是对它的一次观测，不是另一条帖子。"@zh-cn .
+
+<https://openaiwill.com/ontology#Event>
+  a owl:Class ;
+  rdfs:label "Update"@en, "更新"@zh-cn ;
+  rdfs:comment "One deduplicated update: something an organization released, changed, measured or announced. Several posts about the same thing are one update."@en, "一条去重后的更新：某个机构发布、改动、测得或宣布的一件事。讲同一件事的多条帖子是一条更新。"@zh-cn .
+
+<https://openaiwill.com/ontology#Model>
+  a owl:Class ;
+  rdfs:label "Model"@en, "模型"@zh-cn ;
+  rdfs:comment "A trained model, or a family of them, that its maker releases under a name: GPT-6 Astra, Claude Fable 5.1, Qwen3.8, Wan 2.7. A product, app, agent, feature, platform or service is not a model, even when it runs on one or shares its brand."@en, "厂商以某个名字发布的一个训练好的模型，或一个模型系列：GPT-6 Astra、Claude Fable 5.1、Qwen3.8、Wan 2.7。产品、应用、智能体、功能、平台、服务都不是模型，即使它跑在模型上、或与模型同名。"@zh-cn .
+
+<https://openaiwill.com/ontology#Provider>
+  a owl:Class ;
+  rdfs:label "Provider"@en, "供应商"@zh-cn ;
+  rdfs:comment "A platform through which a model is offered. The maker's own API is one; a cloud that serves several makers' models is another. A provider is not the model's owner."@en, "提供模型访问的平台。厂商自己的 API 是一种，转售多家模型的云平台是另一种。供应商不是模型的归属方。"@zh-cn .
+
+<https://openaiwill.com/ontology#EventFact>
+  a owl:Class ;
+  rdfs:label "Event fact"@en, "事件事实"@zh-cn ;
+  rdfs:comment "One number, price, limit, score, date or scope a post states about an update, kept with the exact words it came from."@en, "帖子就一条更新给出的一个数字、价格、限制、成绩、日期或适用范围，连同它出自的原文一起保存。"@zh-cn .
+
+<https://openaiwill.com/ontology#Topic>
+  a owl:Class ;
+  rdfs:label "Topic"@en, "话题"@zh-cn ;
+  rdfs:comment "A closed question about one job or one kind of business, with two to four answers that exclude each other. It stays open while claims and updates collect under it; it carries no answer of its own."@en, "关于一个职业或一类生意的封闭问题，带两到四个互斥的答案。它一直开着，主张和更新不断归到它下面；它自己不带答案。"@zh-cn .
+
+<https://openaiwill.com/ontology#TopicOption>
+  a owl:Class ;
+  rdfs:label "Topic answer"@en, "话题选项"@zh-cn ;
+  rdfs:comment "One answer a reader can pick for a topic. It is a position somebody argued, or the direct opposite of one, written out so the question can be answered either way."@en, "读者可以为一个话题选择的一个答案。它是某人主张过的立场，或其直接的反面，写出来是为了让问题两边都能选。"@zh-cn .
+
+<https://openaiwill.com/ontology#Concept/id>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The whole id is the identity; it is never rebuilt from a label or a path."@en, "整个 ID 是身份，不根据名称或路径重新生成。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Concept> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Concept/kind>
+  a owl:ObjectProperty ;
+  rdfs:comment "Which concept class the entry is. Decides the type; never guessed from the id."@en, "条目属于哪个概念类。类型由它决定，不从 ID 里猜。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Concept> ;
+  rdfs:range skos:Concept .
+
+<https://openaiwill.com/ontology#Concept/label_en>
+  a owl:DatatypeProperty ;
+  rdfs:comment "English name."@en, "英文名。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Concept> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Concept/label_zh_cn>
+  a owl:DatatypeProperty ;
+  rdfs:comment "Simplified Chinese name."@en, "简体中文名。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Concept> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Concept/origin>
+  a owl:ObjectProperty ;
+  rdfs:comment "Where the entry comes from."@en, "条目的来源。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Concept> ;
+  rdfs:range skos:Concept .
+
+<https://openaiwill.com/ontology#Concept/translation_status>
+  a owl:ObjectProperty ;
+  rdfs:comment "State of the Chinese name."@en, "中文名的状态。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Concept> ;
+  rdfs:range skos:Concept .
+
+<https://openaiwill.com/ontology#Concept/scope_status>
+  a owl:ObjectProperty ;
+  rdfs:comment "How far the entry's scope is defined."@en, "条目范围定义到什么程度。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Concept> ;
+  rdfs:range skos:Concept .
+
+<https://openaiwill.com/ontology#Concept/scope_note>
+  a owl:DatatypeProperty ;
+  rdfs:comment "An editorial note on scope."@en, "编辑的范围说明。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Concept> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Concept/definition>
+  a owl:DatatypeProperty ;
+  rdfs:comment "Definition text with its language and basis; null when no existing source text applies."@en, "定义文本，带语言和依据；没有现成来源文本时为空。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Concept> .
+
+<https://openaiwill.com/ontology#Gate/gate_id>
+  a owl:DatatypeProperty ;
+  rdfs:comment "gate:<slug>. Stable."@en, "gate:<标识>。稳定。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Gate> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Gate/gate_type>
+  a owl:ObjectProperty ;
+  rdfs:comment "What kind of condition the gate is."@en, "闸门是哪一类条件。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Gate> ;
+  rdfs:range skos:Concept .
+
+<https://openaiwill.com/ontology#Gate/label_en>
+  a owl:DatatypeProperty ;
+  rdfs:comment "English name."@en, "英文名。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Gate> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Gate/label_zh_cn>
+  a owl:DatatypeProperty ;
+  rdfs:comment "Simplified Chinese name."@en, "简体中文名。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Gate> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Gate/definition_en>
+  a owl:DatatypeProperty ;
+  rdfs:comment "What must change for the gate to lift."@en, "闸门解除需要改变什么。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Gate> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Gate/definition_zh_cn>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The same in Chinese."@en, "同上，中文。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Gate> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Gate/lifecycle>
+  a owl:ObjectProperty ;
+  rdfs:comment "Whether the gate is in use."@en, "闸门是否在用。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Gate> ;
+  rdfs:range skos:Concept .
+
+<https://openaiwill.com/ontology#Gate/replaced_by>
+  a owl:ObjectProperty ;
+  rdfs:comment "The gate that replaces a deprecated one."@en, "接替已停用闸门的闸门。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Gate> ;
+  rdfs:range <https://openaiwill.com/ontology#Gate> .
+
+<https://openaiwill.com/ontology#Gate/obsolescence_reason>
+  a owl:DatatypeProperty ;
+  rdfs:comment "Why it was deprecated."@en, "停用原因。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Gate> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Organization/org_id>
+  a owl:DatatypeProperty ;
+  rdfs:comment "org:<slug>. Every reference to an organization uses it."@en, "org:<标识>。凡是指向机构的地方都用它。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Organization> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Organization/canonical_name_en>
+  a owl:DatatypeProperty ;
+  rdfs:comment "English display name."@en, "英文显示名。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Organization> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Organization/canonical_name_zh_cn>
+  a owl:DatatypeProperty ;
+  rdfs:comment "Chinese display name."@en, "中文显示名。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Organization> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Organization/aliases>
+  a owl:DatatypeProperty ;
+  rdfs:comment "Other names that resolve to this organization."@en, "解析到该机构的其他写法。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Organization> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Person/person_id>
+  a owl:DatatypeProperty ;
+  rdfs:comment "person:<hash>. Stable."@en, "person:<哈希>。稳定。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Person> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Person/name>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The name as the identity source writes it."@en, "身份出处里的写法。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Person> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Person/aliases>
+  a owl:DatatypeProperty ;
+  rdfs:comment "Other spellings."@en, "其他写法。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Person> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Person/identity_url>
+  a owl:DatatypeProperty ;
+  rdfs:comment "Where the identity was established."@en, "身份的出处。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Person> ;
+  rdfs:range xsd:anyURI .
+
+<https://openaiwill.com/ontology#SourceAccount/account_key>
+  a owl:DatatypeProperty ;
+  rdfs:comment "<platform>:<handle in lower case>."@en, "<平台>:<小写账号名>。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#SourceAccount> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#SourceAccount/platform>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The platform the account is on."@en, "账号所在平台。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#SourceAccount> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#SourceAccount/handle>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The handle as written."@en, "账号名原样。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#SourceAccount> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#SourceAccount/platform_account_id>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The platform's stable numeric id; null until resolved."@en, "平台的稳定数字 ID；解析前为空。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#SourceAccount> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#SourceAccount/owner_kind>
+  a owl:ObjectProperty ;
+  rdfs:comment "Whether a person or an organization owns it."@en, "归属于个人还是机构。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#SourceAccount> ;
+  rdfs:range skos:Concept .
+
+<https://openaiwill.com/ontology#SourceAccount/panel_role>
+  a owl:ObjectProperty ;
+  rdfs:comment "The role the account plays as a source."@en, "账号作为来源的角色。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#SourceAccount> ;
+  rdfs:range skos:Concept .
+
+<https://openaiwill.com/ontology#SourceAccount/panel_state>
+  a owl:ObjectProperty ;
+  rdfs:comment "Derived from the check log; never edited by hand."@en, "由检查日志推导，不手工修改。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#SourceAccount> ;
+  rdfs:range skos:Concept .
+
+<https://openaiwill.com/ontology#SourceAccount/identity_grade>
+  a owl:ObjectProperty ;
+  rdfs:comment "How strongly the identity is established."@en, "身份证据的强度。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#SourceAccount> ;
+  rdfs:range skos:Concept .
+
+<https://openaiwill.com/ontology#SourceAccount/identity_url>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The identity evidence."@en, "身份证据的出处。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#SourceAccount> ;
+  rdfs:range xsd:anyURI .
+
+<https://openaiwill.com/ontology#SourceAccount/avatar_url>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The profile image the platform returned for the account; null until a lookup has seen one. It shows who is speaking and proves nothing about identity."@en, "平台返回的账号头像地址；账号查询见到之前为空。只用于显示是谁在说话，不证明身份。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#SourceAccount> ;
+  rdfs:range xsd:anyURI .
+
+<https://openaiwill.com/ontology#SourceAccount/language>
+  a owl:ObjectProperty ;
+  rdfs:comment "Posting language."@en, "发帖语言。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#SourceAccount> ;
+  rdfs:range skos:Concept .
+
+<https://openaiwill.com/ontology#SourceAccount/focus>
+  a owl:DatatypeProperty ;
+  rdfs:comment "What the account mostly writes about."@en, "账号主要写什么。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#SourceAccount> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#SourceAccount/excluded>
+  a owl:DatatypeProperty ;
+  rdfs:comment "Kept in the list but never collected."@en, "留在名单里但不采集。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#SourceAccount> ;
+  rdfs:range xsd:boolean .
+
+<https://openaiwill.com/ontology#SourceAccount/added_from>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The file the account was imported from."@en, "账号从哪个文件导入。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#SourceAccount> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#SourceAccount/state_changed_at>
+  a owl:DatatypeProperty ;
+  rdfs:comment "When panel_state last changed."@en, "panel_state 最近一次变化的时间。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#SourceAccount> ;
+  rdfs:range xsd:dateTime .
+
+<https://openaiwill.com/ontology#Post/source_id>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The platform's id of the post."@en, "平台给帖子的 ID。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Post> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Post/platform>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The platform."@en, "平台。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Post> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Post/canonical_url>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The post's address."@en, "帖子地址。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Post> ;
+  rdfs:range xsd:anyURI .
+
+<https://openaiwill.com/ontology#Post/kind>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The record kind; currently always a post."@en, "记录类型；目前只有帖子。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Post> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Post/published_at>
+  a owl:DatatypeProperty ;
+  rdfs:comment "Original publication time, apart from when it was observed."@en, "原始发布时间，与观测时间分开。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Post> ;
+  rdfs:range xsd:dateTime .
+
+<https://openaiwill.com/ontology#Post/is_reply>
+  a owl:DatatypeProperty ;
+  rdfs:comment "Whether it replies to another post."@en, "是否回复了另一条帖子。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Post> ;
+  rdfs:range xsd:boolean .
+
+<https://openaiwill.com/ontology#Post/is_repost>
+  a owl:DatatypeProperty ;
+  rdfs:comment "Whether it reposts another post."@en, "是否转发了另一条帖子。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Post> ;
+  rdfs:range xsd:boolean .
+
+<https://openaiwill.com/ontology#Post/conversation_id>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The thread it belongs to."@en, "所属会话。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Post> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Event/event_id>
+  a owl:DatatypeProperty ;
+  rdfs:comment "Stable id of the update."@en, "更新的稳定 ID。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Event> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Event/kind>
+  a owl:ObjectProperty ;
+  rdfs:comment "What kind of update it is."@en, "更新的类型。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Event> ;
+  rdfs:range skos:Concept .
+
+<https://openaiwill.com/ontology#Event/kind_vocabulary>
+  a owl:DatatypeProperty ;
+  rdfs:comment "Which version of the kind vocabulary the row was classified under."@en, "该行是按哪个版本的类型词表分类的。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Event> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Event/subject_key>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The canonical name of the thing the update is about; part of its identity."@en, "更新对象的规范名，是同一性的一部分。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Event> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Event/title>
+  a owl:DatatypeProperty ;
+  rdfs:comment "A display title."@en, "显示用标题。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Event> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Event/summary>
+  a owl:DatatypeProperty ;
+  rdfs:comment "What happened, from the source text only."@en, "发生了什么，只依据来源文本。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Event> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Event/announced_at>
+  a owl:DatatypeProperty ;
+  rdfs:comment "When it was announced."@en, "宣布时间。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Event> ;
+  rdfs:range xsd:dateTime .
+
+<https://openaiwill.com/ontology#Event/occurred_at>
+  a owl:DatatypeProperty ;
+  rdfs:comment "When it happened."@en, "发生时间。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Event> ;
+  rdfs:range xsd:dateTime .
+
+<https://openaiwill.com/ontology#Event/scheduled_for>
+  a owl:DatatypeProperty ;
+  rdfs:comment "When it is due to happen."@en, "预定发生时间。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Event> ;
+  rdfs:range xsd:dateTime .
+
+<https://openaiwill.com/ontology#Event/occurrence_status>
+  a owl:ObjectProperty ;
+  rdfs:comment "Whether it has happened."@en, "是否已发生。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Event> ;
+  rdfs:range skos:Concept .
+
+<https://openaiwill.com/ontology#Event/confidence>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The extractor's confidence, 0 to 1."@en, "抽取的置信度，0 到 1。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Event> ;
+  rdfs:range xsd:decimal .
+
+<https://openaiwill.com/ontology#Event/identity_confidence>
+  a owl:ObjectProperty ;
+  rdfs:comment "How surely the subject was identified."@en, "对象识别的把握。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Event> ;
+  rdfs:range skos:Concept .
+
+<https://openaiwill.com/ontology#Model/model_id>
+  a owl:DatatypeProperty ;
+  rdfs:comment "model:<owner>:<slug of the name>. Stable; never reused."@en, "model:<归属方>:<名字的规范写法>。稳定，不复用。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Model> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Model/org_id>
+  a owl:ObjectProperty ;
+  rdfs:comment "The company that makes the model, when it is one we follow."@en, "出品公司，限我们跟踪的公司。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Model> ;
+  rdfs:range <https://openaiwill.com/ontology#Organization> .
+
+<https://openaiwill.com/ontology#Model/owner_name>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The maker as the post writes it, for a maker outside the registry."@en, "出品方不在名单内时，帖子里的原样写法。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Model> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Model/level>
+  a owl:ObjectProperty ;
+  rdfs:comment "Family or release."@en, "系列还是具体版本。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Model> ;
+  rdfs:range skos:Concept .
+
+<https://openaiwill.com/ontology#Model/parent_model_id>
+  a owl:ObjectProperty ;
+  rdfs:comment "The family a release belongs to. A family has none."@en, "具体版本所属的系列。系列自身没有。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Model> ;
+  rdfs:range <https://openaiwill.com/ontology#Model> .
+
+<https://openaiwill.com/ontology#Model/name>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The release name as its maker writes it, without a date or build suffix."@en, "厂商的写法，不带日期或构建号后缀。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Model> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Model/version>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The version as written. Never inferred; a family has none."@en, "文本里写出的版本号。不推断；系列没有。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Model> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Model/variant>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The variant (Flash, Pro, mini). A family has none."@en, "变体（Flash、Pro、mini）。系列没有。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Model> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Model/status>
+  a owl:ObjectProperty ;
+  rdfs:comment "How far the model's existence is established."@en, "模型的存在被确认到什么程度。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Model> ;
+  rdfs:range skos:Concept .
+
+<https://openaiwill.com/ontology#Model/released_at>
+  a owl:DatatypeProperty ;
+  rdfs:comment "When the maker's own release update happened. Set only by confirmation."@en, "厂商自己的发布帖的时间。只在确认时写入。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Model> ;
+  rdfs:range xsd:dateTime .
+
+<https://openaiwill.com/ontology#Model/first_seen_event_id>
+  a owl:ObjectProperty ;
+  rdfs:comment "The update whose mention opened this model. Null for a model known only from the catalog."@en, "最早提到它并开出这一行的事件。只来自目录的模型为空。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Model> ;
+  rdfs:range <https://openaiwill.com/ontology#Event> .
+
+<https://openaiwill.com/ontology#Model/catalog_id>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The catalog's canonical id, <owner>/<model>. Null when the catalog does not list it."@en, "目录里的规范标识，<归属方>/<模型>。目录未收录则为空。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Model> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Model/catalog_released_on>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The earliest date any provider lists the model in the catalog. A listing date, kept apart from released_at."@en, "目录里任一供应商最早的上架日期。是上架日期，与 released_at 分开存。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Model> ;
+  rdfs:range xsd:date .
+
+<https://openaiwill.com/ontology#Model/open_weights>
+  a owl:DatatypeProperty ;
+  rdfs:comment "Whether the weights are published. Null when the catalog does not say or its listings disagree."@en, "权重是否公开。目录没说或各条目不一致时为空。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Model> ;
+  rdfs:range xsd:boolean .
+
+<https://openaiwill.com/ontology#Model/output_modalities>
+  a owl:ObjectProperty ;
+  rdfs:comment "What the model produces. Empty when the catalog does not say or its listings disagree."@en, "模型产出什么。目录没说或各条目不一致时为空。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Model> ;
+  rdfs:range skos:Concept .
+
+<https://openaiwill.com/ontology#Provider/provider_id>
+  a owl:DatatypeProperty ;
+  rdfs:comment "provider:<catalog key>."@en, "provider:<目录里的键>。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Provider> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Provider/name>
+  a owl:DatatypeProperty ;
+  rdfs:comment "Display name."@en, "显示名。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Provider> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Provider/kind>
+  a owl:ObjectProperty ;
+  rdfs:comment "The maker's own API or a platform serving several makers."@en, "厂商自己的 API，还是提供多家模型的平台。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Provider> ;
+  rdfs:range skos:Concept .
+
+<https://openaiwill.com/ontology#Event/actor_account_key>
+  a owl:ObjectProperty ;
+  rdfs:comment "The account whose owner did what the update describes. Filled by the program from the source post, never by the model."@en, "做了这件事的一方所对应的来源账号。由程序从来源帖子得到，不由模型填写。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Event> ;
+  rdfs:range <https://openaiwill.com/ontology#SourceAccount> .
+
+<https://openaiwill.com/ontology#Event/subject>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The product or model the update is about, as the post names it."@en, "更新所涉及的产品或模型，按帖子里的写法原样记录。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Event> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Event/basis>
+  a owl:ObjectProperty ;
+  rdfs:comment "On what basis the update is known, judged by who produced the evidence in the source post."@en, "这条更新凭什么成立，按来源帖子里的证据由谁产生来判断。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Event> ;
+  rdfs:range skos:Concept .
+
+<https://openaiwill.com/ontology#Event/task>
+  a owl:DatatypeProperty ;
+  rdfs:comment "One plain sentence saying what concrete piece of work the AI was given. Only for usage reports, independent evaluations, failure reports and production adoption."@en, "一句话说明让 AI 做了哪件具体的事。只用于使用实录、独立测评、失败报告和生产采用。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Event> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Event/result>
+  a owl:ObjectProperty ;
+  rdfs:comment "How the task came out. Only for the kinds that carry a task."@en, "这件事的结果。只用于带有 task 的类型。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Event> ;
+  rdfs:range skos:Concept .
+
+<https://openaiwill.com/ontology#Event/quote>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The exact sentence of the source post that states the update."@en, "来源帖子里陈述这条更新的原句。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Event> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Event/schema_version>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The schema version the update was extracted under. Empty means it was extracted before 2.2.0."@en, "这条更新按哪一版 schema 提取。为空表示早于 2.2.0。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Event> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#EventFact/fact_id>
+  a owl:DatatypeProperty ;
+  rdfs:comment "Identifier of the fact."@en, "事实的标识。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#EventFact> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#EventFact/event_id>
+  a owl:ObjectProperty ;
+  rdfs:comment "The update the fact belongs to."@en, "事实所属的更新。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#EventFact> ;
+  rdfs:range <https://openaiwill.com/ontology#Event> .
+
+<https://openaiwill.com/ontology#EventFact/source_id>
+  a owl:ObjectProperty ;
+  rdfs:comment "The post the fact was read from."@en, "事实出自的帖子。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#EventFact> ;
+  rdfs:range <https://openaiwill.com/ontology#Post> .
+
+<https://openaiwill.com/ontology#EventFact/value>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The value as the post gives it."@en, "帖子给出的值。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#EventFact> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#EventFact/unit>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The unit of the value, when it has one."@en, "值的单位，没有则为空。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#EventFact> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#EventFact/what>
+  a owl:DatatypeProperty ;
+  rdfs:comment "What the value measures."@en, "这个值指的是什么。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#EventFact> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#EventFact/quote>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The exact words of the post the value comes from; checked against the post text before it is stored."@en, "值所出自的帖子原文；入库前与帖子正文核对。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#EventFact> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Topic/topic_id>
+  a owl:DatatypeProperty ;
+  rdfs:comment "Stable id of the topic."@en, "话题的固定编号。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Topic> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Topic/question_type>
+  a owl:ObjectProperty ;
+  rdfs:comment "Which kind of question it is."@en, "它是哪一类问题。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Topic> ;
+  rdfs:range skos:Concept .
+
+<https://openaiwill.com/ontology#Topic/object_key>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The job or kind of business the question is about, in a normalized form; with the question type it is the topic's identity."@en, "问题所谈的职业或生意的规范化写法；与问题类型一起构成话题的身份。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Topic> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Topic/question_en>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The question in English."@en, "问题的英文。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Topic> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Topic/question_zh_cn>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The question in Simplified Chinese."@en, "问题的简体中文。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Topic> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#Topic/state>
+  a owl:ObjectProperty ;
+  rdfs:comment "Where the topic stands as a subject of research."@en, "话题作为研究对象所处的状态。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Topic> ;
+  rdfs:range skos:Concept .
+
+<https://openaiwill.com/ontology#Topic/origin>
+  a owl:ObjectProperty ;
+  rdfs:comment "How the topic came to be proposed."@en, "话题是怎么被提出的。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Topic> ;
+  rdfs:range skos:Concept .
+
+<https://openaiwill.com/ontology#Topic/opened_at>
+  a owl:DatatypeProperty ;
+  rdfs:comment "When the topic was opened: the time of the post that first raised it, or of the proposal."@en, "话题提出的时间：最早提出它的帖子的发布时间，或提议的时间。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Topic> ;
+  rdfs:range xsd:dateTime .
+
+<https://openaiwill.com/ontology#Topic/state_changed_at>
+  a owl:DatatypeProperty ;
+  rdfs:comment "When state last changed."@en, "state 最近一次变化的时间。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Topic> ;
+  rdfs:range xsd:dateTime .
+
+<https://openaiwill.com/ontology#Topic/schema_version>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The ontology version the topic was written under."@en, "话题写入时的本体版本。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Topic> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#TopicOption/option_id>
+  a owl:DatatypeProperty ;
+  rdfs:comment "Stable id of the answer."@en, "选项的固定编号。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#TopicOption> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#TopicOption/topic_id>
+  a owl:ObjectProperty ;
+  rdfs:comment "The topic the answer belongs to."@en, "选项所属的话题。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#TopicOption> ;
+  rdfs:range <https://openaiwill.com/ontology#Topic> .
+
+<https://openaiwill.com/ontology#TopicOption/position>
+  a owl:DatatypeProperty ;
+  rdfs:comment "Its place among the topic's answers."@en, "它在话题各选项中的顺序。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#TopicOption> ;
+  rdfs:range xsd:integer .
+
+<https://openaiwill.com/ontology#TopicOption/text_en>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The answer in English."@en, "选项的英文。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#TopicOption> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#TopicOption/text_zh_cn>
+  a owl:DatatypeProperty ;
+  rdfs:comment "The answer in Simplified Chinese."@en, "选项的简体中文。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#TopicOption> ;
+  rdfs:range xsd:string .
+
+<https://openaiwill.com/ontology#TopicOption/retired>
+  a owl:DatatypeProperty ;
+  rdfs:comment "No longer offered. An answer somebody argued or voted for is retired, never deleted."@en, "不再提供。有人主张过或投过票的选项只停用，不删除。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#TopicOption> ;
+  rdfs:range xsd:boolean .
+
+<https://openaiwill.com/ontology#relation/has_market>
+  a owl:ObjectProperty ;
+  rdfs:label "has market"@en, "包含赛道"@zh-cn ;
+  rdfs:comment "Organizes a market within an editorial domain."@en, "把一个赛道归入一个编辑领域。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#MarketGroup> ;
+  rdfs:range <https://openaiwill.com/ontology#Market> .
+
+<https://openaiwill.com/ontology#relation/has_work>
+  a owl:ObjectProperty ;
+  rdfs:label "has work"@en, "包含工作"@zh-cn ;
+  rdfs:comment "Associates a work item with a market."@en, "把一项工作关联到一个赛道。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Market> ;
+  rdfs:range <https://openaiwill.com/ontology#Work> .
+
+<https://openaiwill.com/ontology#relation/has_occupation>
+  a owl:ObjectProperty ;
+  rdfs:label "has occupation"@en, "包含职业"@zh-cn ;
+  rdfs:comment "Organizes an occupation within an occupation family."@en, "把一个职业归入一个职业大类。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#OccupationGroup> ;
+  rdfs:range <https://openaiwill.com/ontology#Occupation> .
+
+<https://openaiwill.com/ontology#relation/has_task>
+  a owl:ObjectProperty ;
+  rdfs:label "has task"@en, "包含任务"@zh-cn ;
+  rdfs:comment "Associates work with an occupation; source task membership is retained."@en, "把工作关联到一个职业；保留来源任务的归属。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Occupation> ;
+  rdfs:range <https://openaiwill.com/ontology#Work> .
+
+<https://openaiwill.com/ontology#relation/mapped_to>
+  a owl:ObjectProperty ;
+  rdfs:comment "The concept corresponds to a record of an external source system."@en, "该概念对应外部来源系统里的一条记录。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Concept> .
+
+<https://openaiwill.com/ontology#relation/performed_by>
+  a owl:ObjectProperty ;
+  rdfs:label "performed by"@en, "由…完成"@zh-cn ;
+  rdfs:comment "A market's work item is carried out through this occupation task."@en, "赛道里的这项工作通过这条职业任务来完成。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Work> ;
+  rdfs:range <https://openaiwill.com/ontology#Work> .
+
+<https://openaiwill.com/ontology#relation/blocked_by>
+  a owl:ObjectProperty ;
+  rdfs:label "blocked by"@en, "受阻于"@zh-cn ;
+  rdfs:comment "The work stays limited by this gate however capable the model is."@en, "即使所需能力齐备，这项工作仍受此闸门限制。必须指出依据的任务原文（because_task_id），不能只写理由文字。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Work> ;
+  rdfs:range <https://openaiwill.com/ontology#Gate> .
+
+<https://openaiwill.com/ontology#relation/employs>
+  a owl:ObjectProperty ;
+  rdfs:label "employs"@en, "用到"@zh-cn ;
+  rdfs:comment "People in this occupation do the market's work."@en, "该职业的人做这个赛道的工作。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Market> ;
+  rdfs:range <https://openaiwill.com/ontology#Occupation> .
+
+<https://openaiwill.com/ontology#relation/evidences>
+  a owl:ObjectProperty ;
+  rdfs:label "is evidence for"@en, "佐证"@zh-cn ;
+  rdfs:comment "The update is evidence about how far this work can be done, at a level capped by its tier."@en, "这条更新是关于该项工作能做到什么程度的证据，级别受证据等级封顶。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Event> ;
+  rdfs:range <https://openaiwill.com/ontology#Work> .
+
+<https://openaiwill.com/ontology#relation/verifies>
+  a owl:ObjectProperty ;
+  rdfs:label "verifies"@en, "验证"@zh-cn ;
+  rdfs:comment "A panel post bears on a vendor's claim about a piece of work."@en, "名单账号的一条帖子对厂商关于某项工作的说法构成验证材料。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Post> ;
+  rdfs:range <https://openaiwill.com/ontology#Event> .
+
+<https://openaiwill.com/ontology#relation/links_to>
+  a owl:ObjectProperty ;
+  rdfs:label "links to"@en, "归属于"@zh-cn ;
+  rdfs:comment "The post belongs to the update through a reply, quote or repost chain, or by naming its product."@en, "帖子沿回复、引用、转发链，或因提到产品名，归属到这条更新。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Post> ;
+  rdfs:range <https://openaiwill.com/ontology#Event> .
+
+<https://openaiwill.com/ontology#relation/extracted_from>
+  a owl:ObjectProperty ;
+  rdfs:label "extracted from"@en, "抽取自"@zh-cn ;
+  rdfs:comment "The update was extracted from this post."@en, "这条更新是从该帖子抽取的。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Event> ;
+  rdfs:range <https://openaiwill.com/ontology#Post> .
+
+<https://openaiwill.com/ontology#relation/announced_by>
+  a owl:ObjectProperty ;
+  rdfs:label "announced by"@en, "主体"@zh-cn ;
+  rdfs:comment "The organization the update is about."@en, "更新的主体机构。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Event> ;
+  rdfs:range <https://openaiwill.com/ontology#Organization> .
+
+<https://openaiwill.com/ontology#relation/names_model>
+  a owl:ObjectProperty ;
+  rdfs:label "names"@en, "提到"@zh-cn ;
+  rdfs:comment "The update names this model, in a stated role."@en, "这条更新提到了这个模型，并说明它在更新里的角色。判官只抄出名字和角色，由确定性的别名表决定是哪个模型。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Event> ;
+  rdfs:range <https://openaiwill.com/ontology#Model> .
+
+<https://openaiwill.com/ontology#relation/makes>
+  a owl:ObjectProperty ;
+  rdfs:label "makes"@en, "出品"@zh-cn ;
+  rdfs:comment "The organization trains and releases the model."@en, "这家公司训练并发布了这个模型。归属看目录规范标识里的归属方或帖子写明的出品方，不看是谁在卖（rule:model-owner-is-not-provider）。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Organization> ;
+  rdfs:range <https://openaiwill.com/ontology#Model> .
+
+<https://openaiwill.com/ontology#relation/has_release>
+  a owl:ObjectProperty ;
+  rdfs:label "has release"@en, "包含版本"@zh-cn ;
+  rdfs:comment "A family contains a release. Only a family can be the parent."@en, "系列包含具体版本。只有系列能做上游，系列自身没有上游。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Model> ;
+  rdfs:range <https://openaiwill.com/ontology#Model> .
+
+<https://openaiwill.com/ontology#relation/offers>
+  a owl:ObjectProperty ;
+  rdfs:label "offers"@en, "上架"@zh-cn ;
+  rdfs:comment "The provider lists the model from a given day. From the catalog, not a maker's statement."@en, "这个供应商从某一天起提供这个模型。来自目录，不是厂商声明。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Provider> ;
+  rdfs:range <https://openaiwill.com/ontology#Model> .
+
+<https://openaiwill.com/ontology#relation/operated_by>
+  a owl:ObjectProperty ;
+  rdfs:label "operated by"@en, "运营方"@zh-cn ;
+  rdfs:comment "The organization that runs the provider, when it is one we follow."@en, "运营该供应商的机构，限我们跟踪的机构。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Provider> ;
+  rdfs:range <https://openaiwill.com/ontology#Organization> .
+
+<https://openaiwill.com/ontology#relation/owned_by>
+  a owl:ObjectProperty ;
+  rdfs:label "owned by"@en, "归属"@zh-cn ;
+  rdfs:comment "The person or organization the account belongs to."@en, "账号属于哪个人或机构。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#SourceAccount> ;
+  rdfs:range [ a owl:Class ; owl:unionOf ( <https://openaiwill.com/ontology#Person> <https://openaiwill.com/ontology#Organization> ) ] .
+
+<https://openaiwill.com/ontology#relation/affiliated_with>
+  a owl:ObjectProperty ;
+  rdfs:label "affiliated with"@en, "关联"@zh-cn ;
+  rdfs:comment "A dated relation between a person and an organization, with its source."@en, "人物与机构之间带起止时间和出处的关系。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Person> ;
+  rdfs:range <https://openaiwill.com/ontology#Organization> .
+
+<https://openaiwill.com/ontology#relation/authored_by>
+  a owl:ObjectProperty ;
+  rdfs:label "authored by"@en, "作者"@zh-cn ;
+  rdfs:comment "The account that published the post."@en, "发布该帖子的账号。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Post> ;
+  rdfs:range <https://openaiwill.com/ontology#SourceAccount> .
+
+<https://openaiwill.com/ontology#relation/replies_to>
+  a owl:ObjectProperty ;
+  rdfs:label "replies to"@en, "回复"@zh-cn ;
+  rdfs:comment "The post it replies to."@en, "它回复的帖子。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Post> ;
+  rdfs:range <https://openaiwill.com/ontology#Post> .
+
+<https://openaiwill.com/ontology#relation/quotes>
+  a owl:ObjectProperty ;
+  rdfs:label "quotes"@en, "引用"@zh-cn ;
+  rdfs:comment "The post it quotes."@en, "它引用的帖子。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Post> ;
+  rdfs:range <https://openaiwill.com/ontology#Post> .
+
+<https://openaiwill.com/ontology#relation/reposts>
+  a owl:ObjectProperty ;
+  rdfs:label "reposts"@en, "转发"@zh-cn ;
+  rdfs:comment "The post it reposts."@en, "它转发的帖子。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Post> ;
+  rdfs:range <https://openaiwill.com/ontology#Post> .
+
+<https://openaiwill.com/ontology#relation/acted_by>
+  a owl:ObjectProperty ;
+  rdfs:label "acted by"@en, "行动者"@zh-cn ;
+  rdfs:comment "The account whose owner did what the update describes."@en, "做了这件事的一方所对应的来源账号。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Event> ;
+  rdfs:range <https://openaiwill.com/ontology#SourceAccount> .
+
+<https://openaiwill.com/ontology#relation/attached_to>
+  a owl:ObjectProperty ;
+  rdfs:label "attached to"@en, "挂靠于"@zh-cn ;
+  rdfs:comment "The post is about an update that already exists: it repeats it, adds to it, or reports a use or test of it. It records that the account said so, not that the account is right. Decided by reading the post, not by its reply or quote chain."@en, "帖子在说一条已存在的更新：复述它、补充它，或报告对它的使用或测试。它记录的是这个账号这么说了，不是说得对。由读帖子内容确定，不靠回复或引用链。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Post> ;
+  rdfs:range <https://openaiwill.com/ontology#Event> .
+
+<https://openaiwill.com/ontology#relation/about>
+  a owl:ObjectProperty ;
+  rdfs:label "is about"@en, "关于"@zh-cn ;
+  rdfs:comment "The catalog entry that is the thing the question is about, or clearly contains it. Empty when the catalog has no such entry; a near neighbour is not used instead."@en, "目录里就是问题所谈对象、或明确包含它的那个条目。目录里没有时为空，不拿相近的条目代替。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Topic> ;
+  rdfs:range [ a owl:Class ; owl:unionOf ( <https://openaiwill.com/ontology#Occupation> <https://openaiwill.com/ontology#Market> <https://openaiwill.com/ontology#MarketGroup> ) ] .
+
+<https://openaiwill.com/ontology#relation/has_option>
+  a owl:ObjectProperty ;
+  rdfs:label "has answer"@en, "有选项"@zh-cn ;
+  rdfs:comment "The answers a reader can pick for the topic: two to four that are not retired."@en, "读者可以为话题选择的答案：未停用的有两到四个。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Topic> ;
+  rdfs:range <https://openaiwill.com/ontology#TopicOption> .
+
+<https://openaiwill.com/ontology#relation/argues>
+  a owl:ObjectProperty ;
+  rdfs:label "argues"@en, "主张"@zh-cn ;
+  rdfs:comment "The post's author asserts this answer to the topic's question. It records that the account said so, not that the account is right. A post argues at most one answer of a topic."@en, "帖子作者对话题的问题主张这个答案。它记录的是这个账号这么说了，不是说得对。一条帖子对一个话题最多主张一个答案。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Post> ;
+  rdfs:range <https://openaiwill.com/ontology#TopicOption> .
+
+<https://openaiwill.com/ontology#relation/merged_into>
+  a owl:ObjectProperty ;
+  rdfs:label "merged into"@en, "并入"@zh-cn ;
+  rdfs:comment "The topic was found to ask the same question as another and now stands under it. It keeps its id."@en, "该话题被认定与另一个话题问的是同一个问题，现归于其下。它保留自己的编号。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Topic> ;
+  rdfs:range <https://openaiwill.com/ontology#Topic> .
+
+<https://openaiwill.com/ontology#relation/measures>
+  a owl:ObjectProperty ;
+  rdfs:label "measures"@en, "测量"@zh-cn ;
+  rdfs:comment "A market measurement is about this market or occupation. It says how much the market uses, pays or employs; it is never evidence of how far a piece of work can be done."@en, "一条市场测量说的是这个市场或职业。它说明这个市场有多少在使用、付费或雇用；它不是某项工作能做到什么程度的证据。"@zh-cn ;
+  rdfs:domain <https://openaiwill.com/ontology#Event> ;
+  rdfs:range [ a owl:Class ; owl:unionOf ( <https://openaiwill.com/ontology#Market> <https://openaiwill.com/ontology#MarketGroup> <https://openaiwill.com/ontology#Occupation> ) ] .
+
+<https://openaiwill.com/ontology#vocabulary/event_kind>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Event kind"@en, "事件类型"@zh-cn ;
+  owl:versionInfo "2.2.0" .
+
+<https://openaiwill.com/ontology#vocabulary/event_kind/product_launch>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_kind> ;
+  skos:notation "product_launch" ;
+  skos:prefLabel "Product launch"@en, "产品首发"@zh-cn ;
+  skos:definition "A product, model or service that did not previously exist publicly is announced for the first time."@en, "一个此前不存在公开版本的产品、模型或服务首次对外公布。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_kind/version_release>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_kind> ;
+  skos:notation "version_release" ;
+  skos:prefLabel "Version release"@en, "版本发布"@zh-cn ;
+  skos:definition "A new version of an existing product line is released."@en, "已有产品线发布新版本。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_kind/availability_change>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_kind> ;
+  skos:notation "availability_change" ;
+  skos:prefLabel "Availability change"@en, "可获得性变更"@zh-cn ;
+  skos:definition "Who can use an already-released product, or where, changes: regions, platforms, eligibility, waitlist, preview-to-GA."@en, "已发布产品的可获得范围改变：地区、平台、资格、等待名单、预览转正式。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_kind/capability_update>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_kind> ;
+  skos:notation "capability_update" ;
+  skos:prefLabel "Capability update"@en, "能力更新"@zh-cn ;
+  skos:definition "An existing product gains, improves or removes a function without a new version identifier."@en, "已有产品新增、改进或移除功能，但未标注新版本。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_kind/pricing_change>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_kind> ;
+  skos:notation "pricing_change" ;
+  skos:prefLabel "Pricing change"@en, "价格变更"@zh-cn ;
+  skos:definition "Price, quota, free tier or billing model changes."@en, "价格、配额、免费额度或计费方式变更。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_kind/benchmark_result>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_kind> ;
+  skos:notation "benchmark_result" ;
+  skos:prefLabel "Benchmark result"@en, "基准结果"@zh-cn ;
+  skos:definition "A reproducible quantitative test result with a named benchmark and a number or rank."@en, "具名基准上的可复现量化结果，带数值或排名。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_kind/third_party_recognition>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_kind> ;
+  skos:notation "third_party_recognition" ;
+  skos:prefLabel "Third-party recognition"@en, "第三方评级"@zh-cn ;
+  skos:definition "A rating, quadrant placement, ranking or award issued by an outside institution, not based on a reproducible quantitative test."@en, "由外部机构给出的评级、象限、榜单或奖项，不基于可复现的量化测试。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_kind/production_adoption>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_kind> ;
+  skos:notation "production_adoption" ;
+  skos:prefLabel "Production adoption"@en, "生产采用"@zh-cn ;
+  skos:definition "A named adopting organization reports the technology running in its real business operations."@en, "具名采用方报告该技术已在其真实业务中运行。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_kind/partnership>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_kind> ;
+  skos:notation "partnership" ;
+  skos:prefLabel "Partnership"@en, "合作"@zh-cn ;
+  skos:definition "Two or more organizations announce a cooperation, integration or commercial agreement."@en, "两个及以上组织宣布合作、集成或商业协议。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_kind/research_result>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_kind> ;
+  skos:notation "research_result" ;
+  skos:prefLabel "Research result"@en, "研究成果"@zh-cn ;
+  skos:definition "A paper, technical report or method disclosure not tied to a shippable product."@en, "论文、技术报告或方法披露，不直接对应可用产品。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_kind/deprecation>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_kind> ;
+  skos:notation "deprecation" ;
+  skos:prefLabel "Deprecation"@en, "停用"@zh-cn ;
+  skos:definition "A product, model or interface is retired or given a retirement schedule."@en, "产品、模型或接口停止提供，或公布退役时间表。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_kind/personnel>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_kind> ;
+  skos:notation "personnel" ;
+  skos:prefLabel "Personnel"@en, "人事"@zh-cn ;
+  skos:definition "A person joins, leaves or changes role at an organization."@en, "人员加入、离开或职务变更。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_kind/event_announcement>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_kind> ;
+  skos:notation "event_announcement" ;
+  skos:prefLabel "Event announcement"@en, "活动公告"@zh-cn ;
+  skos:definition "A conference, livestream, contest, hackathon or community gathering is announced, scheduled or held."@en, "会议、直播、比赛、黑客松或社区活动的公布、排期或举办。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_kind/incident>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_kind> ;
+  skos:notation "incident" ;
+  skos:prefLabel "Incident"@en, "事故"@zh-cn ;
+  skos:definition "A service outage, failure, degradation or security incident, and its resolution."@en, "服务中断、故障、降级或安全事件，及其恢复。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_kind/policy_statement>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_kind> ;
+  skos:notation "policy_statement" ;
+  skos:prefLabel "Policy statement"@en, "立场声明"@zh-cn ;
+  skos:definition "An organization states a position or publishes rules on governance, safety, disclosure or acceptable use."@en, "组织就治理、安全、披露或使用规则表明立场或发布规范。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_kind/usage_report>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_kind> ;
+  skos:notation "usage_report" ;
+  skos:prefLabel "Usage report"@en, "使用实录"@zh-cn ;
+  skos:definition "A named person or organization describes using an AI product to carry out a concrete piece of work, and says what came out."@en, "具名的人或机构讲述用 AI 产品完成了一件具体的事，并说明结果。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_kind/independent_evaluation>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_kind> ;
+  skos:notation "independent_evaluation" ;
+  skos:prefLabel "Independent evaluation"@en, "独立测评"@zh-cn ;
+  skos:definition "Someone other than the maker tests or measures an AI product and reports what they found."@en, "出品方以外的人测试或测量 AI 产品，并报告结果。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_kind/failure_report>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_kind> ;
+  skos:notation "failure_report" ;
+  skos:prefLabel "Failure report"@en, "失败报告"@zh-cn ;
+  skos:definition "Someone reports an AI product failing at, or being unable to do, a concrete piece of work."@en, "有人报告 AI 产品在一件具体的事上失败或做不到。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_kind/market_measurement>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_kind> ;
+  skos:notation "market_measurement" ;
+  skos:prefLabel "Market measurement"@en, "市场测量"@zh-cn ;
+  skos:definition "A third party publishes its own measurement of how AI is taken up or what it does to work: how many people or companies use or pay for AI, what they spend on it, how AI products rank by use, or what happened to employment or hiring in a named occupation or industry as AI spread."@en, "第三方发布自己对 AI 被采用的程度或它对工作的影响的测量：多少人或公司在使用 AI、为它付费，在它上面花了多少，AI 产品按使用量的排名，或在 AI 扩散的过程中某个具名职业或行业的就业、招聘发生了什么。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/evidence_tier>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Evidence tier"@en, "证据层级"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/evidence_tier/T1>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/evidence_tier> ;
+  skos:notation "T1" ;
+  skos:prefLabel "第三方基准或他方生产采用"@zh-cn, "Third-party result or others' production use"@en ;
+  skos:definition "由与发布方无隶属关系的一方给出的可核验结果，或采用方自己确认的生产使用。当发布方本身就是采用方（不是厂商）时，以本层为准而不是 T3——采用方说自己在用，与厂商说自己的产品好，是两种不同的陈述。"@zh-cn, "A checkable result produced by a party with no affiliation to the publisher, or an adopting organisation confirming its own production use. When the publisher IS the adopter rather than the vendor, this tier applies rather than T3: an adopter saying it depends on something is a different statement from a vendor saying its product is good."@en .
+
+<https://openaiwill.com/ontology#vocabulary/evidence_tier/T2>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/evidence_tier> ;
+  skos:notation "T2" ;
+  skos:prefLabel "多方独立佐证"@zh-cn, "Independently corroborated"@en ;
+  skos:definition "两个及以上互相独立的来源分别描述同一事实。同集团的两个账号不算两方，同一全文被不同账号转述也不算。"@zh-cn, "Two or more mutually independent sources describe the same fact. Two accounts of the same group are not two parties, and the same text restated by different accounts is not corroboration."@en .
+
+<https://openaiwill.com/ontology#vocabulary/evidence_tier/T3>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/evidence_tier> ;
+  skos:notation "T3" ;
+  skos:prefLabel "厂商自证"@zh-cn, "Vendor self-report"@en ;
+  skos:definition "发布方自己的官方声明、文档或数据。指厂商谈自己的产品；若发布方是采用方在谈自己的使用，属 T1。"@zh-cn, "The publisher's own statement, documentation or self-reported numbers. This means a vendor talking about its own product; a publisher describing its own USE of someone else's product is T1."@en .
+
+<https://openaiwill.com/ontology#vocabulary/evidence_tier/T4>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/evidence_tier> ;
+  skos:notation "T4" ;
+  skos:prefLabel "营销宣称或匿名自述"@zh-cn, "Marketing claim or anonymous account"@en ;
+  skos:definition "无法追溯到具体主体或无法复核的陈述。"@zh-cn, "A statement that cannot be traced to a responsible party or re-checked."@en .
+
+<https://openaiwill.com/ontology#vocabulary/activity_level>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Activity level"@en, "活动层级"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/activity_level/0>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/activity_level> ;
+  skos:notation "0" ;
+  skos:prefLabel "A person does it all"@en, "人自己做"@zh-cn ;
+  skos:definition "AI takes no part in this work."@en, "AI 不参与这项工作。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/activity_level/1>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/activity_level> ;
+  skos:notation "1" ;
+  skos:prefLabel "AI helps, a person does it"@en, "AI 打下手，人自己做"@zh-cn ;
+  skos:definition "AI helps in places; a person does the whole delivery."@en, "AI 在局部帮忙，交付整体由人完成。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/activity_level/2>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/activity_level> ;
+  skos:notation "2" ;
+  skos:prefLabel "AI drafts, a person fixes each"@en, "AI 出初稿，人逐件改"@zh-cn ;
+  skos:definition "AI produces the bulk; a person reviews and corrects every item."@en, "AI 产出主体内容，人逐件复核并修正。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/activity_level/3>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/activity_level> ;
+  skos:notation "3" ;
+  skos:prefLabel "AI finishes, a person spot-checks"@en, "AI 做完，人抽查"@zh-cn ;
+  skos:definition "AI completes it; a person spot-checks rather than reviews each one."@en, "AI 独立做完，人抽查而不是逐件复核。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/activity_level/4>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/activity_level> ;
+  skos:notation "4" ;
+  skos:prefLabel "No person, within a set scope"@en, "限定场景里不用人"@zh-cn ;
+  skos:definition "AI delivers alone inside a defined scope, running in real business."@en, "AI 在限定范围内独立交付，且已在真实业务中运行。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/activity_level/5>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/activity_level> ;
+  skos:notation "5" ;
+  skos:prefLabel "No person, anywhere"@en, "任何场景都不用人"@zh-cn ;
+  skos:definition "AI delivers alone in any setting, with no defined scope limiting it."@en, "AI 在任何场景下独立交付，没有限定范围兜底。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/autonomy_stage>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Autonomy stage"@en, "自主阶段"@zh-cn ;
+  owl:deprecated true .
+
+<https://openaiwill.com/ontology#vocabulary/autonomy_stage/0>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/autonomy_stage> ;
+  skos:notation "0" ;
+  skos:prefLabel "无"@zh-cn, "None"@en ;
+  skos:definition "AI 不参与这项工作。"@zh-cn, "AI takes no part in this work."@en .
+
+<https://openaiwill.com/ontology#vocabulary/autonomy_stage/1>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/autonomy_stage> ;
+  skos:notation "1" ;
+  skos:prefLabel "辅助"@zh-cn, "Assisting"@en ;
+  skos:definition "AI 提供片段性帮助，人完成全部交付。"@zh-cn, "AI helps in pieces; a person produces the whole deliverable."@en .
+
+<https://openaiwill.com/ontology#vocabulary/autonomy_stage/2>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/autonomy_stage> ;
+  skos:notation "2" ;
+  skos:prefLabel "有人监督"@zh-cn, "Supervised"@en ;
+  skos:definition "AI 产出主要内容，人逐项审查并修正。"@zh-cn, "AI produces the substance; a person reviews and corrects every item."@en .
+
+<https://openaiwill.com/ontology#vocabulary/autonomy_stage/3>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/autonomy_stage> ;
+  skos:notation "3" ;
+  skos:prefLabel "自主试点"@zh-cn, "Autonomous pilot"@en ;
+  skos:definition "AI 独立完成，人抽检；限定范围内已在真实业务中运行。"@zh-cn, "AI completes the work independently and a person spot-checks; running in real operations within a bounded scope."@en .
+
+<https://openaiwill.com/ontology#vocabulary/autonomy_stage/4>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/autonomy_stage> ;
+  skos:notation "4" ;
+  skos:prefLabel "自主生产"@zh-cn, "Autonomous production"@en ;
+  skos:definition "AI 独立完成并交付，人只提目标与验收。"@zh-cn, "AI completes and delivers independently; a person only sets the goal and accepts the result."@en .
+
+<https://openaiwill.com/ontology#vocabulary/person_event_role>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Role of a person in an event"@en, "人物在事件中的角色"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/person_event_role/announcer>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/person_event_role> ;
+  skos:notation "announcer" ;
+  skos:prefLabel "官方宣布者"@zh-cn, "Official announcer"@en ;
+  skos:definition "Speaking for the publishing organisation."@en .
+
+<https://openaiwill.com/ontology#vocabulary/person_event_role/spokesperson>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/person_event_role> ;
+  skos:notation "spokesperson" ;
+  skos:prefLabel "发言人"@zh-cn, "Spokesperson"@en ;
+  skos:definition "Speaking on the organisation's behalf."@en .
+
+<https://openaiwill.com/ontology#vocabulary/person_event_role/researcher>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/person_event_role> ;
+  skos:notation "researcher" ;
+  skos:prefLabel "研究者"@zh-cn, "Researcher"@en ;
+  skos:definition "Reporting their own work at the publishing organisation."@en .
+
+<https://openaiwill.com/ontology#vocabulary/person_event_role/third_party_evaluator>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/person_event_role> ;
+  skos:notation "third_party_evaluator" ;
+  skos:prefLabel "第三方评测方"@zh-cn, "Third-party evaluator"@en ;
+  skos:definition "Testing something they did not build."@en .
+
+<https://openaiwill.com/ontology#vocabulary/person_event_role/adopter_engineer>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/person_event_role> ;
+  skos:notation "adopter_engineer" ;
+  skos:prefLabel "采用方技术负责人"@zh-cn, "Adopter's engineer"@en ;
+  skos:definition "Reporting how their own organisation uses it."@en .
+
+<https://openaiwill.com/ontology#vocabulary/person_event_role/community_self_report>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/person_event_role> ;
+  skos:notation "community_self_report" ;
+  skos:prefLabel "社区自述"@zh-cn, "Community self-report"@en ;
+  skos:definition "An account that cannot be traced to a responsible party."@en .
+
+<https://openaiwill.com/ontology#vocabulary/org_affiliation_role>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Role of a person in an organization"@en, "人物任职角色"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/org_affiliation_role/executive>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/org_affiliation_role> ;
+  skos:notation "executive" ;
+  skos:prefLabel "高管"@zh-cn, "Executive"@en ;
+  skos:definition "Holds decision authority in the organisation."@en .
+
+<https://openaiwill.com/ontology#vocabulary/org_affiliation_role/board_member>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/org_affiliation_role> ;
+  skos:notation "board_member" ;
+  skos:prefLabel "董事会成员"@zh-cn, "Board member"@en ;
+  skos:definition "Sits on the governing body."@en .
+
+<https://openaiwill.com/ontology#vocabulary/org_affiliation_role/researcher>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/org_affiliation_role> ;
+  skos:notation "researcher" ;
+  skos:prefLabel "研究人员"@zh-cn, "Researcher"@en ;
+  skos:definition "Does research at the organisation."@en .
+
+<https://openaiwill.com/ontology#vocabulary/org_affiliation_role/engineer>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/org_affiliation_role> ;
+  skos:notation "engineer" ;
+  skos:prefLabel "工程人员"@zh-cn, "Engineer"@en ;
+  skos:definition "Builds or operates the organisation's systems."@en .
+
+<https://openaiwill.com/ontology#vocabulary/org_affiliation_role/communications>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/org_affiliation_role> ;
+  skos:notation "communications" ;
+  skos:prefLabel "传播与公关"@zh-cn, "Communications"@en ;
+  skos:definition "Speaks publicly for the organisation."@en .
+
+<https://openaiwill.com/ontology#vocabulary/org_affiliation_role/unknown>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/org_affiliation_role> ;
+  skos:notation "unknown" ;
+  skos:prefLabel "未知"@zh-cn, "Unknown"@en ;
+  skos:definition "The role is not established. Not a claim that there is none."@en .
+
+<https://openaiwill.com/ontology#vocabulary/gate_type>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Gate type"@en, "闸门类型"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/gate_type/regulatory>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/gate_type> ;
+  skos:notation "regulatory" ;
+  skos:prefLabel "法规"@zh-cn, "Regulatory"@en ;
+  skos:definition "法律或行业规章要求。"@zh-cn, "A law or regulation requires it be done a particular way, or by a particular kind of party."@en .
+
+<https://openaiwill.com/ontology#vocabulary/gate_type/liability>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/gate_type> ;
+  skos:notation "liability" ;
+  skos:prefLabel "责任归属"@zh-cn, "Liability"@en ;
+  skos:definition "出错时须由可追责的人或机构承担。"@zh-cn, "Someone must be answerable for the outcome, so an organisation assigns an accountable person."@en .
+
+<https://openaiwill.com/ontology#vocabulary/gate_type/human_authority>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/gate_type> ;
+  skos:notation "human_authority" ;
+  skos:prefLabel "人的授权"@zh-cn, "Human authority"@en ;
+  skos:definition "须由具备资格的人签字、批准或确认。"@zh-cn, "A person holding a specific authorisation must decide or sign."@en .
+
+<https://openaiwill.com/ontology#vocabulary/gate_type/physical_presence>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/gate_type> ;
+  skos:notation "physical_presence" ;
+  skos:prefLabel "物理在场"@zh-cn, "Physical presence"@en ;
+  skos:definition "须在现场进行物理操作。"@zh-cn, "The work requires being somewhere and acting on the physical world."@en .
+
+<https://openaiwill.com/ontology#vocabulary/gate_type/data_access>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/gate_type> ;
+  skos:notation "data_access" ;
+  skos:prefLabel "数据获取"@zh-cn, "Data access"@en ;
+  skos:definition "所需数据不可得或不可用。"@zh-cn, "The information needed is not available to an automated system."@en .
+
+<https://openaiwill.com/ontology#vocabulary/relation_method>
+  a skos:ConceptScheme ;
+  skos:prefLabel "How a relation was established"@en, "关系的产生方式"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/relation_method/source_id>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/relation_method> ;
+  skos:notation "source_id" ;
+  skos:prefLabel "来源自带"@zh-cn, "From the source"@en ;
+  skos:definition "直接来自外部来源的结构，不含本项目判断。"@zh-cn, "The relation comes from the source data's own structure."@en .
+
+<https://openaiwill.com/ontology#vocabulary/relation_method/ai_proposed>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/relation_method> ;
+  skos:notation "ai_proposed" ;
+  skos:prefLabel "AI 提议"@zh-cn, "Machine-proposed"@en ;
+  skos:definition "由模型提出，未经人工确认。"@zh-cn, "A model proposed it. It stays a candidate until a person confirms it."@en .
+
+<https://openaiwill.com/ontology#vocabulary/relation_method/reviewed>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/relation_method> ;
+  skos:notation "reviewed" ;
+  skos:prefLabel "已审阅"@zh-cn, "Reviewed"@en ;
+  skos:definition "经人逐条确认。"@zh-cn, "A named person confirmed it, at a recorded time."@en .
+
+<https://openaiwill.com/ontology#vocabulary/relation_status>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Relation status"@en, "关系状态"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/relation_status/source_reference>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/relation_status> ;
+  skos:notation "source_reference" ;
+  skos:prefLabel "来源引用"@zh-cn, "Source reference"@en ;
+  skos:definition "Carried over from the source; not a judgement of ours."@en .
+
+<https://openaiwill.com/ontology#vocabulary/relation_status/candidate>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/relation_status> ;
+  skos:notation "candidate" ;
+  skos:prefLabel "候选"@zh-cn, "Candidate"@en ;
+  skos:definition "Proposed and not yet reviewed. Must not enter a calculation."@en .
+
+<https://openaiwill.com/ontology#vocabulary/relation_status/reviewed>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/relation_status> ;
+  skos:notation "reviewed" ;
+  skos:prefLabel "已审阅"@zh-cn, "Reviewed"@en ;
+  skos:definition "Confirmed by a person."@en .
+
+<https://openaiwill.com/ontology#vocabulary/relation_status/rejected>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/relation_status> ;
+  skos:notation "rejected" ;
+  skos:prefLabel "已否决"@zh-cn, "Rejected"@en ;
+  skos:definition "A person declined it. Kept so it is not proposed again as if unseen."@en .
+
+<https://openaiwill.com/ontology#vocabulary/lifecycle>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Concept lifecycle"@en, "概念生命周期"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/lifecycle/active>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/lifecycle> ;
+  skos:notation "active" ;
+  skos:prefLabel "在用"@zh-cn, "Active"@en ;
+  skos:definition "In use."@en .
+
+<https://openaiwill.com/ontology#vocabulary/lifecycle/deprecated>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/lifecycle> ;
+  skos:notation "deprecated" ;
+  skos:prefLabel "已停用"@zh-cn, "Deprecated"@en ;
+  skos:definition "Retired. Must name a replacement or say why it is obsolete; its id is never reused."@en .
+
+<https://openaiwill.com/ontology#vocabulary/judge>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Judge"@en, "判断者"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/judge/deepseek>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/judge> ;
+  skos:notation "deepseek" ;
+  skos:prefLabel "DeepSeek batch judge"@en, "DeepSeek 批量判断"@zh-cn ;
+  skos:definition "A general chat model answering the same question, for comparison."@en .
+
+<https://openaiwill.com/ontology#vocabulary/judge/typesafe>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/judge> ;
+  skos:notation "typesafe" ;
+  skos:prefLabel "TypeSafe typed judge"@en, "TypeSafe 类型化判断"@zh-cn ;
+  skos:definition "A typed-judgment service returning a calibrated decision rather than text."@en .
+
+<https://openaiwill.com/ontology#vocabulary/judge/interactive_review>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/judge> ;
+  skos:notation "interactive_review" ;
+  skos:prefLabel "Interactive review"@en, "评审对话"@zh-cn ;
+  skos:definition "在与人的评审对话中由模型提出、当场附上依据原文的边。与批量判断同属 ai_proposed，同样必须经人工确认才能改为 reviewed。"@zh-cn, "Proposed by a model during a review conversation with a person, with its source text attached. Still machine-proposed: it needs confirming like any other."@en .
+
+<https://openaiwill.com/ontology#vocabulary/judgment_task>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Judgment task"@en, "判断任务"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/judgment_task/requires>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/judgment_task> ;
+  skos:notation "requires" ;
+  skos:prefLabel "Work requires capability"@en, "工作需要能力"@zh-cn ;
+  skos:definition "Does completing this work autonomously require this capability?"@en .
+
+<https://openaiwill.com/ontology#vocabulary/judgment_task/blocked_by>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/judgment_task> ;
+  skos:notation "blocked_by" ;
+  skos:prefLabel "Work blocked by gate"@en, "工作受阻于闸门"@zh-cn ;
+  skos:definition "Does this gate stop this work even when the capabilities are met?"@en .
+
+<https://openaiwill.com/ontology#vocabulary/judgment_task/demonstrates>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/judgment_task> ;
+  skos:notation "demonstrates" ;
+  skos:prefLabel "Event demonstrates capability"@en, "事件佐证能力"@zh-cn ;
+  skos:definition "What does this event show about this capability, and how strongly?"@en .
+
+<https://openaiwill.com/ontology#vocabulary/judgment_task/event_kind>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/judgment_task> ;
+  skos:notation "event_kind" ;
+  skos:prefLabel "Event kind classification"@en, "事件类型判定"@zh-cn ;
+  skos:definition "Which controlled kind is this event?"@en .
+
+<https://openaiwill.com/ontology#vocabulary/judgment_task/gate_state>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/judgment_task> ;
+  skos:notation "gate_state" ;
+  skos:prefLabel "Gate state"@en, "闸门状态"@zh-cn ;
+  skos:definition "Has any published statement moved this blocking condition?"@en, "有没有已发布的声明移动了这个阻塞条件？"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/judgment_task/serves_market>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/judgment_task> ;
+  skos:notation "serves_market" ;
+  skos:prefLabel "Serves market"@en, "服务于该赛道"@zh-cn ;
+  skos:definition "这个职业是否在做该赛道所描述的活。用来把赛道接到职业的任务上——赛道自己那 614 个工作节点与职业任务零重叠，没有这条映射赛道就没有分母。"@zh-cn, "Whether an occupation does the work a market describes. It is the bridge that gives a market a denominator: the market side's own work items do not overlap the occupation tasks at all."@en .
+
+<https://openaiwill.com/ontology#vocabulary/judgment_task/verification>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/judgment_task> ;
+  skos:notation "verification" ;
+  skos:prefLabel "第三方验证"@zh-cn, "Third-party verification"@en ;
+  skos:definition "名单帖子是否独立证实了一条被证据层级压低的厂商声明。"@zh-cn, "Whether a panel post independently confirms a vendor claim that was held down by its evidence tier."@en .
+
+<https://openaiwill.com/ontology#vocabulary/judgment_task/model_identification>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/judgment_task> ;
+  skos:notation "model_identification" ;
+  skos:prefLabel "Models an update names"@en, "更新提到的模型"@zh-cn ;
+  skos:definition "Which AI models does this update name, and in what role?"@en .
+
+<https://openaiwill.com/ontology#vocabulary/panel_role>
+  a skos:ConceptScheme ;
+  skos:prefLabel "名单角色"@zh-cn, "Panel role"@en .
+
+<https://openaiwill.com/ontology#vocabulary/panel_role/evaluator>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/panel_role> ;
+  skos:notation "evaluator" ;
+  skos:prefLabel "评测者"@zh-cn, "Evaluator"@en ;
+  skos:definition "独立评测机构或其成员，发布自己跑出的评测结果。"@zh-cn, "An independent evaluation organisation or its staff, publishing results they ran."@en .
+
+<https://openaiwill.com/ontology#vocabulary/panel_role/practitioner>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/panel_role> ;
+  skos:notation "practitioner" ;
+  skos:prefLabel "实测者"@zh-cn, "Practitioner"@en ;
+  skos:definition "亲手使用新模型或工具并公布具体结果的人。"@zh-cn, "Someone who uses new models or tools themselves and publishes concrete results."@en .
+
+<https://openaiwill.com/ontology#vocabulary/panel_role/adopter>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/panel_role> ;
+  skos:notation "adopter" ;
+  skos:prefLabel "采用方"@zh-cn, "Adopter"@en ;
+  skos:definition "非模型厂商的机构负责人或工程团队，谈本机构在生产中的使用。"@zh-cn, "A leader or engineering team at an organisation that is not a model vendor, describing its own production use."@en .
+
+<https://openaiwill.com/ontology#vocabulary/panel_role/researcher>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/panel_role> ;
+  skos:notation "researcher" ;
+  skos:prefLabel "研究者"@zh-cn, "Researcher"@en ;
+  skos:definition "以实验或研究为依据评估能力的学者或独立研究者。"@zh-cn, "An academic or independent researcher assessing capability from experiments or research."@en .
+
+<https://openaiwill.com/ontology#vocabulary/panel_role/commentator>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/panel_role> ;
+  skos:notation "commentator" ;
+  skos:prefLabel "评论者"@zh-cn, "Commentator"@en ;
+  skos:definition "发表观点，不提供可核对的依据。"@zh-cn, "Publishes opinions without checkable evidence."@en .
+
+<https://openaiwill.com/ontology#vocabulary/panel_role/executive>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/panel_role> ;
+  skos:notation "executive" ;
+  skos:prefLabel "高管"@zh-cn, "Executive"@en ;
+  skos:definition "AI 公司的负责人；谈自家产品属于厂商自证。"@zh-cn, "A leader at an AI company; about its own products this is a vendor claim."@en .
+
+<https://openaiwill.com/ontology#vocabulary/panel_role/lab_insider>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/panel_role> ;
+  skos:notation "lab_insider" ;
+  skos:prefLabel "实验室内部人"@zh-cn, "Lab insider"@en ;
+  skos:definition "在模型厂商任职的研究员或产品人员；谈自家产品属于厂商自证。"@zh-cn, "A researcher or product person employed by a model vendor; about its own products this is a vendor claim."@en .
+
+<https://openaiwill.com/ontology#vocabulary/panel_role/relay>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/panel_role> ;
+  skos:notation "relay" ;
+  skos:prefLabel "资讯转发"@zh-cn, "Relay"@en ;
+  skos:definition "主要转发他人公告；转述不是证据。"@zh-cn, "Mainly reposts others' announcements; restating is not evidence."@en .
+
+<https://openaiwill.com/ontology#vocabulary/panel_role/official>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/panel_role> ;
+  skos:notation "official" ;
+  skos:prefLabel "官方账号"@zh-cn, "Official account"@en ;
+  skos:definition "机构自己运营的公司、产品、平台或研究部门账号；谈本机构属于厂商自证。"@zh-cn, "An account an organisation runs for itself, a product, platform or research unit; about that organisation this is a vendor claim."@en .
+
+<https://openaiwill.com/ontology#vocabulary/panel_role/market_researcher>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/panel_role> ;
+  skos:notation "market_researcher" ;
+  skos:prefLabel "Market and labour researcher"@en, "市场与行业研究"@zh-cn ;
+  skos:definition "A third-party institution or its staff - an investor, a consultancy, a data firm, a public body or a think tank - publishing its own measurements of markets, adoption or work. About a company it has put money into, it is not independent."@en, "第三方机构或其成员：投资机构、咨询公司、数据公司、公共机构或智库，发布自己对市场、采用情况或工作的测量。对它投资的公司，它不算独立。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/panel_role/unclassified>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/panel_role> ;
+  skos:notation "unclassified" ;
+  skos:prefLabel "Unclassified"@en, "未分类"@zh-cn ;
+  skos:definition "Found by search as the author of a post that made an update; nobody has yet said what the account posts about."@en, "由搜索发现、其帖子产生了更新的账号；还没有人说明它发什么。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/panel_state>
+  a skos:ConceptScheme ;
+  skos:prefLabel "名单状态"@zh-cn, "Panel state"@en .
+
+<https://openaiwill.com/ontology#vocabulary/panel_state/candidate>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/panel_state> ;
+  skos:notation "candidate" ;
+  skos:prefLabel "候选"@zh-cn, "Candidate"@en ;
+  skos:definition "已收录，身份尚未确认。"@zh-cn, "Listed; identity not yet confirmed."@en .
+
+<https://openaiwill.com/ontology#vocabulary/panel_state/identity_confirmed>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/panel_state> ;
+  skos:notation "identity_confirmed" ;
+  skos:prefLabel "身份已确认"@zh-cn, "Identity confirmed"@en ;
+  skos:definition "平台稳定 ID 已解析，且有一手或本人简介依据。"@zh-cn, "Platform ID resolved and backed by first-party or own-bio evidence."@en .
+
+<https://openaiwill.com/ontology#vocabulary/panel_state/enabled>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/panel_state> ;
+  skos:notation "enabled" ;
+  skos:prefLabel "启用"@zh-cn, "Enabled"@en ;
+  skos:definition "满足启用条件，帖子进入采集与判定。"@zh-cn, "Meets the enabling conditions; its posts are collected and judged."@en .
+
+<https://openaiwill.com/ontology#vocabulary/panel_state/suspended>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/panel_state> ;
+  skos:notation "suspended" ;
+  skos:prefLabel "暂停"@zh-cn, "Suspended"@en ;
+  skos:definition "启用条件暂时不满足，条件恢复后自动启用。"@zh-cn, "An enabling condition currently fails; re-enabled automatically when it holds again."@en .
+
+<https://openaiwill.com/ontology#vocabulary/panel_state/retired>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/panel_state> ;
+  skos:notation "retired" ;
+  skos:prefLabel "退出"@zh-cn, "Retired"@en ;
+  skos:definition "账号注销或连续两次复核失败。"@zh-cn, "Account gone, or two consecutive re-checks failed."@en .
+
+<https://openaiwill.com/ontology#vocabulary/affiliation_relation>
+  a skos:ConceptScheme ;
+  skos:prefLabel "机构关系"@zh-cn, "Affiliation relation"@en .
+
+<https://openaiwill.com/ontology#vocabulary/affiliation_relation/employee>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/affiliation_relation> ;
+  skos:notation "employee" ;
+  skos:prefLabel "雇员"@zh-cn, "Employee"@en ;
+  skos:definition "在该机构任职。"@zh-cn, "Works for the organisation."@en .
+
+<https://openaiwill.com/ontology#vocabulary/affiliation_relation/founder>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/affiliation_relation> ;
+  skos:notation "founder" ;
+  skos:prefLabel "创始人"@zh-cn, "Founder"@en ;
+  skos:definition "创立或共同创立该机构。"@zh-cn, "Founded or co-founded the organisation."@en .
+
+<https://openaiwill.com/ontology#vocabulary/affiliation_relation/investor>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/affiliation_relation> ;
+  skos:notation "investor" ;
+  skos:prefLabel "投资人"@zh-cn, "Investor"@en ;
+  skos:definition "持有该机构的股份或投资。"@zh-cn, "Holds equity or an investment in the organisation."@en .
+
+<https://openaiwill.com/ontology#vocabulary/affiliation_relation/advisor>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/affiliation_relation> ;
+  skos:notation "advisor" ;
+  skos:prefLabel "顾问"@zh-cn, "Advisor"@en ;
+  skos:definition "为该机构担任顾问。"@zh-cn, "Advises the organisation."@en .
+
+<https://openaiwill.com/ontology#vocabulary/affiliation_relation/partner>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/affiliation_relation> ;
+  skos:notation "partner" ;
+  skos:prefLabel "合作方"@zh-cn, "Partner"@en ;
+  skos:definition "与该机构有付费或正式合作。"@zh-cn, "Has a paid or formal partnership with the organisation."@en .
+
+<https://openaiwill.com/ontology#vocabulary/affiliation_relation/academic>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/affiliation_relation> ;
+  skos:notation "academic" ;
+  skos:prefLabel "学术关系"@zh-cn, "Academic"@en ;
+  skos:definition "在该机构从事学术工作。大学不是模型厂商，但大学自有模型时同样不独立。"@zh-cn, "Holds an academic post there. Universities are not model vendors, but are not independent of their own models."@en .
+
+<https://openaiwill.com/ontology#vocabulary/affiliation_relation/former>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/affiliation_relation> ;
+  skos:notation "former" ;
+  skos:prefLabel "前任"@zh-cn, "Former"@en ;
+  skos:definition "曾经任职，现已离开。结束日期之后不影响独立性。"@zh-cn, "Used to be affiliated and has left. Does not affect independence after the end date."@en .
+
+<https://openaiwill.com/ontology#vocabulary/account_check_kind>
+  a skos:ConceptScheme ;
+  skos:prefLabel "账号检查类型"@zh-cn, "Account check kind"@en .
+
+<https://openaiwill.com/ontology#vocabulary/account_check_kind/identity>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/account_check_kind> ;
+  skos:notation "identity" ;
+  skos:prefLabel "身份"@zh-cn, "Identity"@en ;
+  skos:definition "确认 handle 属于该人物或机构，并记录依据等级。"@zh-cn, "Confirms the handle belongs to the person or organisation, with the grade of evidence."@en .
+
+<https://openaiwill.com/ontology#vocabulary/account_check_kind/platform_id>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/account_check_kind> ;
+  skos:notation "platform_id" ;
+  skos:prefLabel "平台 ID"@zh-cn, "Platform ID"@en ;
+  skos:definition "解析账号在平台上的稳定 ID。"@zh-cn, "Resolves the account's stable platform ID."@en .
+
+<https://openaiwill.com/ontology#vocabulary/account_check_kind/affiliation>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/account_check_kind> ;
+  skos:notation "affiliation" ;
+  skos:prefLabel "任职"@zh-cn, "Affiliation"@en ;
+  skos:definition "核对当前的机构关系。"@zh-cn, "Checks current affiliations."@en .
+
+<https://openaiwill.com/ontology#vocabulary/account_check_kind/activity>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/account_check_kind> ;
+  skos:notation "activity" ;
+  skos:prefLabel "活跃度"@zh-cn, "Activity"@en ;
+  skos:definition "记录最近一次发帖时间。"@zh-cn, "Records the most recent post time."@en .
+
+<https://openaiwill.com/ontology#vocabulary/account_check_kind/profile>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/account_check_kind> ;
+  skos:notation "profile" ;
+  skos:prefLabel "资料"@zh-cn, "Profile"@en ;
+  skos:definition "账号公开资料的快照：显示名、简介、粉丝数等。简介变化会把任职送回复核。"@zh-cn, "A snapshot of the public profile: name, bio, counts. A changed bio sends the affiliation back for review."@en .
+
+<https://openaiwill.com/ontology#vocabulary/identity_evidence_grade>
+  a skos:ConceptScheme ;
+  skos:prefLabel "身份依据等级"@zh-cn, "Identity evidence grade"@en .
+
+<https://openaiwill.com/ontology#vocabulary/identity_evidence_grade/first_party_link>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/identity_evidence_grade> ;
+  skos:notation "first_party_link" ;
+  skos:prefLabel "一手链接"@zh-cn, "First-party link"@en ;
+  skos:definition "本人或机构自己控制的页面（个人主页、GitHub、官网）链接到该账号。"@zh-cn, "A page the person or organisation controls links to the account."@en .
+
+<https://openaiwill.com/ontology#vocabulary/identity_evidence_grade/official_bio>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/identity_evidence_grade> ;
+  skos:notation "official_bio" ;
+  skos:prefLabel "本人简介"@zh-cn, "Own bio"@en ;
+  skos:definition "账号自己的简介或帖子表明身份。"@zh-cn, "The account's own bio or posts establish who it is."@en .
+
+<https://openaiwill.com/ontology#vocabulary/identity_evidence_grade/third_party_list>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/identity_evidence_grade> ;
+  skos:notation "third_party_list" ;
+  skos:prefLabel "第三方名单"@zh-cn, "Third-party list"@en ;
+  skos:definition "只出现在别人整理的名单中。"@zh-cn, "Only appears in someone else's list."@en .
+
+<https://openaiwill.com/ontology#vocabulary/identity_evidence_grade/found_by_search>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/identity_evidence_grade> ;
+  skos:notation "found_by_search" ;
+  skos:prefLabel "Found by search"@en, "搜索发现"@zh-cn ;
+  skos:definition "Seen only as the author of posts a search returned. Nothing says who is behind the account, so it cannot be enabled on this alone."@en, "只作为搜索结果里帖子的作者出现过。没有任何依据说明账号背后是谁，仅凭这一点不能启用。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/post_nature>
+  a skos:ConceptScheme ;
+  skos:prefLabel "帖子性质"@zh-cn, "Post nature"@en .
+
+<https://openaiwill.com/ontology#vocabulary/post_nature/hands_on_test>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/post_nature> ;
+  skos:notation "hands_on_test" ;
+  skos:prefLabel "亲手测试"@zh-cn, "Hands-on test"@en ;
+  skos:definition "作者自己用了该产品，并给出具体过程或结果。"@zh-cn, "The author used the product themselves and gives concrete steps or results."@en .
+
+<https://openaiwill.com/ontology#vocabulary/post_nature/independent_evaluation>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/post_nature> ;
+  skos:notation "independent_evaluation" ;
+  skos:prefLabel "独立评测"@zh-cn, "Independent evaluation"@en ;
+  skos:definition "作者或其机构运行了评测或基准，并公布结果。"@zh-cn, "The author or their organisation ran an evaluation or benchmark and published the result."@en .
+
+<https://openaiwill.com/ontology#vocabulary/post_nature/own_production_use>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/post_nature> ;
+  skos:notation "own_production_use" ;
+  skos:prefLabel "本机构生产使用"@zh-cn, "Own production use"@en ;
+  skos:definition "作者所在的非厂商机构在真实业务中使用该产品。"@zh-cn, "The author's organisation, not the vendor, uses the product in real work."@en .
+
+<https://openaiwill.com/ontology#vocabulary/post_nature/expert_assessment>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/post_nature> ;
+  skos:notation "expert_assessment" ;
+  skos:prefLabel "专家评估"@zh-cn, "Expert assessment"@en ;
+  skos:definition "有依据的评价，但不是作者亲自测试的结果。"@zh-cn, "A reasoned assessment that is not the author's own test."@en .
+
+<https://openaiwill.com/ontology#vocabulary/post_nature/opinion>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/post_nature> ;
+  skos:notation "opinion" ;
+  skos:prefLabel "观点"@zh-cn, "Opinion"@en ;
+  skos:definition "只有看法，没有可核对的依据。"@zh-cn, "A view with nothing checkable behind it."@en .
+
+<https://openaiwill.com/ontology#vocabulary/post_nature/relay>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/post_nature> ;
+  skos:notation "relay" ;
+  skos:prefLabel "转述"@zh-cn, "Relay"@en ;
+  skos:definition "转述厂商或他人的说法。"@zh-cn, "Restates the vendor's or someone else's claim."@en .
+
+<https://openaiwill.com/ontology#vocabulary/post_nature/unrelated>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/post_nature> ;
+  skos:notation "unrelated" ;
+  skos:prefLabel "无关"@zh-cn, "Unrelated"@en ;
+  skos:definition "没有谈到这项能力。"@zh-cn, "Does not address this capability."@en .
+
+<https://openaiwill.com/ontology#vocabulary/post_link>
+  a skos:ConceptScheme ;
+  skos:prefLabel "帖子与事件的关联方式"@zh-cn, "Post-to-event link"@en .
+
+<https://openaiwill.com/ontology#vocabulary/post_link/source>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/post_link> ;
+  skos:notation "source" ;
+  skos:prefLabel "原帖"@zh-cn, "Source"@en ;
+  skos:definition "事件抽取所依据的官方帖子本身。"@zh-cn, "A post the event was extracted from."@en .
+
+<https://openaiwill.com/ontology#vocabulary/post_link/reply>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/post_link> ;
+  skos:notation "reply" ;
+  skos:prefLabel "回复"@zh-cn, "Reply"@en ;
+  skos:definition "回复了已归属该事件的帖子。"@zh-cn, "Replies to a post already linked to the event."@en .
+
+<https://openaiwill.com/ontology#vocabulary/post_link/quote>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/post_link> ;
+  skos:notation "quote" ;
+  skos:prefLabel "引用"@zh-cn, "Quote"@en ;
+  skos:definition "引用了已归属该事件的帖子。"@zh-cn, "Quotes a post already linked to the event."@en .
+
+<https://openaiwill.com/ontology#vocabulary/post_link/repost>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/post_link> ;
+  skos:notation "repost" ;
+  skos:prefLabel "转发"@zh-cn, "Repost"@en ;
+  skos:definition "原样转发了已归属该事件的帖子；没有自己的内容，只算热度。"@zh-cn, "Reposts a linked post as is; carries no content of its own, so attention only."@en .
+
+<https://openaiwill.com/ontology#vocabulary/post_link/mention>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/post_link> ;
+  skos:notation "mention" ;
+  skos:prefLabel "提及"@zh-cn, "Mention"@en ;
+  skos:definition "没有上游关系，但在事件发生后 7 天内提到了产品名。"@zh-cn, "No upstream link, but names the product within 7 days of the event."@en .
+
+<https://openaiwill.com/ontology#vocabulary/post_link/attached>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/post_link> ;
+  skos:notation "attached" ;
+  skos:prefLabel "Attached"@en, "挂靠"@zh-cn ;
+  skos:definition "The extractor read the post and found it says something of substance about the event."@en, "提取时读过帖子内容，确认它就这条事件说了实质内容。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/model_level>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Model level"@en, "模型层级"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/model_level/family>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/model_level> ;
+  skos:notation "family" ;
+  skos:prefLabel "Family"@en, "系列"@zh-cn ;
+  skos:definition "A line of models under one name, with no version."@en, "同一名字下的一条模型线，不带版本。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/model_level/release>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/model_level> ;
+  skos:notation "release" ;
+  skos:prefLabel "Release"@en, "具体版本"@zh-cn ;
+  skos:definition "One released model, with its version or variant."@en, "一个具体发布的模型，带版本或变体。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/model_status>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Model status"@en, "模型状态"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/model_status/candidate>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/model_status> ;
+  skos:notation "candidate" ;
+  skos:prefLabel "Candidate"@en, "候选"@zh-cn ;
+  skos:definition "Named in an update or listed in the catalog; not yet confirmed by its maker's own release update."@en, "被某条更新提到或被目录收录，尚未被厂商自己的发布帖确认。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/model_status/confirmed>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/model_status> ;
+  skos:notation "confirmed" ;
+  skos:prefLabel "Confirmed"@en, "已确认"@zh-cn ;
+  skos:definition "The maker's own release update names it as its subject."@en, "厂商自己的发布帖以它为主体。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/model_role>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Model's role in an update"@en, "模型在更新里的角色"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/model_role/subject>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/model_role> ;
+  skos:notation "subject" ;
+  skos:prefLabel "Subject"@en, "主体"@zh-cn ;
+  skos:definition "the update releases this model or changes the model itself"@en, "这条更新发布了这个模型，或改动了模型本身"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/model_role/adopted>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/model_role> ;
+  skos:notation "adopted" ;
+  skos:prefLabel "Adopted"@en, "被采用"@zh-cn ;
+  skos:definition "someone builds on it or uses it: an integration, a customer, a demo, a contest or a piece of work made with it"@en, "有人基于它构建或使用它：集成、客户、演示、比赛，或用它做出的作品"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/model_role/distributed>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/model_role> ;
+  skos:notation "distributed" ;
+  skos:prefLabel "Distributed"@en, "被分发"@zh-cn ;
+  skos:definition "it becomes available on another platform, cloud or service"@en, "它在另一个平台、云或服务上可用了"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/model_role/compared>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/model_role> ;
+  skos:notation "compared" ;
+  skos:prefLabel "Compared"@en, "被比较"@zh-cn ;
+  skos:definition "it is named in a benchmark, ranking or comparison, including its own vendor reporting where it ranks"@en, "它出现在基准、排名或对比里，包括厂商自己报告它的名次"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/provider_kind>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Provider kind"@en, "供应商类型"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/provider_kind/first_party>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/provider_kind> ;
+  skos:notation "first_party" ;
+  skos:prefLabel "First party"@en, "官方"@zh-cn ;
+  skos:definition "The maker's own API."@en, "厂商自己的 API。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/provider_kind/cloud>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/provider_kind> ;
+  skos:notation "cloud" ;
+  skos:prefLabel "Cloud"@en, "云平台"@zh-cn ;
+  skos:definition "A platform serving several makers' models, whoever runs it."@en, "提供多家厂商模型的平台，不论由谁运营。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/modality>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Modality"@en, "模态"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/modality/text>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/modality> ;
+  skos:notation "text" ;
+  skos:prefLabel "Text"@en, "文本"@zh-cn ;
+  skos:definition "Text, including code."@en, "文本，含代码。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/modality/image>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/modality> ;
+  skos:notation "image" ;
+  skos:prefLabel "Image"@en, "图像"@zh-cn ;
+  skos:definition "Still images."@en, "静态图像。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/modality/audio>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/modality> ;
+  skos:notation "audio" ;
+  skos:prefLabel "Audio"@en, "音频"@zh-cn ;
+  skos:definition "Speech, music or other sound."@en, "语音、音乐或其他声音。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/modality/video>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/modality> ;
+  skos:notation "video" ;
+  skos:prefLabel "Video"@en, "视频"@zh-cn ;
+  skos:definition "Moving images."@en, "视频。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/concept_origin>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Concept origin"@en, "概念来源"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/concept_origin/editorial_ai>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/concept_origin> ;
+  skos:notation "editorial_ai" ;
+  skos:prefLabel "Editorial, AI-proposed"@en, "编辑目录（AI 提议）"@zh-cn ;
+  skos:definition "Written for our own market and work catalog; an AI proposal, not a reviewed fact."@en, "为我们自己的赛道与工作目录而写；是 AI 提议，未经审定。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/concept_origin/onet_projection>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/concept_origin> ;
+  skos:notation "onet_projection" ;
+  skos:prefLabel "O*NET projection"@en, "O*NET 投影"@zh-cn ;
+  skos:definition "Projected from an O*NET record; the source identity is kept."@en, "由 O*NET 记录投影而来，保留来源身份。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/translation_status>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Translation status"@en, "翻译状态"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/translation_status/ai_translated>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/translation_status> ;
+  skos:notation "ai_translated" ;
+  skos:prefLabel "AI translated"@en, "AI 翻译"@zh-cn ;
+  skos:definition "The Chinese label is an AI translation."@en, "中文名是 AI 翻译。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/translation_status/pending>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/translation_status> ;
+  skos:notation "pending" ;
+  skos:prefLabel "Pending"@en, "待翻译"@zh-cn ;
+  skos:definition "No Chinese label yet."@en, "还没有中文名。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/translation_status/source_original>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/translation_status> ;
+  skos:notation "source_original" ;
+  skos:prefLabel "Source original"@en, "原文"@zh-cn ;
+  skos:definition "The label is the source's own wording."@en, "名称是来源的原文。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/scope_status>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Scope status"@en, "范围状态"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/scope_status/starter_catalog>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/scope_status> ;
+  skos:notation "starter_catalog" ;
+  skos:prefLabel "Starter catalog"@en, "起步目录"@zh-cn ;
+  skos:definition "An editorial starter entry whose scope is not yet defined by a source."@en, "编辑起步条目，范围尚无来源定义。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/scope_status/defined>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/scope_status> ;
+  skos:notation "defined" ;
+  skos:prefLabel "Defined"@en, "已定义"@zh-cn ;
+  skos:definition "Scope is given by a source description or task statement."@en, "范围由来源的描述或任务原文给出。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/scope_status/source_missing_tasks>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/scope_status> ;
+  skos:notation "source_missing_tasks" ;
+  skos:prefLabel "Source has no tasks"@en, "来源无任务"@zh-cn ;
+  skos:definition "The source occupation carries no task statements."@en, "来源职业没有任务原文。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/definition_basis>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Definition basis"@en, "定义依据"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/definition_basis/source_occupation_description>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/definition_basis> ;
+  skos:notation "source_occupation_description" ;
+  skos:prefLabel "Source occupation description"@en, "来源职业描述"@zh-cn ;
+  skos:definition "The existing English description of the mapped O*NET occupation, copied without new interpretation."@en, "所映射 O*NET 职业的英文描述原文，不加新解释。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/definition_basis/source_task_statement>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/definition_basis> ;
+  skos:notation "source_task_statement" ;
+  skos:prefLabel "Source task statement"@en, "来源任务原文"@zh-cn ;
+  skos:definition "The existing English statement of the mapped O*NET task, copied without new interpretation."@en, "所映射 O*NET 任务的英文原文，不加新解释。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/definition_basis/editorial_scope_note>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/definition_basis> ;
+  skos:notation "editorial_scope_note" ;
+  skos:prefLabel "Editorial scope note"@en, "编辑范围说明"@zh-cn ;
+  skos:definition "An existing editorial scope note, retaining its editorial status."@en, "已有的编辑范围说明，保留其编辑身份。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/concept_view>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Browsing view"@en, "浏览视图"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/concept_view/markets>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/concept_view> ;
+  skos:notation "markets" ;
+  skos:prefLabel "Markets"@en, "赛道"@zh-cn ;
+  skos:definition "Our own market and work catalog."@en, "我们自己的赛道与工作目录。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/concept_view/occupations>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/concept_view> ;
+  skos:notation "occupations" ;
+  skos:prefLabel "Occupations"@en, "职业"@zh-cn ;
+  skos:definition "The O*NET occupation and task projection."@en, "O*NET 职业与任务投影。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/mapping_relation>
+  a skos:ConceptScheme ;
+  skos:prefLabel "External mapping relation"@en, "外部映射关系"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/mapping_relation/source_projection>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/mapping_relation> ;
+  skos:notation "source_projection" ;
+  skos:prefLabel "Source projection"@en, "来源投影"@zh-cn ;
+  skos:definition "The concept is the projection of this external record."@en, "该概念就是这条外部记录的投影。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/mapping_relation/related>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/mapping_relation> ;
+  skos:notation "related" ;
+  skos:prefLabel "Related"@en, "相关"@zh-cn ;
+  skos:definition "Related without a broader or narrower claim."@en, "相关，不断言上下位。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/mapping_relation/broader>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/mapping_relation> ;
+  skos:notation "broader" ;
+  skos:prefLabel "Broader"@en, "更宽"@zh-cn ;
+  skos:definition "The external entry is broader than the concept."@en, "外部条目比该概念更宽。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/mapping_relation/narrower>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/mapping_relation> ;
+  skos:notation "narrower" ;
+  skos:prefLabel "Narrower"@en, "更窄"@zh-cn ;
+  skos:definition "The external entry is narrower than the concept."@en, "外部条目比该概念更窄。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/mapping_relation/exact>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/mapping_relation> ;
+  skos:notation "exact" ;
+  skos:prefLabel "Exact"@en, "等同"@zh-cn ;
+  skos:definition "The two mean the same thing. An AI proposal cannot assert this."@en, "两者含义相同。AI 提议不得断言等同。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/account_owner_kind>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Account owner kind"@en, "账号归属类型"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/account_owner_kind/person>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/account_owner_kind> ;
+  skos:notation "person" ;
+  skos:prefLabel "Person"@en, "个人"@zh-cn ;
+  skos:definition "The account belongs to a person."@en, "账号属于一个人。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/account_owner_kind/organization>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/account_owner_kind> ;
+  skos:notation "organization" ;
+  skos:prefLabel "Organization"@en, "机构"@zh-cn ;
+  skos:definition "The account belongs to an organization."@en, "账号属于一个机构。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/account_owner_kind/unknown>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/account_owner_kind> ;
+  skos:notation "unknown" ;
+  skos:prefLabel "Unknown"@en, "未知"@zh-cn ;
+  skos:definition "Not yet known whether the account belongs to a person or an organization."@en, "还不知道账号属于个人还是机构。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/account_language>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Account language"@en, "账号语言"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/account_language/en>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/account_language> ;
+  skos:notation "en" ;
+  skos:prefLabel "English"@en, "英文"@zh-cn ;
+  skos:definition "Posts mainly in English."@en, "主要用英文发帖。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/account_language/zh>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/account_language> ;
+  skos:notation "zh" ;
+  skos:prefLabel "Chinese"@en, "中文"@zh-cn ;
+  skos:definition "Posts mainly in Chinese."@en, "主要用中文发帖。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/account_language/both>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/account_language> ;
+  skos:notation "both" ;
+  skos:prefLabel "Both"@en, "双语"@zh-cn ;
+  skos:definition "Posts in both."@en, "两种语言都用。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/occurrence_status>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Occurrence status"@en, "发生状态"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/occurrence_status/unknown>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/occurrence_status> ;
+  skos:notation "unknown" ;
+  skos:prefLabel "Unknown"@en, "未知"@zh-cn ;
+  skos:definition "The text does not say whether it has happened."@en, "文本没有说明是否已发生。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/occurrence_status/scheduled>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/occurrence_status> ;
+  skos:notation "scheduled" ;
+  skos:prefLabel "Scheduled"@en, "已排期"@zh-cn ;
+  skos:definition "Announced for a future time."@en, "已宣布，将在未来发生。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/occurrence_status/occurred>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/occurrence_status> ;
+  skos:notation "occurred" ;
+  skos:prefLabel "Occurred"@en, "已发生"@zh-cn ;
+  skos:definition "It has happened."@en, "已经发生。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/occurrence_status/postponed>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/occurrence_status> ;
+  skos:notation "postponed" ;
+  skos:prefLabel "Postponed"@en, "推迟"@zh-cn ;
+  skos:definition "Moved to a later time."@en, "已推迟。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/occurrence_status/cancelled>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/occurrence_status> ;
+  skos:notation "cancelled" ;
+  skos:prefLabel "Cancelled"@en, "取消"@zh-cn ;
+  skos:definition "Will not happen."@en, "已取消。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/identity_confidence>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Identity confidence"@en, "同一性置信度"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/identity_confidence/high>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/identity_confidence> ;
+  skos:notation "high" ;
+  skos:prefLabel "High"@en, "高"@zh-cn ;
+  skos:definition "The subject of the update is stated outright."@en, "更新的对象在文本里写明。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/identity_confidence/low>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/identity_confidence> ;
+  skos:notation "low" ;
+  skos:prefLabel "Low"@en, "低"@zh-cn ;
+  skos:definition "The subject had to be read from context."@en, "更新的对象要从上下文读出。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/source_role>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Source role"@en, "来源角色"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/source_role/primary>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/source_role> ;
+  skos:notation "primary" ;
+  skos:prefLabel "Primary"@en, "主要"@zh-cn ;
+  skos:definition "The post the update is mainly drawn from."@en, "更新主要依据的帖子。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/source_role/corroborating>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/source_role> ;
+  skos:notation "corroborating" ;
+  skos:prefLabel "Corroborating"@en, "佐证"@zh-cn ;
+  skos:definition "Supports the same update."@en, "佐证同一条更新。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/source_role/context>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/source_role> ;
+  skos:notation "context" ;
+  skos:prefLabel "Context"@en, "背景"@zh-cn ;
+  skos:definition "Gives background only."@en, "只提供背景。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/evidence_sign>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Evidence sign"@en, "证据方向"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/evidence_sign/positive>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/evidence_sign> ;
+  skos:notation "positive" ;
+  skos:prefLabel "Positive"@en, "正向"@zh-cn ;
+  skos:definition "Shows the work being done at the observed level."@en, "表明工作在所观察的级别上被完成。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/evidence_sign/negative>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/evidence_sign> ;
+  skos:notation "negative" ;
+  skos:prefLabel "Negative"@en, "反向"@zh-cn ;
+  skos:definition "Shows a failure or a limit at that level."@en, "表明在该级别上失败或受限。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/concept_kind>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Concept kind"@en, "概念类型"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/concept_kind/market_group>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/concept_kind> ;
+  skos:notation "market_group" ;
+  skos:prefLabel "Market group"@en, "领域"@zh-cn ;
+  skos:definition "An editorial domain organizing related markets; not an industry weight or capability score."@en, "归拢相关赛道的编辑领域；不是行业权重，也不是能力分数。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/concept_kind/market>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/concept_kind> ;
+  skos:notation "market" ;
+  skos:prefLabel "Market"@en, "赛道"@zh-cn ;
+  skos:definition "An editorial market or service area grouping work that serves a related production or service need."@en, "一个编辑赛道或服务领域，把服务于同一类生产或服务需求的工作归在一起。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/concept_kind/work>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/concept_kind> ;
+  skos:notation "work" ;
+  skos:prefLabel "Work"@en, "工作"@zh-cn ;
+  skos:definition "A named scope of work, either an editorial work item or a source occupation task; matching labels do not establish identity."@en, "一项有名字的工作范围：编辑的工作条目，或来源职业的任务。名称相同不代表是同一项。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/concept_kind/occupation_group>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/concept_kind> ;
+  skos:notation "occupation_group" ;
+  skos:prefLabel "Occupation group"@en, "职业大类"@zh-cn ;
+  skos:definition "An O*NET occupation family used to organize source occupations."@en, "用来组织来源职业的 O*NET 职业大类。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/concept_kind/occupation>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/concept_kind> ;
+  skos:notation "occupation" ;
+  skos:prefLabel "Occupation"@en, "职业"@zh-cn ;
+  skos:definition "An O*NET occupation with its source identity and occupational description."@en, "一个 O*NET 职业，带来源身份和职业描述。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_basis>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Basis of an update"@en, "更新的依据"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_basis/vendor_claim>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_basis> ;
+  skos:notation "vendor_claim" ;
+  skos:prefLabel "Vendor claim"@en, "出品方自述"@zh-cn ;
+  skos:definition "The maker of the subject says so; nobody else measured it."@en, "出品方自己说的，没有他人测量。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_basis/demonstration>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_basis> ;
+  skos:notation "demonstration" ;
+  skos:prefLabel "Demonstration"@en, "演示"@zh-cn ;
+  skos:definition "A shown example or demo, not a measurement."@en, "给出了示例或演示，不是测量。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_basis/own_use>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_basis> ;
+  skos:notation "own_use" ;
+  skos:prefLabel "Own use"@en, "亲自使用"@zh-cn ;
+  skos:definition "The author of the post used it themselves."@en, "发帖人自己用过。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_basis/measurement>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_basis> ;
+  skos:notation "measurement" ;
+  skos:prefLabel "Measurement"@en, "测量"@zh-cn ;
+  skos:definition "A test or benchmark run by someone other than the maker."@en, "出品方以外的人做的测试或基准。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_basis/production_use>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_basis> ;
+  skos:notation "production_use" ;
+  skos:prefLabel "Production use"@en, "生产使用"@zh-cn ;
+  skos:definition "A named organization runs it in its real operations."@en, "具名机构在真实业务中运行。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_result>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Result of the task"@en, "这件事的结果"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_result/succeeded>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_result> ;
+  skos:notation "succeeded" ;
+  skos:prefLabel "Succeeded"@en, "成功"@zh-cn ;
+  skos:definition "The work was done."@en, "事情做成了。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_result/partly>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_result> ;
+  skos:notation "partly" ;
+  skos:prefLabel "Partly"@en, "部分成功"@zh-cn ;
+  skos:definition "Part of the work was done, or it was done with significant help or flaws."@en, "做成了一部分，或在明显的帮助或缺陷下做成。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_result/failed>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_result> ;
+  skos:notation "failed" ;
+  skos:prefLabel "Failed"@en, "失败"@zh-cn ;
+  skos:definition "The work was not done."@en, "事情没有做成。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/event_result/not_stated>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/event_result> ;
+  skos:notation "not_stated" ;
+  skos:prefLabel "Not stated"@en, "未说明"@zh-cn ;
+  skos:definition "The post does not say how it came out."@en, "帖子没有说明结果。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/topic_question_type>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Kind of question"@en, "问题类型"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/topic_question_type/replacement>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/topic_question_type> ;
+  skos:notation "replacement" ;
+  skos:prefLabel "Replacement"@en, "替代"@zh-cn ;
+  skos:definition "Whether AI does, or will do, the work of a specific job, so that the job shrinks, changes into something else or disappears."@en, "AI 是否在做、或将会做某个具体职业的工作，使这个职业收缩、变成别的或消失。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/topic_question_type/viability>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/topic_question_type> ;
+  skos:notation "viability" ;
+  skos:prefLabel "Viability"@en, "赛道"@zh-cn ;
+  skos:definition "Whether a specific kind of product or business is still worth building or paying for now that AI can do it."@en, "在 AI 能做这件事之后，某一类产品或生意是否还值得做、值得付费。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/topic_state>
+  a skos:ConceptScheme ;
+  skos:prefLabel "Topic state"@en, "话题状态"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/topic_state/proposed>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/topic_state> ;
+  skos:notation "proposed" ;
+  skos:prefLabel "Proposed"@en, "提议中"@zh-cn ;
+  skos:definition "Open and visible; not yet chosen for research."@en, "已提出并公开；尚未被选中研究。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/topic_state/researching>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/topic_state> ;
+  skos:notation "researching" ;
+  skos:prefLabel "Researching"@en, "研究中"@zh-cn ;
+  skos:definition "Chosen for research: searched for regularly."@en, "已被选中研究：定期为它搜索。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/topic_state/dormant>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/topic_state> ;
+  skos:notation "dormant" ;
+  skos:prefLabel "Dormant"@en, "休眠"@zh-cn ;
+  skos:definition "Nothing new has arrived for a while; searched for rarely, and revived when something does."@en, "一段时间没有新材料；很少为它搜索，有新材料时恢复。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/topic_state/merged>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/topic_state> ;
+  skos:notation "merged" ;
+  skos:prefLabel "Merged"@en, "已并入"@zh-cn ;
+  skos:definition "Stands under another topic that asks the same question."@en, "归于另一个问同一问题的话题之下。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/topic_state/closed>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/topic_state> ;
+  skos:notation "closed" ;
+  skos:prefLabel "Closed"@en, "关闭"@zh-cn ;
+  skos:definition "Withdrawn: it turned out not to be a question of this kind."@en, "撤回：它被认定不是这一类问题。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/topic_origin>
+  a skos:ConceptScheme ;
+  skos:prefLabel "How a topic was proposed"@en, "话题来源"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/topic_origin/mined>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/topic_origin> ;
+  skos:notation "mined" ;
+  skos:prefLabel "Mined from posts"@en, "从帖子挖出"@zh-cn ;
+  skos:definition "A collected post asserted an answer that no open topic asked about."@en, "采集到的一条帖子主张了一个答案，而没有已开的话题问到它。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/topic_origin/reader>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/topic_origin> ;
+  skos:notation "reader" ;
+  skos:prefLabel "Proposed by a reader"@en, "读者提出"@zh-cn ;
+  skos:definition "A reader submitted it and an administrator accepted it."@en, "读者提交并经管理员接受。"@zh-cn .
+
+<https://openaiwill.com/ontology#vocabulary/topic_origin/editor>
+  a skos:Concept ;
+  skos:inScheme <https://openaiwill.com/ontology#vocabulary/topic_origin> ;
+  skos:notation "editor" ;
+  skos:prefLabel "Set by the editor"@en, "编辑指定"@zh-cn ;
+  skos:definition "Written by the project itself."@en, "由项目自己写下。"@zh-cn .
+
+<https://openaiwill.com/ontology#shape/Concept>
+  a sh:NodeShape ;
+  sh:targetClass <https://openaiwill.com/ontology#Concept> ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Concept/id> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Concept/kind> ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( <https://openaiwill.com/ontology#vocabulary/concept_kind/market_group> <https://openaiwill.com/ontology#vocabulary/concept_kind/market> <https://openaiwill.com/ontology#vocabulary/concept_kind/work> <https://openaiwill.com/ontology#vocabulary/concept_kind/occupation_group> <https://openaiwill.com/ontology#vocabulary/concept_kind/occupation> ) ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Concept/label_en> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Concept/label_zh_cn> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Concept/origin> ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( <https://openaiwill.com/ontology#vocabulary/concept_origin/editorial_ai> <https://openaiwill.com/ontology#vocabulary/concept_origin/onet_projection> ) ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Concept/translation_status> ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( <https://openaiwill.com/ontology#vocabulary/translation_status/ai_translated> <https://openaiwill.com/ontology#vocabulary/translation_status/pending> <https://openaiwill.com/ontology#vocabulary/translation_status/source_original> ) ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Concept/scope_status> ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( <https://openaiwill.com/ontology#vocabulary/scope_status/starter_catalog> <https://openaiwill.com/ontology#vocabulary/scope_status/defined> <https://openaiwill.com/ontology#vocabulary/scope_status/source_missing_tasks> ) ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Concept/scope_note> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Concept/definition> ; sh:minCount 0 ; sh:maxCount 1 ] .
+
+<https://openaiwill.com/ontology#shape/Gate>
+  a sh:NodeShape ;
+  sh:targetClass <https://openaiwill.com/ontology#Gate> ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Gate/gate_id> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Gate/gate_type> ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( <https://openaiwill.com/ontology#vocabulary/gate_type/regulatory> <https://openaiwill.com/ontology#vocabulary/gate_type/liability> <https://openaiwill.com/ontology#vocabulary/gate_type/human_authority> <https://openaiwill.com/ontology#vocabulary/gate_type/physical_presence> <https://openaiwill.com/ontology#vocabulary/gate_type/data_access> ) ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Gate/label_en> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Gate/label_zh_cn> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Gate/definition_en> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Gate/definition_zh_cn> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Gate/lifecycle> ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( <https://openaiwill.com/ontology#vocabulary/lifecycle/active> <https://openaiwill.com/ontology#vocabulary/lifecycle/deprecated> ) ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Gate/replaced_by> ; sh:minCount 0 ; sh:maxCount 1 ; sh:class <https://openaiwill.com/ontology#Gate> ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Gate/obsolescence_reason> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:string ] .
+
+<https://openaiwill.com/ontology#shape/Organization>
+  a sh:NodeShape ;
+  sh:targetClass <https://openaiwill.com/ontology#Organization> ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Organization/org_id> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Organization/canonical_name_en> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Organization/canonical_name_zh_cn> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Organization/aliases> ; sh:minCount 0 ; sh:datatype xsd:string ] .
+
+<https://openaiwill.com/ontology#shape/Person>
+  a sh:NodeShape ;
+  sh:targetClass <https://openaiwill.com/ontology#Person> ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Person/person_id> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Person/name> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Person/aliases> ; sh:minCount 0 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Person/identity_url> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:anyURI ] .
+
+<https://openaiwill.com/ontology#shape/SourceAccount>
+  a sh:NodeShape ;
+  sh:targetClass <https://openaiwill.com/ontology#SourceAccount> ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#SourceAccount/account_key> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#SourceAccount/platform> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#SourceAccount/handle> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#SourceAccount/platform_account_id> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#SourceAccount/owner_kind> ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( <https://openaiwill.com/ontology#vocabulary/account_owner_kind/person> <https://openaiwill.com/ontology#vocabulary/account_owner_kind/organization> <https://openaiwill.com/ontology#vocabulary/account_owner_kind/unknown> ) ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#SourceAccount/panel_role> ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( <https://openaiwill.com/ontology#vocabulary/panel_role/evaluator> <https://openaiwill.com/ontology#vocabulary/panel_role/practitioner> <https://openaiwill.com/ontology#vocabulary/panel_role/adopter> <https://openaiwill.com/ontology#vocabulary/panel_role/researcher> <https://openaiwill.com/ontology#vocabulary/panel_role/commentator> <https://openaiwill.com/ontology#vocabulary/panel_role/executive> <https://openaiwill.com/ontology#vocabulary/panel_role/lab_insider> <https://openaiwill.com/ontology#vocabulary/panel_role/relay> <https://openaiwill.com/ontology#vocabulary/panel_role/official> <https://openaiwill.com/ontology#vocabulary/panel_role/market_researcher> <https://openaiwill.com/ontology#vocabulary/panel_role/unclassified> ) ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#SourceAccount/panel_state> ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( <https://openaiwill.com/ontology#vocabulary/panel_state/candidate> <https://openaiwill.com/ontology#vocabulary/panel_state/identity_confirmed> <https://openaiwill.com/ontology#vocabulary/panel_state/enabled> <https://openaiwill.com/ontology#vocabulary/panel_state/suspended> <https://openaiwill.com/ontology#vocabulary/panel_state/retired> ) ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#SourceAccount/identity_grade> ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( <https://openaiwill.com/ontology#vocabulary/identity_evidence_grade/first_party_link> <https://openaiwill.com/ontology#vocabulary/identity_evidence_grade/official_bio> <https://openaiwill.com/ontology#vocabulary/identity_evidence_grade/third_party_list> <https://openaiwill.com/ontology#vocabulary/identity_evidence_grade/found_by_search> ) ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#SourceAccount/identity_url> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:anyURI ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#SourceAccount/avatar_url> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:anyURI ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#SourceAccount/language> ; sh:minCount 0 ; sh:maxCount 1 ; sh:in ( <https://openaiwill.com/ontology#vocabulary/account_language/en> <https://openaiwill.com/ontology#vocabulary/account_language/zh> <https://openaiwill.com/ontology#vocabulary/account_language/both> ) ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#SourceAccount/focus> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#SourceAccount/excluded> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:boolean ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#SourceAccount/added_from> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#SourceAccount/state_changed_at> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:dateTime ] .
+
+<https://openaiwill.com/ontology#shape/Post>
+  a sh:NodeShape ;
+  sh:targetClass <https://openaiwill.com/ontology#Post> ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Post/source_id> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Post/platform> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Post/canonical_url> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:anyURI ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Post/kind> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Post/published_at> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:dateTime ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Post/is_reply> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:boolean ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Post/is_repost> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:boolean ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Post/conversation_id> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:string ] .
+
+<https://openaiwill.com/ontology#shape/Event>
+  a sh:NodeShape ;
+  sh:targetClass <https://openaiwill.com/ontology#Event> ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Event/event_id> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Event/kind> ; sh:minCount 0 ; sh:maxCount 1 ; sh:in ( <https://openaiwill.com/ontology#vocabulary/event_kind/product_launch> <https://openaiwill.com/ontology#vocabulary/event_kind/version_release> <https://openaiwill.com/ontology#vocabulary/event_kind/availability_change> <https://openaiwill.com/ontology#vocabulary/event_kind/capability_update> <https://openaiwill.com/ontology#vocabulary/event_kind/pricing_change> <https://openaiwill.com/ontology#vocabulary/event_kind/benchmark_result> <https://openaiwill.com/ontology#vocabulary/event_kind/third_party_recognition> <https://openaiwill.com/ontology#vocabulary/event_kind/production_adoption> <https://openaiwill.com/ontology#vocabulary/event_kind/partnership> <https://openaiwill.com/ontology#vocabulary/event_kind/research_result> <https://openaiwill.com/ontology#vocabulary/event_kind/deprecation> <https://openaiwill.com/ontology#vocabulary/event_kind/personnel> <https://openaiwill.com/ontology#vocabulary/event_kind/event_announcement> <https://openaiwill.com/ontology#vocabulary/event_kind/incident> <https://openaiwill.com/ontology#vocabulary/event_kind/policy_statement> <https://openaiwill.com/ontology#vocabulary/event_kind/usage_report> <https://openaiwill.com/ontology#vocabulary/event_kind/independent_evaluation> <https://openaiwill.com/ontology#vocabulary/event_kind/failure_report> <https://openaiwill.com/ontology#vocabulary/event_kind/market_measurement> ) ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Event/kind_vocabulary> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Event/subject_key> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Event/title> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Event/summary> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Event/announced_at> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:dateTime ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Event/occurred_at> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:dateTime ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Event/scheduled_for> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:dateTime ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Event/occurrence_status> ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( <https://openaiwill.com/ontology#vocabulary/occurrence_status/unknown> <https://openaiwill.com/ontology#vocabulary/occurrence_status/scheduled> <https://openaiwill.com/ontology#vocabulary/occurrence_status/occurred> <https://openaiwill.com/ontology#vocabulary/occurrence_status/postponed> <https://openaiwill.com/ontology#vocabulary/occurrence_status/cancelled> ) ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Event/confidence> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:decimal ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Event/identity_confidence> ; sh:minCount 0 ; sh:maxCount 1 ; sh:in ( <https://openaiwill.com/ontology#vocabulary/identity_confidence/high> <https://openaiwill.com/ontology#vocabulary/identity_confidence/low> ) ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Event/actor_account_key> ; sh:minCount 0 ; sh:maxCount 1 ; sh:class <https://openaiwill.com/ontology#SourceAccount> ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Event/subject> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Event/basis> ; sh:minCount 0 ; sh:maxCount 1 ; sh:in ( <https://openaiwill.com/ontology#vocabulary/event_basis/vendor_claim> <https://openaiwill.com/ontology#vocabulary/event_basis/demonstration> <https://openaiwill.com/ontology#vocabulary/event_basis/own_use> <https://openaiwill.com/ontology#vocabulary/event_basis/measurement> <https://openaiwill.com/ontology#vocabulary/event_basis/production_use> ) ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Event/task> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Event/result> ; sh:minCount 0 ; sh:maxCount 1 ; sh:in ( <https://openaiwill.com/ontology#vocabulary/event_result/succeeded> <https://openaiwill.com/ontology#vocabulary/event_result/partly> <https://openaiwill.com/ontology#vocabulary/event_result/failed> <https://openaiwill.com/ontology#vocabulary/event_result/not_stated> ) ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Event/quote> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Event/schema_version> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:string ] .
+
+<https://openaiwill.com/ontology#shape/Model>
+  a sh:NodeShape ;
+  sh:targetClass <https://openaiwill.com/ontology#Model> ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Model/model_id> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Model/org_id> ; sh:minCount 0 ; sh:maxCount 1 ; sh:class <https://openaiwill.com/ontology#Organization> ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Model/owner_name> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Model/level> ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( <https://openaiwill.com/ontology#vocabulary/model_level/family> <https://openaiwill.com/ontology#vocabulary/model_level/release> ) ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Model/parent_model_id> ; sh:minCount 0 ; sh:maxCount 1 ; sh:class <https://openaiwill.com/ontology#Model> ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Model/name> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Model/version> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Model/variant> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Model/status> ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( <https://openaiwill.com/ontology#vocabulary/model_status/candidate> <https://openaiwill.com/ontology#vocabulary/model_status/confirmed> ) ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Model/released_at> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:dateTime ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Model/first_seen_event_id> ; sh:minCount 0 ; sh:maxCount 1 ; sh:class <https://openaiwill.com/ontology#Event> ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Model/catalog_id> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Model/catalog_released_on> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:date ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Model/open_weights> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:boolean ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Model/output_modalities> ; sh:minCount 0 ; sh:in ( <https://openaiwill.com/ontology#vocabulary/modality/text> <https://openaiwill.com/ontology#vocabulary/modality/image> <https://openaiwill.com/ontology#vocabulary/modality/audio> <https://openaiwill.com/ontology#vocabulary/modality/video> ) ] .
+
+<https://openaiwill.com/ontology#shape/Provider>
+  a sh:NodeShape ;
+  sh:targetClass <https://openaiwill.com/ontology#Provider> ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Provider/provider_id> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Provider/name> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Provider/kind> ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( <https://openaiwill.com/ontology#vocabulary/provider_kind/first_party> <https://openaiwill.com/ontology#vocabulary/provider_kind/cloud> ) ] .
+
+<https://openaiwill.com/ontology#shape/EventFact>
+  a sh:NodeShape ;
+  sh:targetClass <https://openaiwill.com/ontology#EventFact> ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#EventFact/fact_id> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#EventFact/event_id> ; sh:minCount 1 ; sh:maxCount 1 ; sh:class <https://openaiwill.com/ontology#Event> ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#EventFact/source_id> ; sh:minCount 1 ; sh:maxCount 1 ; sh:class <https://openaiwill.com/ontology#Post> ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#EventFact/value> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#EventFact/unit> ; sh:minCount 0 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#EventFact/what> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#EventFact/quote> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] .
+
+<https://openaiwill.com/ontology#shape/Topic>
+  a sh:NodeShape ;
+  sh:targetClass <https://openaiwill.com/ontology#Topic> ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Topic/topic_id> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Topic/question_type> ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( <https://openaiwill.com/ontology#vocabulary/topic_question_type/replacement> <https://openaiwill.com/ontology#vocabulary/topic_question_type/viability> ) ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Topic/object_key> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Topic/question_en> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Topic/question_zh_cn> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Topic/state> ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( <https://openaiwill.com/ontology#vocabulary/topic_state/proposed> <https://openaiwill.com/ontology#vocabulary/topic_state/researching> <https://openaiwill.com/ontology#vocabulary/topic_state/dormant> <https://openaiwill.com/ontology#vocabulary/topic_state/merged> <https://openaiwill.com/ontology#vocabulary/topic_state/closed> ) ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Topic/origin> ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( <https://openaiwill.com/ontology#vocabulary/topic_origin/mined> <https://openaiwill.com/ontology#vocabulary/topic_origin/reader> <https://openaiwill.com/ontology#vocabulary/topic_origin/editor> ) ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Topic/opened_at> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:dateTime ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Topic/state_changed_at> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:dateTime ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#Topic/schema_version> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] .
+
+<https://openaiwill.com/ontology#shape/TopicOption>
+  a sh:NodeShape ;
+  sh:targetClass <https://openaiwill.com/ontology#TopicOption> ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#TopicOption/option_id> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#TopicOption/topic_id> ; sh:minCount 1 ; sh:maxCount 1 ; sh:class <https://openaiwill.com/ontology#Topic> ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#TopicOption/position> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#TopicOption/text_en> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#TopicOption/text_zh_cn> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path <https://openaiwill.com/ontology#TopicOption/retired> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:boolean ] .

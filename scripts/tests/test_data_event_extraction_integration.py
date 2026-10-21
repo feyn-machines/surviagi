@@ -23,7 +23,7 @@ from data_pipeline.event_extraction import (
 def seed_org_registry(conn):
     """extracted_events.primary_org_id is an FK, so the registry precedes ingestion.
 
-    Projected from the same datasets/semantic/organizations.json that
+    Projected from the same datasets/ontology/data/organizations.json that
     type_layer.seed reads, so the ids here cannot drift from the ones resolve_org
     returns. Only the organisations: the rest of the seed needs a full ontology
     release, which this file's subject - the event layer - does not touch.
@@ -67,7 +67,8 @@ def crawler_run(posts, run_id):
 def candidate(sid, run_id):
     return {"run_id": run_id, "source_id": sid, "platform": "x", "handle": "OpenAI",
             "company": "OpenAI", "url": f"https://x.com/OpenAI/status/{sid}",
-            "published_at": datetime(2026, 9, 10, tzinfo=timezone.utc), "excerpt": "x", "metrics": {}}
+            "published_at": datetime(2026, 9, 10, tzinfo=timezone.utc), "excerpt": "x", "metrics": {},
+            "account_key": "x:openai", "official": True}
 
 
 def meta():
@@ -86,6 +87,13 @@ class EventLayerTest(unittest.TestCase):
         with connect(cls.database) as conn:
             migrate(conn)
             seed_org_registry(conn)
+            # The actor of an update is the account that posted it.
+            conn.execute(
+                """INSERT INTO source_accounts
+                   (account_key, platform, handle, platform_account_id, owner_kind, org_name, org_id,
+                    panel_role, panel_state, identity_grade, added_from, state_changed_at, record_sha256)
+                   VALUES ('x:openai', 'x', 'OpenAI', '4398626122', 'organization', 'OpenAI', 'org:openai',
+                    'official', 'enabled', 'first_party_link', 'test', now(), %s)""", ("a" * 64,))
 
     @classmethod
     def remove_database(cls):
@@ -191,6 +199,104 @@ class EventLayerTest(unittest.TestCase):
             self.assertEqual(row, {"kind": "product_launch", "kind_vocabulary": EVENT_KIND_VOCABULARY,
                                    "subject_key": self.subject, "identity_confidence": "high",
                                    "primary_org_id": "org:openai", "unresolved_reason": None})
+
+    def test_an_update_read_again_gains_the_new_attributes_in_place(self):
+        """rule:definitions-take-effect-forward: re-extraction upgrades the row it already has."""
+        with tempfile.TemporaryDirectory() as tmp:
+            old = self.make_doc(["1"], title="Old title")
+            old["version"], old["kind_vocabulary"] = "event-extraction-2", "event_kind-2.0.0"
+            for event in old["events"]:
+                event["kind_vocabulary"] = "event_kind-2.0.0"
+                for name in ("actor_account_key", "subject", "basis", "task", "result", "quote",
+                             "schema_version", "facts"):
+                    event.pop(name, None)
+            ingest_extraction(self.conn, self.write(tmp, "extract-old-" + uuid.uuid4().hex, old))
+            event_id = old["events"][0]["event_id"]
+            before = self.conn.execute(
+                "SELECT kind_vocabulary, schema_version, basis FROM extracted_events WHERE event_id=%s",
+                (event_id,)).fetchone()
+            self.assertEqual(before, {"kind_vocabulary": "event_kind-2.0.0", "schema_version": None, "basis": None})
+
+            cands = [dict(candidate("1", self.seed), text="GPT-X costs $2 per million tokens.")]
+            event = {"kind": "product_launch", "title": "New title", "summary": "s", "primary_org": "OpenAI",
+                     "subject_key": "worded-differently-" + self.uid, "subject": "GPT-X", "basis": "vendor_claim",
+                     "occurred_at": "2026-09-10T00:00:00+00:00", "occurrence_status": "occurred",
+                     "confidence": 0.9, "source_ids": ["1"],
+                     "facts": [{"value": "2", "unit": "USD per 1M tokens", "what": "price",
+                                "quote": "$2 per million tokens"}]}
+            prior = {"1": [{"event_id": event_id, "dedup_key": old["events"][0]["dedup_key"]}]}
+            new = assemble_extraction(cands, [{"events": [event]}], meta(), prior=prior)
+            result = ingest_extraction(self.conn, self.write(tmp, "extract-new-" + uuid.uuid4().hex, new))
+            self.assertEqual(result["facts"], 1)
+            after = self.conn.execute(
+                "SELECT title, kind_vocabulary, schema_version, basis, subject, actor_account_key"
+                " FROM extracted_events WHERE event_id=%s", (event_id,)).fetchone()
+            self.assertEqual(after, {"title": "Old title", "kind_vocabulary": EVENT_KIND_VOCABULARY,
+                                     "schema_version": "2.4.0", "basis": "vendor_claim", "subject": "GPT-X",
+                                     "actor_account_key": "x:openai"})
+            self.assertEqual(self.count("extracted_event_facts", "event_id", event_id), 1)
+            self.assertEqual(self.count("extracted_events", "event_id", event_id), 1)
+
+    def test_candidates_carry_their_account_and_whether_it_is_a_relay(self):
+        from data_pipeline.event_extraction import load_candidates
+        got = load_candidates(self.conn)
+        self.assertEqual({c["source_id"] for c in got}, {"1", "2", "3"})
+        self.assertTrue(all(c["account_key"] == "x:openai" and c["official"] and not c["relay"] for c in got))
+        self.assertEqual(len(load_candidates(self.conn, targets="panel")), 0)
+        self.conn.execute("UPDATE source_accounts SET panel_role = 'relay' WHERE account_key = 'x:openai'")
+        try:
+            self.assertTrue(all(c["relay"] for c in load_candidates(self.conn)))
+        finally:
+            self.conn.execute("UPDATE source_accounts SET panel_role = 'official' WHERE account_key = 'x:openai'")
+
+    def test_an_author_found_by_search_becomes_a_candidate_when_their_post_makes_an_update(self):
+        """rule:search-finds-candidates: an actor for the update, and nothing more than a candidate."""
+        from data_pipeline import panel
+        handle = "found" + self.uid
+        self.conn.execute("UPDATE collected_sources SET account_handle=%s, account_external_id=%s, company=NULL"
+                          " WHERE source_id='3'", (handle, "9" + str(int(self.uid, 16))))
+        try:
+            cands = [dict(candidate("3", self.seed), handle=handle, company=None, official=False,
+                          account_key=f"x:{handle}", text="My tool now does a thing.",
+                          unregistered={"handle": handle, "platform_account_id": "9" + str(int(self.uid, 16))})]
+            event = {"kind": "capability_update", "title": "Tool does a thing " + self.uid, "summary": "s",
+                     "subject_key": "tool-" + self.uid, "basis": "vendor_claim", "occurrence_status": "occurred",
+                     "occurred_at": "2026-09-10T00:00:00+00:00", "confidence": 0.9, "source_ids": ["3"]}
+            doc = assemble_extraction(cands, [{"events": [event]}], meta())
+            with tempfile.TemporaryDirectory() as tmp:
+                ingest_extraction(self.conn, self.write(tmp, "extract-S-" + uuid.uuid4().hex, doc))
+            account = self.conn.execute(
+                "SELECT owner_kind, panel_role, panel_state, identity_grade, person_id FROM source_accounts"
+                " WHERE account_key=%s", (f"x:{handle}",)).fetchone()
+            self.assertEqual(account, {"owner_kind": "unknown", "panel_role": "unclassified",
+                                       "panel_state": "candidate", "identity_grade": "found_by_search",
+                                       "person_id": None})
+            # The panel's own rule keeps it a candidate: this grade is below the one identity needs.
+            self.assertEqual(panel.derive_state({**account, "platform_account_id": "1"}, [],
+                                                datetime.now(timezone.utc)), "candidate")
+            with self.assertRaises(Exception):
+                with self.conn.transaction():
+                    self.conn.execute("UPDATE source_accounts SET panel_state='enabled' WHERE account_key=%s",
+                                      (f"x:{handle}",))
+        finally:
+            self.conn.execute("UPDATE collected_sources SET account_handle='OpenAI', account_external_id='4398626122',"
+                              " company='OpenAI' WHERE source_id='3'")
+
+    def test_an_attached_post_is_stored_against_the_known_update(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ingest_extraction(self.conn, self.write(tmp, "extract-K-" + uuid.uuid4().hex, self.make_doc(["1"])))
+            event_id = event_id_for(dedup_key("org:openai", "product_launch", self.subject))
+            cands = [dict(candidate("2", self.seed), text="It is off by default in the API.")]
+            batch = {"events": [], "attachments": [{"source_id": "2", "event_ref": "E1",
+                                                    "says": "Off by default in the API.",
+                                                    "quote": "off by default in the API"}]}
+            doc = assemble_extraction(cands, [batch], meta(), known_events={"E1": event_id})
+            result = ingest_extraction(self.conn, self.write(tmp, "extract-T-" + uuid.uuid4().hex, doc))
+            self.assertEqual(result["attachments"], 1)
+            row = self.conn.execute(
+                "SELECT says FROM extracted_event_attachments WHERE event_id=%s AND source_id='2'",
+                (event_id,)).fetchone()
+            self.assertEqual(row["says"], "Off by default in the API.")
 
     def test_unresolved_kind_lands_as_null_plus_a_reason(self):
         """rule:no-other-bucket end to end: an unclassifiable event is counted, not bucketed."""

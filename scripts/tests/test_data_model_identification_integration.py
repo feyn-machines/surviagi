@@ -90,6 +90,52 @@ class ModelRegistry(unittest.TestCase):
             self.assertEqual(self.status("tgem-9-ultra"), {"status": "candidate", "released_at": None})
         self.run_rolled_back(body)
 
+    def seed_short_name_duplicate(self):
+        """Tgem Nova 9 exists; a later post that says only "Nova 9" opened a second row."""
+        self.seed()
+        self.conn.execute(
+            "INSERT INTO models (model_id, org_id, level, parent_model_id, name, status, first_seen_event_id) VALUES "
+            "('model:google:tgem-nova-9', 'org:google', 'release', 'model:google:tgem', 'Tgem Nova 9', 'confirmed', 't-ev-release'), "
+            "('model:google:nova', 'org:google', 'family', NULL, 'Nova', 'candidate', 't-ev-adopt'), "
+            "('model:google:nova-9', 'org:google', 'release', 'model:google:nova', 'Nova 9', 'candidate', 't-ev-adopt')")
+        self.conn.execute("INSERT INTO model_aliases (alias, model_id) VALUES ('tgem nova 9', 'model:google:tgem-nova-9'), "
+                          "('nova 9', 'model:google:nova-9')")
+        self.conn.execute(
+            "INSERT INTO event_models (event_id, model_id, role, mention, run_id) VALUES "
+            "('t-ev-release', 'model:google:tgem-nova-9', 'subject', 'Tgem Nova 9', 't-models'), "
+            "('t-ev-adopt', 'model:google:nova-9', 'distributed', 'Nova 9', 't-models'), "
+            "('t-ev-release', 'model:google:nova-9', 'subject', 'Nova 9', 't-models')")
+
+    def test_a_short_name_duplicate_is_folded_into_its_model(self):
+        def body():
+            self.seed_short_name_duplicate()
+            result = mi.reconcile(self.conn)
+            # Membership, not equality: the live registry may hold duplicates of its own.
+            self.assertIn({"from": "model:google:nova-9", "into": "model:google:tgem-nova-9"}, result["merged"])
+            self.assertIn("model:google:nova", result["empty_families_removed"])
+            self.assertIsNone(self.conn.execute(
+                "SELECT 1 FROM models WHERE model_id = 'model:google:nova-9'").fetchone())
+            links = self.conn.execute(
+                "SELECT event_id, role FROM event_models WHERE model_id = 'model:google:tgem-nova-9' "
+                "ORDER BY event_id, role").fetchall()
+            # The release update already named the model as subject: one link, not two.
+            self.assertEqual(links, [{"event_id": "t-ev-adopt", "role": "distributed"},
+                                     {"event_id": "t-ev-release", "role": "subject"}])
+            alias = self.conn.execute("SELECT model_id FROM model_aliases WHERE alias = 'nova 9'").fetchone()
+            self.assertEqual(alias["model_id"], "model:google:tgem-nova-9")
+            self.assertEqual(mi.reconcile(self.conn), {"merged": [], "short_aliases_added": 0,
+                                                       "empty_families_removed": []})
+        self.run_rolled_back(body)
+
+    def test_a_short_name_held_by_a_confirmed_model_is_left_alone(self):
+        def body():
+            self.seed_short_name_duplicate()
+            self.conn.execute("UPDATE models SET status = 'confirmed' WHERE model_id = 'model:google:nova-9'")
+            self.assertNotIn("model:google:nova-9", [m["from"] for m in mi.reconcile(self.conn)["merged"]])
+            self.assertIsNotNone(self.conn.execute(
+                "SELECT 1 FROM models WHERE model_id = 'model:google:nova-9'").fetchone())
+        self.run_rolled_back(body)
+
     def test_a_family_carries_no_version(self):
         def body():
             self.seed()

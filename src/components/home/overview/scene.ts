@@ -45,6 +45,8 @@ export type View = {
   today: number;
   ticker: { org: string; title: string } | null;
   panel: Panel | null;
+  /** The updates of the chosen day, once a day has been picked on the timeline. */
+  dayList: (NodeRef & { org: string })[] | null;
 };
 
 export type Hover = {
@@ -437,6 +439,7 @@ export function createScene(o: SceneOptions): OverviewScene {
 
   // ---------- state ----------
   let day = last;
+  let dayOpen = false;
   let selected: SceneNode | null = null;
   let selectedAt = 0;
   const trail: SceneNode[] = [];
@@ -585,6 +588,7 @@ export function createScene(o: SceneOptions): OverviewScene {
       today: perDay[day] ?? 0,
       ticker: todays[0]?.update ? { org: todays[0].update.org, title: todays[0].update.title } : null,
       panel: panel(),
+      dayList: dayOpen && !selected ? todays.map((n) => ({ ...ref(n), org: n.update?.org ?? "" })) : null,
     });
   }
 
@@ -807,6 +811,7 @@ export function createScene(o: SceneOptions): OverviewScene {
     select(id) {
       const node = id ? (byId.get(id) ?? null) : null;
       if (node) stop();
+      else dayOpen = false; // closing the panel closes the day list behind it too
       go(node);
     },
     back() {
@@ -821,6 +826,10 @@ export function createScene(o: SceneOptions): OverviewScene {
     setDay(next) {
       stop();
       day = Math.max(0, Math.min(last, next));
+      // Picking a day asks what happened on it: the panel lists that day's updates.
+      dayOpen = true;
+      selected = null;
+      trail.length = 0;
       apply();
     },
     stepDay(delta) {
@@ -830,7 +839,10 @@ export function createScene(o: SceneOptions): OverviewScene {
     },
     togglePlay() {
       if (playing) stop();
-      else play();
+      else {
+        dayOpen = false;
+        play();
+      }
       apply();
     },
     setFilters(next) {
@@ -848,6 +860,7 @@ export function createScene(o: SceneOptions): OverviewScene {
     },
     reset() {
       selected = null;
+      dayOpen = false;
       trail.length = 0;
       fly = null;
       camera.position.copy(HOME);

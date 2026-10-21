@@ -104,7 +104,7 @@ export function DomainsSection({ data, language, index }: { data: HomeData; lang
     return (
       <div key={l} className={`${s.cell} ${l === 3 ? s.cut : ""}`}>
         {here.map((w) => (link
-          ? <Link key={w.id} href={workHref(w.id)} className={`${s.sq} ${s[levelClass(l)]}`} title={`${pick(w.name, language)} · L${l}`} aria-label={`${pick(w.name, language)} · L${l}`} />
+          ? <Link key={w.id} href={workHref(language, w.id)} className={`${s.sq} ${s[levelClass(l)]}`} title={`${pick(w.name, language)} · L${l}`} aria-label={`${pick(w.name, language)} · L${l}`} />
           : <i key={w.id} className={`${s.sq} ${s[levelClass(l)]}`} title={`${pick(w.name, language)} · L${l}`} />))}
         {over.map((w) => <i key={w.id} className={`${s.sq} ${s.cl}`} title={`${pick(w.name, language)} · ${c.claimed.replace("{n}", String(l))}`} />)}
         {Array.from({ length: empty }, (_, i) => <i key={i} className={s.sq} aria-hidden="true" />)}
@@ -157,7 +157,7 @@ export function DomainsSection({ data, language, index }: { data: HomeData; lang
 
         {current && markets.map((m) => (
           <div key={m.id} className={`${s.row} ${s.mrow}`} style={columns}>
-            <div className={s.name}><Link className={s.go} href={marketHref(m.works[0].marketId)}>{m.name} <span aria-hidden="true">→</span></Link></div>
+            <div className={s.name}><Link className={s.go} href={marketHref(language, m.works[0].marketId)}>{m.name} <span aria-hidden="true">→</span></Link></div>
             {band(m.works, true)}
             {meta(m)}
           </div>

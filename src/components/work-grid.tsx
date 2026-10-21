@@ -43,7 +43,7 @@ import s from "./work-grid.module.css";
  * of "AI produces the bulk, a person checks every item" is the type layer
  * duplicated into the rendering layer: it reads correctly right up until the
  * vocabulary is edited, and then the chart and the method disagree with no
- * error anywhere. `pnpm semantic:check` fails if that text comes back here.
+ * error anywhere. `pnpm ontology:check` fails if that text comes back here.
  *
  * `unknown` and `untouched` DO belong here. They are not rungs of the ladder -
  * they are what the publisher records when there is no reading to place on it -
@@ -72,7 +72,7 @@ const COPY = {
 
 function stageLabel(key: StageKey, language: Language) {
   if (key === "unknown" || key === "untouched") return COPY[language][key];
-  const word = progress?.levels?.[key]?.[language];
+  const word = progress()?.levels?.[key]?.[language];
   // A rung with no published label still has to draw: the number alone is the
   // honest fallback, never an invented name for it.
   return word ? `L${key} · ${word}` : `L${key}`;
@@ -82,7 +82,7 @@ function stageNote(key: StageKey, language: Language) {
   const c = COPY[language];
   if (key === "unknown") return c.unknownNote;
   if (key === "untouched") return c.untouchedNote;
-  return progress?.level_definitions?.[key]?.[language] ?? null;
+  return progress()?.level_definitions?.[key]?.[language] ?? null;
 }
 
 function formatNumber(n: number) {

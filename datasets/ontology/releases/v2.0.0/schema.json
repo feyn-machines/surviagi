@@ -1,0 +1,4288 @@
+{
+  "ontology": "openaiwill",
+  "version": "2.0.0",
+  "status": "review",
+  "namespace": "https://openaiwill.com/ontology#",
+  "prefix": "oaw",
+  "note": {
+    "en": "The one type definition: classes, properties, relations, controlled vocabularies and constraints. Data formats, SQL checks, prompts and site labels are generated from or checked against it. It holds no instances, no measurements and no dates.",
+    "zh-CN": "唯一的类型定义：类、属性、关系、受控词表、约束。数据文件格式、SQL 约束、提示词、站点标签都由它生成或与它核对。不含实例、不含测量结果、不含日期。"
+  },
+  "previous": {
+    "ontology": "1.0.0",
+    "type_definition_merged_from": [
+      "ontology 1.0.0 model.json",
+      "semantic model 2.1.0"
+    ]
+  },
+  "relationship_semantics": {
+    "inheritance": false,
+    "multiple_parents": true,
+    "shared_work_across_views": true,
+    "views_are_additive": false,
+    "note": "These are organization and association relations, not is_a inheritance. Shared labels do not merge editorial work and source tasks."
+  },
+  "source_systems": {
+    "onet": {
+      "source_id": "onet-31.0",
+      "version": "31.0",
+      "description": "O*NET 31.0 occupation, family, task and activity reference data; a United States occupational reference.",
+      "export_note": "O*NET 31.0 occupation, task and activity references. Chinese occupation labels are openaiwill AI adaptations, not official translations. This ontology export excludes weights, IM/RT ratings, frequency distributions, sample sizes and task counts; original source notes remain in platform 0.0.1."
+    },
+    "isic": {
+      "source_id": "isic-rev5",
+      "version": "5",
+      "description": "ISIC Revision 5 code hierarchy only; original descriptions are not redistributed."
+    },
+    "editorial": {
+      "source_id": "openaiwill-editorial",
+      "version": "0.0.1",
+      "description": "The existing openaiwill editorial catalog; AI proposals remain drafts.",
+      "export_note": "Existing AI-proposed market catalog and scope notes; associations remain candidates. This ontology export contains no weights, capability baseline or progress values."
+    }
+  },
+  "external_types": {
+    "onet_family": {
+      "source_system": "onet",
+      "collection": "reference_occupation_groups",
+      "code_field": "source_code",
+      "projection_kind": "occupation_group"
+    },
+    "onet_occupation": {
+      "source_system": "onet",
+      "collection": "reference_occupations",
+      "code_field": "source_code",
+      "projection_kind": "occupation"
+    },
+    "onet_task": {
+      "source_system": "onet",
+      "collection": "reference_tasks",
+      "code_field": "source_task_id",
+      "projection_kind": "work"
+    },
+    "onet_activity": {
+      "source_system": "onet",
+      "collection": "reference_activities",
+      "code_field": "source_id",
+      "projection_kind": null
+    },
+    "isic_section": {
+      "source_system": "isic",
+      "collection": "reference_taxonomy_codes",
+      "code_field": "source_code",
+      "projection_kind": null,
+      "reference_kind": "section"
+    }
+  },
+  "reference_hierarchies": {
+    "reference_activities": {
+      "GWA": null,
+      "IWA": "GWA",
+      "DWA": "IWA"
+    },
+    "reference_taxonomy_codes": {
+      "section": null,
+      "division": "section",
+      "group": "division",
+      "class": "group"
+    }
+  },
+  "limitations": [
+    "O*NET is a United States reference; Chinese occupation labels are AI translations and task translations remain pending.",
+    "Definitions are null when no existing occupation description, task statement or editorial scope note is available.",
+    "AI-proposed mappings remain candidates and do not assert verified equivalence.",
+    "Weights, events, metrics, observations, progress and task statistics are outside this contract."
+  ],
+  "process_records": {
+    "note": {
+      "en": "Records of how a fact was obtained. Defined by their tables only; not classes of this ontology.",
+      "zh-CN": "记录某个事实是怎么得到的。只由数据库表定义，不是本体的类。"
+    },
+    "tables": [
+      "collection_runs",
+      "collection_gaps",
+      "collected_captures",
+      "extraction_runs",
+      "judgment_runs",
+      "judgment_checkpoints",
+      "source_account_checks",
+      "event_model_checks",
+      "model_aliases",
+      "model_catalog_imports",
+      "gate_states",
+      "extracted_event_categories",
+      "extracted_event_relations",
+      "ontology_releases",
+      "schema_migrations"
+    ]
+  },
+  "classes": {
+    "Concept": {
+      "label": {
+        "en": "Concept",
+        "zh-CN": "概念"
+      },
+      "abstract": true,
+      "definition": {
+        "en": "A sealed, identified entry of the world catalog: a market group, market, work, occupation group or occupation. The whole id is its identity.",
+        "zh-CN": "世界目录里一个封存的、有标识的条目：赛道组、赛道、工作、职业大类或职业。整个 ID 就是它的身份。"
+      },
+      "identifier": "id",
+      "storage": "sealed:concepts.jsonl",
+      "table": "ontology_concepts",
+      "sealed": true
+    },
+    "MarketGroup": {
+      "label": {
+        "en": "Market group",
+        "zh-CN": "领域"
+      },
+      "subclass_of": "Concept",
+      "kind": "market_group",
+      "definition": {
+        "en": "An editorial domain organizing related markets; not an industry weight or capability score.",
+        "zh-CN": "归拢相关赛道的编辑领域；不是行业权重，也不是能力分数。"
+      },
+      "storage": "sealed:concepts.jsonl",
+      "sealed": true
+    },
+    "Market": {
+      "label": {
+        "en": "Market",
+        "zh-CN": "赛道"
+      },
+      "subclass_of": "Concept",
+      "kind": "market",
+      "definition": {
+        "en": "An editorial market or service area grouping work that serves a related production or service need.",
+        "zh-CN": "一个编辑赛道或服务领域，把服务于同一类生产或服务需求的工作归在一起。"
+      },
+      "storage": "sealed:concepts.jsonl",
+      "sealed": true
+    },
+    "Work": {
+      "label": {
+        "en": "Work",
+        "zh-CN": "工作"
+      },
+      "subclass_of": "Concept",
+      "kind": "work",
+      "definition": {
+        "en": "A named scope of work, either an editorial work item or a source occupation task; matching labels do not establish identity.",
+        "zh-CN": "一项有名字的工作范围：编辑的工作条目，或来源职业的任务。名称相同不代表是同一项。"
+      },
+      "storage": "sealed:concepts.jsonl",
+      "sealed": true
+    },
+    "OccupationGroup": {
+      "label": {
+        "en": "Occupation group",
+        "zh-CN": "职业大类"
+      },
+      "subclass_of": "Concept",
+      "kind": "occupation_group",
+      "definition": {
+        "en": "An O*NET occupation family used to organize source occupations.",
+        "zh-CN": "用来组织来源职业的 O*NET 职业大类。"
+      },
+      "storage": "sealed:concepts.jsonl",
+      "sealed": true
+    },
+    "Occupation": {
+      "label": {
+        "en": "Occupation",
+        "zh-CN": "职业"
+      },
+      "subclass_of": "Concept",
+      "kind": "occupation",
+      "definition": {
+        "en": "An O*NET occupation with its source identity and occupational description.",
+        "zh-CN": "一个 O*NET 职业，带来源身份和职业描述。"
+      },
+      "storage": "sealed:concepts.jsonl",
+      "sealed": true
+    },
+    "Gate": {
+      "label": {
+        "en": "Gate",
+        "zh-CN": "闸门"
+      },
+      "definition": {
+        "en": "A non-capability condition that prevents autonomous completion even when every required capability is met.",
+        "zh-CN": "即使所需能力全部达成，仍然阻止自主完成的条件。闸门不会因为模型变强而解除，需要制度、法规或物理条件改变。"
+      },
+      "identifier": "gate_id",
+      "storage": "data/gates.json",
+      "table": "gates",
+      "sealed": true,
+      "state_store": "pg:gate_states"
+    },
+    "Organization": {
+      "label": {
+        "en": "Organization",
+        "zh-CN": "公司"
+      },
+      "definition": {
+        "en": "A company or institution we follow. Referred to by id everywhere (rule:org-must-be-id); the registry is datasets/semantic/organizations.json.",
+        "zh-CN": "我们跟踪的公司或机构。任何地方都用 ID 引用（rule:org-must-be-id），名单在 datasets/semantic/organizations.json。"
+      },
+      "identifier": "org_id",
+      "storage": "data/organizations.json",
+      "table": "org_registry",
+      "sealed": true
+    },
+    "Person": {
+      "label": {
+        "en": "Person",
+        "zh-CN": "人物"
+      },
+      "definition": {
+        "en": "A person whose public account we may collect, with the source of their identity.",
+        "zh-CN": "我们可能采集其公开账号的一个人，带身份出处。"
+      },
+      "identifier": "person_id",
+      "table": "people",
+      "sealed": false
+    },
+    "SourceAccount": {
+      "label": {
+        "en": "Source account",
+        "zh-CN": "来源账号"
+      },
+      "definition": {
+        "en": "A social account we collect from. It belongs to one person or one organization; a verified badge proves nothing about what it claims.",
+        "zh-CN": "一个被采集的社交账号，属于一个人或一个机构。认证标记不证明它说的内容。"
+      },
+      "identifier": "account_key",
+      "table": "source_accounts",
+      "sealed": false
+    },
+    "Post": {
+      "label": {
+        "en": "Post",
+        "zh-CN": "帖子"
+      },
+      "definition": {
+        "en": "A post's identity. Each collection run's snapshot of it is an observation, not another post.",
+        "zh-CN": "一条帖子的身份。每次采集得到的快照是对它的一次观测，不是另一条帖子。"
+      },
+      "identifier": "source_id",
+      "table": "collected_sources",
+      "sealed": false
+    },
+    "Event": {
+      "label": {
+        "en": "Update",
+        "zh-CN": "更新"
+      },
+      "definition": {
+        "en": "One deduplicated update: something an organization released, changed, measured or announced. Several posts about the same thing are one update.",
+        "zh-CN": "一条去重后的更新：某个机构发布、改动、测得或宣布的一件事。讲同一件事的多条帖子是一条更新。"
+      },
+      "identifier": "event_id",
+      "table": "extracted_events",
+      "sealed": false,
+      "identity": {
+        "label": {
+          "en": "Event identity",
+          "zh-CN": "事件同一性"
+        },
+        "new": true,
+        "observed_problem": {
+          "zh-CN": "现行 dedup_key = slug(primary_org + title)。措辞不同即视为不同事件：Qwen3.8-Max-0902 tops CodeArena WebDev 被拆成 4 条，Apsara Conference 2026 被拆成 4 条，Tencent Agent Day 2 条。755 条里可确认的重复至少 10 条。"
+        },
+        "root_cause": {
+          "zh-CN": "标题是自然语言，同一件事有无数种写法。用标题当身份，等于用措辞当身份。"
+        },
+        "rule": {
+          "zh-CN": "事件身份由三元组决定：主体组织 ID + 事件类型 + 事件对象。事件对象指被发布/被评测/被采用的那个具体东西（产品版本、基准名、会议名），由模型显式抽取为 subject_key，而不是从标题里猜。同一三元组即同一事件，标题只作展示。"
+        },
+        "identity_fields": [
+          "primary_org_id",
+          "kind",
+          "subject_key"
+        ],
+        "subject_key": {
+          "zh-CN": "被讨论对象的规范名，小写、去空格与标点。产品用产品线+版本（wan-3.0），基准用基准名+赛道（codearena-webdev），活动用活动名+年份（apsara-conference-2026），事故用受影响服务+日期（grok-2026-09-18）。判不出对象时留空，此时退回标题 slug 并标记 identity_confidence 低。"
+        },
+        "occurrence_window": {
+          "zh-CN": "同一三元组跨 14 天以上再次出现，视为新一次发生（例如年度会议），身份追加年份。"
+        }
+      }
+    },
+    "Model": {
+      "label": {
+        "en": "Model",
+        "zh-CN": "模型"
+      },
+      "definition": {
+        "en": "A trained model, or a family of them, that its maker releases under a name: GPT-6 Astra, Claude Fable 5.1, Qwen3.8, Wan 2.7. A product, app, agent, feature, platform or service is not a model, even when it runs on one or shares its brand.",
+        "zh-CN": "厂商以某个名字发布的一个训练好的模型，或一个模型系列：GPT-6 Astra、Claude Fable 5.1、Qwen3.8、Wan 2.7。产品、应用、智能体、功能、平台、服务都不是模型，即使它跑在模型上、或与模型同名。"
+      },
+      "identifier": "model_id",
+      "table": "models",
+      "sealed": false
+    },
+    "Provider": {
+      "label": {
+        "en": "Provider",
+        "zh-CN": "供应商"
+      },
+      "definition": {
+        "en": "A platform through which a model is offered. The maker's own API is one; a cloud that serves several makers' models is another. A provider is not the model's owner.",
+        "zh-CN": "提供模型访问的平台。厂商自己的 API 是一种，转售多家模型的云平台是另一种。供应商不是模型的归属方。"
+      },
+      "identifier": "provider_id",
+      "table": "model_providers",
+      "sealed": false
+    }
+  },
+  "properties": {
+    "Concept.id": {
+      "domain": "Concept",
+      "range": "string",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "The whole id is the identity; it is never rebuilt from a label or a path.",
+        "zh-CN": "整个 ID 是身份，不根据名称或路径重新生成。"
+      },
+      "column": "ontology_concepts.id"
+    },
+    "Concept.kind": {
+      "domain": "Concept",
+      "range": "vocabulary:concept_kind",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "Which concept class the entry is. Decides the type; never guessed from the id.",
+        "zh-CN": "条目属于哪个概念类。类型由它决定，不从 ID 里猜。"
+      },
+      "column": "ontology_concepts.kind"
+    },
+    "Concept.label_en": {
+      "domain": "Concept",
+      "range": "string",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "English name.",
+        "zh-CN": "英文名。"
+      },
+      "column": "ontology_concepts.label_en"
+    },
+    "Concept.label_zh_cn": {
+      "domain": "Concept",
+      "range": "string",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "Simplified Chinese name.",
+        "zh-CN": "简体中文名。"
+      },
+      "column": "ontology_concepts.label_zh_cn"
+    },
+    "Concept.origin": {
+      "domain": "Concept",
+      "range": "vocabulary:concept_origin",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "Where the entry comes from.",
+        "zh-CN": "条目的来源。"
+      },
+      "column": "ontology_concepts.origin"
+    },
+    "Concept.translation_status": {
+      "domain": "Concept",
+      "range": "vocabulary:translation_status",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "State of the Chinese name.",
+        "zh-CN": "中文名的状态。"
+      },
+      "column": "ontology_concepts.translation_status"
+    },
+    "Concept.scope_status": {
+      "domain": "Concept",
+      "range": "vocabulary:scope_status",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "How far the entry's scope is defined.",
+        "zh-CN": "条目范围定义到什么程度。"
+      },
+      "column": "ontology_concepts.scope_status"
+    },
+    "Concept.scope_note": {
+      "domain": "Concept",
+      "range": "text",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "An editorial note on scope.",
+        "zh-CN": "编辑的范围说明。"
+      }
+    },
+    "Concept.definition": {
+      "domain": "Concept",
+      "range": "object",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "Definition text with its language and basis; null when no existing source text applies.",
+        "zh-CN": "定义文本，带语言和依据；没有现成来源文本时为空。"
+      },
+      "column": "ontology_concepts.definition",
+      "fields": {
+        "text": "text",
+        "language": "string",
+        "basis": "vocabulary:definition_basis"
+      }
+    },
+    "Gate.gate_id": {
+      "domain": "Gate",
+      "range": "string",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "gate:<slug>. Stable.",
+        "zh-CN": "gate:<标识>。稳定。"
+      },
+      "column": "gates.gate_id"
+    },
+    "Gate.gate_type": {
+      "domain": "Gate",
+      "range": "vocabulary:gate_type",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "What kind of condition the gate is.",
+        "zh-CN": "闸门是哪一类条件。"
+      },
+      "column": "gates.gate_type"
+    },
+    "Gate.label_en": {
+      "domain": "Gate",
+      "range": "string",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "English name.",
+        "zh-CN": "英文名。"
+      },
+      "column": "gates.label_en"
+    },
+    "Gate.label_zh_cn": {
+      "domain": "Gate",
+      "range": "string",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "Simplified Chinese name.",
+        "zh-CN": "简体中文名。"
+      },
+      "column": "gates.label_zh_cn"
+    },
+    "Gate.definition_en": {
+      "domain": "Gate",
+      "range": "text",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "What must change for the gate to lift.",
+        "zh-CN": "闸门解除需要改变什么。"
+      },
+      "column": "gates.definition_en"
+    },
+    "Gate.definition_zh_cn": {
+      "domain": "Gate",
+      "range": "text",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "The same in Chinese.",
+        "zh-CN": "同上，中文。"
+      },
+      "column": "gates.definition_zh_cn"
+    },
+    "Gate.lifecycle": {
+      "domain": "Gate",
+      "range": "vocabulary:lifecycle",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "Whether the gate is in use.",
+        "zh-CN": "闸门是否在用。"
+      },
+      "column": "gates.lifecycle"
+    },
+    "Gate.replaced_by": {
+      "domain": "Gate",
+      "range": "class:Gate",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "The gate that replaces a deprecated one.",
+        "zh-CN": "接替已停用闸门的闸门。"
+      },
+      "column": "gates.replaced_by"
+    },
+    "Gate.obsolescence_reason": {
+      "domain": "Gate",
+      "range": "text",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "Why it was deprecated.",
+        "zh-CN": "停用原因。"
+      },
+      "column": "gates.obsolescence_reason"
+    },
+    "Organization.org_id": {
+      "domain": "Organization",
+      "range": "string",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "org:<slug>. Every reference to an organization uses it.",
+        "zh-CN": "org:<标识>。凡是指向机构的地方都用它。"
+      },
+      "column": "org_registry.org_id"
+    },
+    "Organization.canonical_name_en": {
+      "domain": "Organization",
+      "range": "string",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "English display name.",
+        "zh-CN": "英文显示名。"
+      },
+      "column": "org_registry.canonical_name_en"
+    },
+    "Organization.canonical_name_zh_cn": {
+      "domain": "Organization",
+      "range": "string",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "Chinese display name.",
+        "zh-CN": "中文显示名。"
+      },
+      "column": "org_registry.canonical_name_zh_cn"
+    },
+    "Organization.aliases": {
+      "domain": "Organization",
+      "range": "string",
+      "min": 0,
+      "max": "*",
+      "definition": {
+        "en": "Other names that resolve to this organization.",
+        "zh-CN": "解析到该机构的其他写法。"
+      },
+      "column": "org_registry.aliases"
+    },
+    "Person.person_id": {
+      "domain": "Person",
+      "range": "string",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "person:<hash>. Stable.",
+        "zh-CN": "person:<哈希>。稳定。"
+      },
+      "column": "people.person_id"
+    },
+    "Person.name": {
+      "domain": "Person",
+      "range": "string",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "The name as the identity source writes it.",
+        "zh-CN": "身份出处里的写法。"
+      },
+      "column": "people.name"
+    },
+    "Person.aliases": {
+      "domain": "Person",
+      "range": "string",
+      "min": 0,
+      "max": "*",
+      "definition": {
+        "en": "Other spellings.",
+        "zh-CN": "其他写法。"
+      },
+      "column": "people.aliases"
+    },
+    "Person.identity_url": {
+      "domain": "Person",
+      "range": "uri",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "Where the identity was established.",
+        "zh-CN": "身份的出处。"
+      },
+      "column": "people.identity_url"
+    },
+    "SourceAccount.account_key": {
+      "domain": "SourceAccount",
+      "range": "string",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "<platform>:<handle in lower case>.",
+        "zh-CN": "<平台>:<小写账号名>。"
+      },
+      "column": "source_accounts.account_key"
+    },
+    "SourceAccount.platform": {
+      "domain": "SourceAccount",
+      "range": "string",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "The platform the account is on.",
+        "zh-CN": "账号所在平台。"
+      },
+      "column": "source_accounts.platform"
+    },
+    "SourceAccount.handle": {
+      "domain": "SourceAccount",
+      "range": "string",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "The handle as written.",
+        "zh-CN": "账号名原样。"
+      },
+      "column": "source_accounts.handle"
+    },
+    "SourceAccount.platform_account_id": {
+      "domain": "SourceAccount",
+      "range": "string",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "The platform's stable numeric id; null until resolved.",
+        "zh-CN": "平台的稳定数字 ID；解析前为空。"
+      },
+      "column": "source_accounts.platform_account_id"
+    },
+    "SourceAccount.owner_kind": {
+      "domain": "SourceAccount",
+      "range": "vocabulary:account_owner_kind",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "Whether a person or an organization owns it.",
+        "zh-CN": "归属于个人还是机构。"
+      },
+      "column": "source_accounts.owner_kind"
+    },
+    "SourceAccount.panel_role": {
+      "domain": "SourceAccount",
+      "range": "vocabulary:panel_role",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "The role the account plays as a source.",
+        "zh-CN": "账号作为来源的角色。"
+      },
+      "column": "source_accounts.panel_role"
+    },
+    "SourceAccount.panel_state": {
+      "domain": "SourceAccount",
+      "range": "vocabulary:panel_state",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "Derived from the check log; never edited by hand.",
+        "zh-CN": "由检查日志推导，不手工修改。"
+      },
+      "column": "source_accounts.panel_state"
+    },
+    "SourceAccount.identity_grade": {
+      "domain": "SourceAccount",
+      "range": "vocabulary:identity_evidence_grade",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "How strongly the identity is established.",
+        "zh-CN": "身份证据的强度。"
+      },
+      "column": "source_accounts.identity_grade"
+    },
+    "SourceAccount.identity_url": {
+      "domain": "SourceAccount",
+      "range": "uri",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "The identity evidence.",
+        "zh-CN": "身份证据的出处。"
+      },
+      "column": "source_accounts.identity_url"
+    },
+    "SourceAccount.language": {
+      "domain": "SourceAccount",
+      "range": "vocabulary:account_language",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "Posting language.",
+        "zh-CN": "发帖语言。"
+      },
+      "column": "source_accounts.language"
+    },
+    "SourceAccount.focus": {
+      "domain": "SourceAccount",
+      "range": "text",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "What the account mostly writes about.",
+        "zh-CN": "账号主要写什么。"
+      },
+      "column": "source_accounts.focus"
+    },
+    "SourceAccount.excluded": {
+      "domain": "SourceAccount",
+      "range": "boolean",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "Kept in the list but never collected.",
+        "zh-CN": "留在名单里但不采集。"
+      },
+      "column": "source_accounts.excluded"
+    },
+    "SourceAccount.added_from": {
+      "domain": "SourceAccount",
+      "range": "string",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "The file the account was imported from.",
+        "zh-CN": "账号从哪个文件导入。"
+      },
+      "column": "source_accounts.added_from"
+    },
+    "SourceAccount.state_changed_at": {
+      "domain": "SourceAccount",
+      "range": "datetime",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "When panel_state last changed.",
+        "zh-CN": "panel_state 最近一次变化的时间。"
+      },
+      "column": "source_accounts.state_changed_at"
+    },
+    "Post.source_id": {
+      "domain": "Post",
+      "range": "string",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "The platform's id of the post.",
+        "zh-CN": "平台给帖子的 ID。"
+      },
+      "column": "collected_sources.source_id"
+    },
+    "Post.platform": {
+      "domain": "Post",
+      "range": "string",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "The platform.",
+        "zh-CN": "平台。"
+      },
+      "column": "collected_sources.platform"
+    },
+    "Post.canonical_url": {
+      "domain": "Post",
+      "range": "uri",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "The post's address.",
+        "zh-CN": "帖子地址。"
+      },
+      "column": "collected_sources.canonical_url"
+    },
+    "Post.kind": {
+      "domain": "Post",
+      "range": "string",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "The record kind; currently always a post.",
+        "zh-CN": "记录类型；目前只有帖子。"
+      },
+      "column": "collected_sources.kind"
+    },
+    "Post.published_at": {
+      "domain": "Post",
+      "range": "datetime",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "Original publication time, apart from when it was observed.",
+        "zh-CN": "原始发布时间，与观测时间分开。"
+      },
+      "column": "collected_sources.published_at"
+    },
+    "Post.is_reply": {
+      "domain": "Post",
+      "range": "boolean",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "Whether it replies to another post.",
+        "zh-CN": "是否回复了另一条帖子。"
+      },
+      "column": "collected_sources.is_reply"
+    },
+    "Post.is_repost": {
+      "domain": "Post",
+      "range": "boolean",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "Whether it reposts another post.",
+        "zh-CN": "是否转发了另一条帖子。"
+      },
+      "column": "collected_sources.is_repost"
+    },
+    "Post.conversation_id": {
+      "domain": "Post",
+      "range": "string",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "The thread it belongs to.",
+        "zh-CN": "所属会话。"
+      },
+      "column": "collected_sources.conversation_id"
+    },
+    "Event.event_id": {
+      "domain": "Event",
+      "range": "string",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "Stable id of the update.",
+        "zh-CN": "更新的稳定 ID。"
+      },
+      "column": "extracted_events.event_id"
+    },
+    "Event.kind": {
+      "domain": "Event",
+      "range": "vocabulary:event_kind",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "What kind of update it is.",
+        "zh-CN": "更新的类型。"
+      },
+      "column": "extracted_events.kind"
+    },
+    "Event.kind_vocabulary": {
+      "domain": "Event",
+      "range": "string",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "Which version of the kind vocabulary the row was classified under.",
+        "zh-CN": "该行是按哪个版本的类型词表分类的。"
+      },
+      "column": "extracted_events.kind_vocabulary"
+    },
+    "Event.subject_key": {
+      "domain": "Event",
+      "range": "string",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "The canonical name of the thing the update is about; part of its identity.",
+        "zh-CN": "更新对象的规范名，是同一性的一部分。"
+      },
+      "column": "extracted_events.subject_key"
+    },
+    "Event.title": {
+      "domain": "Event",
+      "range": "string",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "A display title.",
+        "zh-CN": "显示用标题。"
+      },
+      "column": "extracted_events.title"
+    },
+    "Event.summary": {
+      "domain": "Event",
+      "range": "text",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "What happened, from the source text only.",
+        "zh-CN": "发生了什么，只依据来源文本。"
+      },
+      "column": "extracted_events.summary"
+    },
+    "Event.announced_at": {
+      "domain": "Event",
+      "range": "datetime",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "When it was announced.",
+        "zh-CN": "宣布时间。"
+      },
+      "column": "extracted_events.announced_at"
+    },
+    "Event.occurred_at": {
+      "domain": "Event",
+      "range": "datetime",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "When it happened.",
+        "zh-CN": "发生时间。"
+      },
+      "column": "extracted_events.occurred_at"
+    },
+    "Event.scheduled_for": {
+      "domain": "Event",
+      "range": "datetime",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "When it is due to happen.",
+        "zh-CN": "预定发生时间。"
+      },
+      "column": "extracted_events.scheduled_for"
+    },
+    "Event.occurrence_status": {
+      "domain": "Event",
+      "range": "vocabulary:occurrence_status",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "Whether it has happened.",
+        "zh-CN": "是否已发生。"
+      },
+      "column": "extracted_events.occurrence_status"
+    },
+    "Event.confidence": {
+      "domain": "Event",
+      "range": "number",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "The extractor's confidence, 0 to 1.",
+        "zh-CN": "抽取的置信度，0 到 1。"
+      },
+      "column": "extracted_events.confidence"
+    },
+    "Event.identity_confidence": {
+      "domain": "Event",
+      "range": "vocabulary:identity_confidence",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "How surely the subject was identified.",
+        "zh-CN": "对象识别的把握。"
+      },
+      "column": "extracted_events.identity_confidence"
+    },
+    "Model.model_id": {
+      "domain": "Model",
+      "range": "string",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "model:<owner>:<slug of the name>. Stable; never reused.",
+        "zh-CN": "model:<归属方>:<名字的规范写法>。稳定，不复用。"
+      },
+      "column": "models.model_id",
+      "source": "derived"
+    },
+    "Model.org_id": {
+      "domain": "Model",
+      "range": "class:Organization",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "The company that makes the model, when it is one we follow.",
+        "zh-CN": "出品公司，限我们跟踪的公司。"
+      },
+      "column": "models.org_id",
+      "source": "mention | catalog"
+    },
+    "Model.owner_name": {
+      "domain": "Model",
+      "range": "string",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "The maker as the post writes it, for a maker outside the registry.",
+        "zh-CN": "出品方不在名单内时，帖子里的原样写法。"
+      },
+      "column": "models.owner_name",
+      "source": "mention"
+    },
+    "Model.level": {
+      "domain": "Model",
+      "range": "vocabulary:model_level",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "Family or release.",
+        "zh-CN": "系列还是具体版本。"
+      },
+      "column": "models.level"
+    },
+    "Model.parent_model_id": {
+      "domain": "Model",
+      "range": "class:Model",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "The family a release belongs to. A family has none.",
+        "zh-CN": "具体版本所属的系列。系列自身没有。"
+      },
+      "column": "models.parent_model_id"
+    },
+    "Model.name": {
+      "domain": "Model",
+      "range": "string",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "The release name as its maker writes it, without a date or build suffix.",
+        "zh-CN": "厂商的写法，不带日期或构建号后缀。"
+      },
+      "column": "models.name"
+    },
+    "Model.version": {
+      "domain": "Model",
+      "range": "string",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "The version as written. Never inferred; a family has none.",
+        "zh-CN": "文本里写出的版本号。不推断；系列没有。"
+      },
+      "column": "models.version",
+      "source": "mention"
+    },
+    "Model.variant": {
+      "domain": "Model",
+      "range": "string",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "The variant (Flash, Pro, mini). A family has none.",
+        "zh-CN": "变体（Flash、Pro、mini）。系列没有。"
+      },
+      "column": "models.variant",
+      "source": "mention"
+    },
+    "Model.status": {
+      "domain": "Model",
+      "range": "vocabulary:model_status",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "How far the model's existence is established.",
+        "zh-CN": "模型的存在被确认到什么程度。"
+      },
+      "column": "models.status"
+    },
+    "Model.released_at": {
+      "domain": "Model",
+      "range": "datetime",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "When the maker's own release update happened. Set only by confirmation.",
+        "zh-CN": "厂商自己的发布帖的时间。只在确认时写入。"
+      },
+      "column": "models.released_at",
+      "source": "owner_release_update"
+    },
+    "Model.first_seen_event_id": {
+      "domain": "Model",
+      "range": "class:Event",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "The update whose mention opened this model. Null for a model known only from the catalog.",
+        "zh-CN": "最早提到它并开出这一行的事件。只来自目录的模型为空。"
+      },
+      "column": "models.first_seen_event_id",
+      "source": "mention"
+    },
+    "Model.catalog_id": {
+      "domain": "Model",
+      "range": "string",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "The catalog's canonical id, <owner>/<model>. Null when the catalog does not list it.",
+        "zh-CN": "目录里的规范标识，<归属方>/<模型>。目录未收录则为空。"
+      },
+      "column": "models.catalog_id",
+      "source": "catalog"
+    },
+    "Model.catalog_released_on": {
+      "domain": "Model",
+      "range": "date",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "The earliest date any provider lists the model in the catalog. A listing date, kept apart from released_at.",
+        "zh-CN": "目录里任一供应商最早的上架日期。是上架日期，与 released_at 分开存。"
+      },
+      "column": "models.catalog_released_on",
+      "source": "catalog"
+    },
+    "Model.open_weights": {
+      "domain": "Model",
+      "range": "boolean",
+      "min": 0,
+      "max": 1,
+      "definition": {
+        "en": "Whether the weights are published. Null when the catalog does not say or its listings disagree.",
+        "zh-CN": "权重是否公开。目录没说或各条目不一致时为空。"
+      },
+      "column": "models.open_weights",
+      "source": "catalog"
+    },
+    "Model.output_modalities": {
+      "domain": "Model",
+      "range": "vocabulary:modality",
+      "min": 0,
+      "max": "*",
+      "definition": {
+        "en": "What the model produces. Empty when the catalog does not say or its listings disagree.",
+        "zh-CN": "模型产出什么。目录没说或各条目不一致时为空。"
+      },
+      "column": "model_output_modalities.modality",
+      "source": "catalog"
+    },
+    "Provider.provider_id": {
+      "domain": "Provider",
+      "range": "string",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "provider:<catalog key>.",
+        "zh-CN": "provider:<目录里的键>。"
+      },
+      "column": "model_providers.provider_id"
+    },
+    "Provider.name": {
+      "domain": "Provider",
+      "range": "string",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "Display name.",
+        "zh-CN": "显示名。"
+      },
+      "column": "model_providers.name"
+    },
+    "Provider.kind": {
+      "domain": "Provider",
+      "range": "vocabulary:provider_kind",
+      "min": 1,
+      "max": 1,
+      "definition": {
+        "en": "The maker's own API or a platform serving several makers.",
+        "zh-CN": "厂商自己的 API，还是提供多家模型的平台。"
+      },
+      "column": "model_providers.kind"
+    }
+  },
+  "relations": {
+    "has_market": {
+      "domain": "MarketGroup",
+      "range": "Market",
+      "domain_cardinality": "1..*",
+      "range_cardinality": "0..*",
+      "storage": "sealed:relations.jsonl",
+      "sealed": true,
+      "definition": {
+        "en": "Organizes a market within an editorial domain.",
+        "zh-CN": "把一个赛道归入一个编辑领域。"
+      },
+      "view": "markets",
+      "attributes": {
+        "order": "integer"
+      },
+      "label": {
+        "en": "has market",
+        "zh-CN": "包含赛道"
+      }
+    },
+    "has_work": {
+      "domain": "Market",
+      "range": "Work",
+      "domain_cardinality": "0..*",
+      "range_cardinality": "0..*",
+      "storage": "sealed:relations.jsonl",
+      "sealed": true,
+      "definition": {
+        "en": "Associates a work item with a market.",
+        "zh-CN": "把一项工作关联到一个赛道。"
+      },
+      "view": "markets",
+      "attributes": {
+        "order": "integer"
+      },
+      "label": {
+        "en": "has work",
+        "zh-CN": "包含工作"
+      }
+    },
+    "has_occupation": {
+      "domain": "OccupationGroup",
+      "range": "Occupation",
+      "domain_cardinality": "1",
+      "range_cardinality": "0..*",
+      "storage": "sealed:relations.jsonl",
+      "sealed": true,
+      "definition": {
+        "en": "Organizes an occupation within an occupation family.",
+        "zh-CN": "把一个职业归入一个职业大类。"
+      },
+      "view": "occupations",
+      "attributes": {
+        "order": "integer"
+      },
+      "label": {
+        "en": "has occupation",
+        "zh-CN": "包含职业"
+      }
+    },
+    "has_task": {
+      "domain": "Occupation",
+      "range": "Work",
+      "domain_cardinality": "0..*",
+      "range_cardinality": "0..*",
+      "storage": "sealed:relations.jsonl",
+      "sealed": true,
+      "definition": {
+        "en": "Associates work with an occupation; source task membership is retained.",
+        "zh-CN": "把工作关联到一个职业；保留来源任务的归属。"
+      },
+      "view": "occupations",
+      "attributes": {
+        "order": "integer"
+      },
+      "label": {
+        "en": "has task",
+        "zh-CN": "包含任务"
+      }
+    },
+    "mapped_to": {
+      "domain": "Concept",
+      "range": "external:reference",
+      "domain_cardinality": "0..*",
+      "range_cardinality": "0..*",
+      "storage": "sealed:external_mappings.jsonl",
+      "sealed": true,
+      "definition": {
+        "en": "The concept corresponds to a record of an external source system.",
+        "zh-CN": "该概念对应外部来源系统里的一条记录。"
+      },
+      "attributes": {
+        "relation": "vocabulary:mapping_relation",
+        "method": "vocabulary:relation_method",
+        "status": "vocabulary:relation_status",
+        "explanation": "text"
+      }
+    },
+    "performed_by": {
+      "domain": "Work",
+      "range": "Work",
+      "domain_cardinality": "0..*",
+      "range_cardinality": "0..*",
+      "storage": "pg:activity_task_edges",
+      "sealed": false,
+      "definition": {
+        "en": "A market's work item is carried out through this occupation task.",
+        "zh-CN": "赛道里的这项工作通过这条职业任务来完成。"
+      },
+      "label": {
+        "en": "performed by",
+        "zh-CN": "由…完成"
+      },
+      "attributes": {
+        "judge": "vocabulary:judge",
+        "method": "vocabulary:relation_method",
+        "status": "vocabulary:relation_status",
+        "confidence": "number",
+        "rationale": "text",
+        "judgment_run_id": "string"
+      },
+      "domain_note": "editorial work",
+      "range_note": "source occupation task"
+    },
+    "blocked_by": {
+      "domain": "Work",
+      "range": "Gate",
+      "domain_cardinality": "0..*",
+      "range_cardinality": "0..*",
+      "storage": "pg:activity_gate_edges",
+      "sealed": false,
+      "definition": {
+        "en": "The work stays limited by this gate however capable the model is.",
+        "zh-CN": "即使所需能力齐备，这项工作仍受此闸门限制。必须指出依据的任务原文（because_task_id），不能只写理由文字。"
+      },
+      "label": {
+        "en": "blocked by",
+        "zh-CN": "受阻于"
+      },
+      "attributes": {
+        "judge": "vocabulary:judge",
+        "method": "vocabulary:relation_method",
+        "status": "vocabulary:relation_status",
+        "confidence": "number",
+        "rationale": "text",
+        "judgment_run_id": "string"
+      }
+    },
+    "employs": {
+      "domain": "Market",
+      "range": "Occupation",
+      "domain_cardinality": "0..*",
+      "range_cardinality": "0..*",
+      "storage": "pg:market_occupation_edges",
+      "sealed": false,
+      "definition": {
+        "en": "People in this occupation do the market's work.",
+        "zh-CN": "该职业的人做这个赛道的工作。"
+      },
+      "label": {
+        "en": "employs",
+        "zh-CN": "用到"
+      },
+      "attributes": {
+        "judge": "vocabulary:judge",
+        "method": "vocabulary:relation_method",
+        "status": "vocabulary:relation_status",
+        "confidence": "number",
+        "rationale": "text",
+        "judgment_run_id": "string"
+      }
+    },
+    "evidences": {
+      "domain": "Event",
+      "range": "Work",
+      "domain_cardinality": "0..*",
+      "range_cardinality": "0..*",
+      "storage": "pg:activity_evidence",
+      "sealed": false,
+      "definition": {
+        "en": "The update is evidence about how far this work can be done, at a level capped by its tier.",
+        "zh-CN": "这条更新是关于该项工作能做到什么程度的证据，级别受证据等级封顶。"
+      },
+      "label": {
+        "en": "is evidence for",
+        "zh-CN": "佐证"
+      },
+      "attributes": {
+        "evidence_tier": "vocabulary:evidence_tier",
+        "evidence_sign": "vocabulary:evidence_sign",
+        "observed_level": "vocabulary:activity_level",
+        "judge": "vocabulary:judge",
+        "method": "vocabulary:relation_method",
+        "status": "vocabulary:relation_status",
+        "confidence": "number",
+        "rationale": "text",
+        "judgment_run_id": "string"
+      }
+    },
+    "verifies": {
+      "domain": "Post",
+      "range": "Event",
+      "domain_cardinality": "0..*",
+      "range_cardinality": "0..*",
+      "storage": "pg:verification_evidence",
+      "sealed": false,
+      "definition": {
+        "en": "A panel post bears on a vendor's claim about a piece of work.",
+        "zh-CN": "名单账号的一条帖子对厂商关于某项工作的说法构成验证材料。"
+      },
+      "label": {
+        "en": "verifies",
+        "zh-CN": "验证"
+      },
+      "attributes": {
+        "work": "class:Work",
+        "post_nature": "vocabulary:post_nature",
+        "observed_level": "vocabulary:activity_level",
+        "evidence_tier": "vocabulary:evidence_tier",
+        "independent": "boolean",
+        "status": "vocabulary:relation_status",
+        "rationale": "text",
+        "judgment_run_id": "string"
+      }
+    },
+    "links_to": {
+      "domain": "Post",
+      "range": "Event",
+      "domain_cardinality": "0..*",
+      "range_cardinality": "0..*",
+      "storage": "pg:event_posts",
+      "sealed": false,
+      "definition": {
+        "en": "The post belongs to the update through a reply, quote or repost chain, or by naming its product.",
+        "zh-CN": "帖子沿回复、引用、转发链，或因提到产品名，归属到这条更新。"
+      },
+      "label": {
+        "en": "links to",
+        "zh-CN": "归属于"
+      },
+      "attributes": {
+        "link": "vocabulary:post_link",
+        "depth": "integer",
+        "via_source_id": "class:Post"
+      }
+    },
+    "extracted_from": {
+      "domain": "Event",
+      "range": "Post",
+      "domain_cardinality": "1..*",
+      "range_cardinality": "0..*",
+      "storage": "pg:extracted_event_sources",
+      "sealed": false,
+      "definition": {
+        "en": "The update was extracted from this post.",
+        "zh-CN": "这条更新是从该帖子抽取的。"
+      },
+      "label": {
+        "en": "extracted from",
+        "zh-CN": "抽取自"
+      },
+      "attributes": {
+        "source_role": "vocabulary:source_role"
+      }
+    },
+    "announced_by": {
+      "domain": "Event",
+      "range": "Organization",
+      "domain_cardinality": "0..*",
+      "range_cardinality": "0..1",
+      "storage": "pg:extracted_events.primary_org_id",
+      "sealed": false,
+      "definition": {
+        "en": "The organization the update is about.",
+        "zh-CN": "更新的主体机构。"
+      },
+      "label": {
+        "en": "announced by",
+        "zh-CN": "主体"
+      }
+    },
+    "names_model": {
+      "domain": "Event",
+      "range": "Model",
+      "domain_cardinality": "0..*",
+      "range_cardinality": "0..*",
+      "storage": "pg:event_models",
+      "sealed": false,
+      "definition": {
+        "en": "The update names this model, in a stated role.",
+        "zh-CN": "这条更新提到了这个模型，并说明它在更新里的角色。判官只抄出名字和角色，由确定性的别名表决定是哪个模型。"
+      },
+      "label": {
+        "en": "names",
+        "zh-CN": "提到"
+      },
+      "attributes": {
+        "role": "vocabulary:model_role",
+        "mention": "string",
+        "confidence": "number",
+        "run_id": "string"
+      }
+    },
+    "makes": {
+      "domain": "Organization",
+      "range": "Model",
+      "domain_cardinality": "0..1",
+      "range_cardinality": "0..*",
+      "storage": "pg:models.org_id",
+      "sealed": false,
+      "definition": {
+        "en": "The organization trains and releases the model.",
+        "zh-CN": "这家公司训练并发布了这个模型。归属看目录规范标识里的归属方或帖子写明的出品方，不看是谁在卖（rule:model-owner-is-not-provider）。"
+      },
+      "label": {
+        "en": "makes",
+        "zh-CN": "出品"
+      }
+    },
+    "has_release": {
+      "domain": "Model",
+      "range": "Model",
+      "domain_cardinality": "0..1",
+      "range_cardinality": "0..*",
+      "storage": "pg:models.parent_model_id",
+      "sealed": false,
+      "definition": {
+        "en": "A family contains a release. Only a family can be the parent.",
+        "zh-CN": "系列包含具体版本。只有系列能做上游，系列自身没有上游。"
+      },
+      "label": {
+        "en": "has release",
+        "zh-CN": "包含版本"
+      }
+    },
+    "offers": {
+      "domain": "Provider",
+      "range": "Model",
+      "domain_cardinality": "0..*",
+      "range_cardinality": "0..*",
+      "storage": "pg:model_offerings",
+      "sealed": false,
+      "definition": {
+        "en": "The provider lists the model from a given day. From the catalog, not a maker's statement.",
+        "zh-CN": "这个供应商从某一天起提供这个模型。来自目录，不是厂商声明。"
+      },
+      "label": {
+        "en": "offers",
+        "zh-CN": "上架"
+      },
+      "attributes": {
+        "listed_on": "date"
+      }
+    },
+    "operated_by": {
+      "domain": "Provider",
+      "range": "Organization",
+      "domain_cardinality": "0..*",
+      "range_cardinality": "0..1",
+      "storage": "pg:model_providers.org_id",
+      "sealed": false,
+      "definition": {
+        "en": "The organization that runs the provider, when it is one we follow.",
+        "zh-CN": "运营该供应商的机构，限我们跟踪的机构。"
+      },
+      "label": {
+        "en": "operated by",
+        "zh-CN": "运营方"
+      }
+    },
+    "owned_by": {
+      "domain": "SourceAccount",
+      "range": [
+        "Person",
+        "Organization"
+      ],
+      "domain_cardinality": "0..*",
+      "range_cardinality": "1",
+      "storage": "pg:source_accounts.person_id|org_id",
+      "sealed": false,
+      "definition": {
+        "en": "The person or organization the account belongs to.",
+        "zh-CN": "账号属于哪个人或机构。"
+      },
+      "label": {
+        "en": "owned by",
+        "zh-CN": "归属"
+      }
+    },
+    "affiliated_with": {
+      "domain": "Person",
+      "range": "Organization",
+      "domain_cardinality": "0..*",
+      "range_cardinality": "0..*",
+      "storage": "pg:person_affiliations",
+      "sealed": false,
+      "definition": {
+        "en": "A dated relation between a person and an organization, with its source.",
+        "zh-CN": "人物与机构之间带起止时间和出处的关系。"
+      },
+      "label": {
+        "en": "affiliated with",
+        "zh-CN": "关联"
+      },
+      "attributes": {
+        "relation": "vocabulary:affiliation_relation",
+        "role_title": "string",
+        "started_on": "date",
+        "ended_on": "date",
+        "observed_on": "date",
+        "source_url": "uri"
+      }
+    },
+    "authored_by": {
+      "domain": "Post",
+      "range": "SourceAccount",
+      "domain_cardinality": "0..*",
+      "range_cardinality": "0..1",
+      "storage": "pg:collected_sources.account_external_id",
+      "sealed": false,
+      "definition": {
+        "en": "The account that published the post.",
+        "zh-CN": "发布该帖子的账号。"
+      },
+      "label": {
+        "en": "authored by",
+        "zh-CN": "作者"
+      }
+    },
+    "replies_to": {
+      "domain": "Post",
+      "range": "Post",
+      "domain_cardinality": "0..*",
+      "range_cardinality": "0..1",
+      "storage": "pg:collected_sources.reply_to_source_id",
+      "sealed": false,
+      "definition": {
+        "en": "The post it replies to.",
+        "zh-CN": "它回复的帖子。"
+      },
+      "label": {
+        "en": "replies to",
+        "zh-CN": "回复"
+      }
+    },
+    "quotes": {
+      "domain": "Post",
+      "range": "Post",
+      "domain_cardinality": "0..*",
+      "range_cardinality": "0..1",
+      "storage": "pg:collected_sources.quoted_source_id",
+      "sealed": false,
+      "definition": {
+        "en": "The post it quotes.",
+        "zh-CN": "它引用的帖子。"
+      },
+      "label": {
+        "en": "quotes",
+        "zh-CN": "引用"
+      }
+    },
+    "reposts": {
+      "domain": "Post",
+      "range": "Post",
+      "domain_cardinality": "0..*",
+      "range_cardinality": "0..1",
+      "storage": "pg:collected_sources.repost_of_source_id",
+      "sealed": false,
+      "definition": {
+        "en": "The post it reposts.",
+        "zh-CN": "它转发的帖子。"
+      },
+      "label": {
+        "en": "reposts",
+        "zh-CN": "转发"
+      }
+    }
+  },
+  "vocabularies": {
+    "event_kind": {
+      "label": {
+        "en": "Event kind",
+        "zh-CN": "事件类型"
+      },
+      "version": "2.0.0",
+      "terms": {
+        "product_launch": {
+          "label": {
+            "en": "Product launch",
+            "zh-CN": "产品首发"
+          },
+          "definition": {
+            "en": "A product, model or service that did not previously exist publicly is announced for the first time.",
+            "zh-CN": "一个此前不存在公开版本的产品、模型或服务首次对外公布。"
+          },
+          "discriminator": {
+            "zh-CN": "与 version_release 的分界：该产品线此前有无任何公开版本。有，就是 version_release；没有，才是 product_launch。名称中带版本号/代际（3.0、v2、-0902）几乎总是 version_release。"
+          },
+          "positive_example": "MiniMax launches Hailuo Agent",
+          "negative_example": "Alibaba releases Wan3.0 —— 属 version_release，Wan 系列此前已有公开版本",
+          "can_demonstrate_capability": true,
+          "typical_tier": "T3"
+        },
+        "version_release": {
+          "label": {
+            "en": "Version release",
+            "zh-CN": "版本发布"
+          },
+          "definition": {
+            "en": "A new version of an existing product line is released.",
+            "zh-CN": "已有产品线发布新版本。"
+          },
+          "discriminator": {
+            "zh-CN": "出现版本号、代际或日期戳（Wan3.0、GPT-Live-1、Qwen3.8-Max-0902），且该产品线此前已公开。与 capability_update 的分界：有版本标识是 version_release，只是功能增减无版本标识是 capability_update。"
+          },
+          "positive_example": "Wan 3.0 video generation model released",
+          "negative_example": "Gemini app adds file upload —— 无版本标识，属 capability_update",
+          "can_demonstrate_capability": true,
+          "typical_tier": "T3"
+        },
+        "availability_change": {
+          "label": {
+            "en": "Availability change",
+            "zh-CN": "可获得性变更"
+          },
+          "definition": {
+            "en": "Who can use an already-released product, or where, changes: regions, platforms, eligibility, waitlist, preview-to-GA.",
+            "zh-CN": "已发布产品的可获得范围改变：地区、平台、资格、等待名单、预览转正式。"
+          },
+          "discriminator": {
+            "zh-CN": "产品本身没变，变的是「谁能用 / 在哪能用 / 是否还要排队」。判别关键词：generally available、rolls out to、now in、expands to、waitlist removed。若同一条消息既是首发又立即全量可用，归 product_launch，不重复计。"
+          },
+          "positive_example": "Wan3.0 generally available in Singapore region",
+          "negative_example": "Wan3.0 launches across platforms —— 若该产品此前未公开，归 product_launch",
+          "can_demonstrate_capability": false,
+          "typical_tier": "T3"
+        },
+        "capability_update": {
+          "label": {
+            "en": "Capability update",
+            "zh-CN": "能力更新"
+          },
+          "definition": {
+            "en": "An existing product gains, improves or removes a function without a new version identifier.",
+            "zh-CN": "已有产品新增、改进或移除功能，但未标注新版本。"
+          },
+          "discriminator": {
+            "zh-CN": "无版本标识，描述的是功能本身的增减。与 version_release 的分界只看有无版本标识。"
+          },
+          "positive_example": "ChatGPT Projects now supports scheduled runs",
+          "negative_example": "GPT-Live-1 released —— 有版本标识，属 version_release",
+          "can_demonstrate_capability": true,
+          "typical_tier": "T3"
+        },
+        "pricing_change": {
+          "label": {
+            "en": "Pricing change",
+            "zh-CN": "价格变更"
+          },
+          "definition": {
+            "en": "Price, quota, free tier or billing model changes.",
+            "zh-CN": "价格、配额、免费额度或计费方式变更。"
+          },
+          "discriminator": {
+            "zh-CN": "必须出现具体的价格、配额或计费方式。「更划算」「性价比更高」这类形容不算，除非给出数字。"
+          },
+          "positive_example": "Gemini API cuts input token price by 50%",
+          "negative_example": "New tier offers better value —— 无具体数字，不计",
+          "can_demonstrate_capability": false,
+          "typical_tier": "T3"
+        },
+        "benchmark_result": {
+          "label": {
+            "en": "Benchmark result",
+            "zh-CN": "基准结果"
+          },
+          "definition": {
+            "en": "A reproducible quantitative test result with a named benchmark and a number or rank.",
+            "zh-CN": "具名基准上的可复现量化结果，带数值或排名。"
+          },
+          "discriminator": {
+            "zh-CN": "必须有具名基准（CodeArena、Artificial Analysis、Pipecat、MMLU）且结果原则上可被第三方复算。与 third_party_recognition 的分界：基准可复算，机构评级不可复算。Gartner Magic Quadrant、IDC MarketScape、Forrester Wave 一律不是基准。"
+          },
+          "positive_example": "Qwen3.8-Max-0902 tops CodeArena WebDev at 1691",
+          "negative_example": "Named a Leader in the Gartner Magic Quadrant —— 属 third_party_recognition",
+          "can_demonstrate_capability": true,
+          "typical_tier": "T1 若由第三方运行；T3 若厂商自测自报"
+        },
+        "third_party_recognition": {
+          "label": {
+            "en": "Third-party recognition",
+            "zh-CN": "第三方评级"
+          },
+          "definition": {
+            "en": "A rating, quadrant placement, ranking or award issued by an outside institution, not based on a reproducible quantitative test.",
+            "zh-CN": "由外部机构给出的评级、象限、榜单或奖项，不基于可复现的量化测试。"
+          },
+          "discriminator": {
+            "zh-CN": "来源是分析机构、媒体或评审委员会，结论依赖机构判断。与 benchmark_result 的分界：能否被第三方按公开方法复算。"
+          },
+          "positive_example": "Recognized as a Leader in IDC MarketScape for AI platforms",
+          "negative_example": "Ranks first on Artificial Analysis Speech-to-Speech Index —— 属 benchmark_result",
+          "can_demonstrate_capability": true,
+          "typical_tier": "T2"
+        },
+        "production_adoption": {
+          "label": {
+            "en": "Production adoption",
+            "zh-CN": "生产采用"
+          },
+          "definition": {
+            "en": "A named adopting organization reports the technology running in its real business operations.",
+            "zh-CN": "具名采用方报告该技术已在其真实业务中运行。"
+          },
+          "discriminator": {
+            "zh-CN": "必须同时满足三点：(1) 采用方是厂商以外的具名主体；(2) 描述的是已在运行，不是试用、试点计划或意向；(3) 有可指认的业务场景。厂商说「已被数千家企业使用」不算——没有具名主体。这是自主阶段 3/4 唯一的硬证据类型，宁可漏判也不要放宽。"
+          },
+          "positive_example": "Klarna says its AI assistant now handles two-thirds of customer service chats",
+          "negative_example": "Trusted by thousands of enterprises —— 无具名主体，不计",
+          "can_demonstrate_capability": true,
+          "typical_tier": "T1 若采用方自述；T3 若厂商代述"
+        },
+        "partnership": {
+          "label": {
+            "en": "Partnership",
+            "zh-CN": "合作"
+          },
+          "definition": {
+            "en": "Two or more organizations announce a cooperation, integration or commercial agreement.",
+            "zh-CN": "两个及以上组织宣布合作、集成或商业协议。"
+          },
+          "discriminator": {
+            "zh-CN": "与 production_adoption 的分界：合作是关系的建立，生产采用是已在运行的使用。「X 与 Y 达成合作」是 partnership；「Y 已用 X 处理其全部工单」是 production_adoption。"
+          },
+          "positive_example": "Anthropic and Deloitte announce enterprise deployment partnership",
+          "negative_example": "Deloitte now runs 40% of audits on Claude —— 属 production_adoption",
+          "can_demonstrate_capability": false,
+          "typical_tier": "T3"
+        },
+        "research_result": {
+          "label": {
+            "en": "Research result",
+            "zh-CN": "研究成果"
+          },
+          "definition": {
+            "en": "A paper, technical report or method disclosure not tied to a shippable product.",
+            "zh-CN": "论文、技术报告或方法披露，不直接对应可用产品。"
+          },
+          "discriminator": {
+            "zh-CN": "与 version_release 的分界：读者今天能不能用上。能用是发布，不能用是研究。"
+          },
+          "positive_example": "DeepMind publishes paper on long-horizon agent planning",
+          "negative_example": "DeepMind ships the planner in Gemini —— 属 capability_update",
+          "can_demonstrate_capability": true,
+          "typical_tier": "T3"
+        },
+        "deprecation": {
+          "label": {
+            "en": "Deprecation",
+            "zh-CN": "停用"
+          },
+          "definition": {
+            "en": "A product, model or interface is retired or given a retirement schedule.",
+            "zh-CN": "产品、模型或接口停止提供，或公布退役时间表。"
+          },
+          "discriminator": {
+            "zh-CN": "包含「将于 X 日停止」这类有时间表的预告，不必已经下线。与 availability_change 的分界：可获得范围缩小但仍提供是 availability_change，彻底终止才是 deprecation。"
+          },
+          "positive_example": "GPT-4o API endpoints retire on 2027-01-15",
+          "negative_example": "Model no longer available in the EU —— 属 availability_change",
+          "can_demonstrate_capability": false,
+          "typical_tier": "T3"
+        },
+        "personnel": {
+          "label": {
+            "en": "Personnel",
+            "zh-CN": "人事"
+          },
+          "definition": {
+            "en": "A person joins, leaves or changes role at an organization.",
+            "zh-CN": "人员加入、离开或职务变更。"
+          },
+          "discriminator": {
+            "zh-CN": "只记组织与人的关系变化本身。若消息重点是此人宣布的产品，归该产品对应的类型。"
+          },
+          "positive_example": "Meta appoints new head of superintelligence research",
+          "negative_example": "New CTO announces the 3.0 roadmap —— 重点是路线图，按产品类型判",
+          "can_demonstrate_capability": false,
+          "typical_tier": "T3"
+        },
+        "event_announcement": {
+          "label": {
+            "en": "Event announcement",
+            "zh-CN": "活动公告"
+          },
+          "definition": {
+            "en": "A conference, livestream, contest, hackathon or community gathering is announced, scheduled or held.",
+            "zh-CN": "会议、直播、比赛、黑客松或社区活动的公布、排期或举办。"
+          },
+          "discriminator": {
+            "zh-CN": "活动本身是主体。若消息重点是活动上发布的产品，归该产品对应的类型，不归此类。同一场活动的多条消息必须合并为一个事件（见去重规则）。"
+          },
+          "positive_example": "Apsara Conference 2026 opens in Hangzhou",
+          "negative_example": "At Apsara, Alibaba releases Wan3.0 —— 重点是发布，属 version_release",
+          "can_demonstrate_capability": false,
+          "typical_tier": "T3"
+        },
+        "incident": {
+          "label": {
+            "en": "Incident",
+            "zh-CN": "事故"
+          },
+          "definition": {
+            "en": "A service outage, failure, degradation or security incident, and its resolution.",
+            "zh-CN": "服务中断、故障、降级或安全事件，及其恢复。"
+          },
+          "definition_why": {
+            "zh-CN": "可靠性是自主阶段 3/4 的必要条件。事故是能力的反向证据：一个还在频繁中断的服务，不可能被判为自主生产。缺这个类目，负面证据无处可放，进度只会被高估。"
+          },
+          "discriminator": {
+            "zh-CN": "包括恢复通告——恢复通告同时确认了事故的存在。与 policy_statement 的分界：事故是发生了什么，立场声明是打算怎么做。"
+          },
+          "positive_example": "Grok outage at Memphis compute center restored",
+          "negative_example": "We are publishing our incident disclosure policy —— 属 policy_statement",
+          "can_demonstrate_capability": true,
+          "capability_evidence_sign": "negative",
+          "typical_tier": "T2"
+        },
+        "policy_statement": {
+          "label": {
+            "en": "Policy statement",
+            "zh-CN": "立场声明"
+          },
+          "definition": {
+            "en": "An organization states a position or publishes rules on governance, safety, disclosure or acceptable use.",
+            "zh-CN": "组织就治理、安全、披露或使用规则表明立场或发布规范。"
+          },
+          "definition_why": {
+            "zh-CN": "影响的是闸门（gate），不是能力状态。制度变化会解除闸门，模型变强不会。"
+          },
+          "discriminator": {
+            "zh-CN": "与 incident 的分界：立场声明是规则与打算，事故是已发生的事实。"
+          },
+          "positive_example": "OpenAI publishes stance on misalignment incident disclosure",
+          "negative_example": "Model misalignment caused a production outage —— 属 incident",
+          "can_demonstrate_capability": false,
+          "affects": "gate",
+          "typical_tier": "T3"
+        }
+      },
+      "closed": true,
+      "no_other_bucket": {
+        "zh-CN": "取消 other。判不出来时返回 null 并记 unresolved_reason，让它可被统计和改进；other 会把问题藏起来——现在藏了 23%。"
+      },
+      "unresolved": {
+        "zh-CN": "判不出类型时 kind 置 null，并必须写 unresolved_reason 说明卡在哪。unresolved_reason 是自由文本但不得为空。",
+        "field": "unresolved_reason",
+        "replaces_other_bucket": true
+      },
+      "term_shape": [
+        "label",
+        "definition",
+        "discriminator",
+        "positive_example",
+        "negative_example",
+        "can_demonstrate_capability",
+        "typical_tier"
+      ]
+    },
+    "evidence_tier": {
+      "label": {
+        "en": "Evidence tier",
+        "zh-CN": "证据层级"
+      },
+      "terms": {
+        "T1": {
+          "label": {
+            "zh-CN": "第三方基准或他方生产采用",
+            "en": "Third-party result or others' production use"
+          },
+          "definition": {
+            "zh-CN": "由与发布方无隶属关系的一方给出的可核验结果，或采用方自己确认的生产使用。当发布方本身就是采用方（不是厂商）时，以本层为准而不是 T3——采用方说自己在用，与厂商说自己的产品好，是两种不同的陈述。",
+            "en": "A checkable result produced by a party with no affiliation to the publisher, or an adopting organisation confirming its own production use. When the publisher IS the adopter rather than the vendor, this tier applies rather than T3: an adopter saying it depends on something is a different statement from a vendor saying its product is good."
+          },
+          "stage_cap": 4,
+          "level_cap": 5
+        },
+        "T2": {
+          "label": {
+            "zh-CN": "多方独立佐证",
+            "en": "Independently corroborated"
+          },
+          "definition": {
+            "zh-CN": "两个及以上互相独立的来源分别描述同一事实。同集团的两个账号不算两方，同一全文被不同账号转述也不算。",
+            "en": "Two or more mutually independent sources describe the same fact. Two accounts of the same group are not two parties, and the same text restated by different accounts is not corroboration."
+          },
+          "stage_cap": 3,
+          "level_cap": 4
+        },
+        "T3": {
+          "label": {
+            "zh-CN": "厂商自证",
+            "en": "Vendor self-report"
+          },
+          "definition": {
+            "zh-CN": "发布方自己的官方声明、文档或数据。指厂商谈自己的产品；若发布方是采用方在谈自己的使用，属 T1。",
+            "en": "The publisher's own statement, documentation or self-reported numbers. This means a vendor talking about its own product; a publisher describing its own USE of someone else's product is T1."
+          },
+          "stage_cap": 2,
+          "level_cap": 2
+        },
+        "T4": {
+          "label": {
+            "zh-CN": "营销宣称或匿名自述",
+            "en": "Marketing claim or anonymous account"
+          },
+          "definition": {
+            "zh-CN": "无法追溯到具体主体或无法复核的陈述。",
+            "en": "A statement that cannot be traced to a responsible party or re-checked."
+          },
+          "stage_cap": 1,
+          "level_cap": 1
+        }
+      },
+      "closed": true,
+      "cap_fields": {
+        "stage_cap": {
+          "scale": "autonomy_stage",
+          "retired": true,
+          "zh-CN": "上一代能力层的 0-4 刻度上限，随 autonomy_stage 一起退役。"
+        },
+        "level_cap": {
+          "scale": "activity_level",
+          "zh-CN": "活动层级 0-5 刻度上限。一条活动证据能支持到的最高层级，由它的证据层级决定。"
+        }
+      }
+    },
+    "activity_level": {
+      "label": {
+        "en": "Activity level",
+        "zh-CN": "活动层级"
+      },
+      "scale": "0-5，整数",
+      "capped_by": {
+        "vocabulary": "evidence_tier",
+        "field": "level_cap"
+      },
+      "governs": "activity_evidence.observed_level",
+      "terms": {
+        "0": {
+          "label": {
+            "en": "A person does it all",
+            "zh-CN": "人自己做"
+          },
+          "definition": {
+            "en": "AI takes no part in this work.",
+            "zh-CN": "AI 不参与这项工作。"
+          }
+        },
+        "1": {
+          "label": {
+            "en": "AI helps, a person does it",
+            "zh-CN": "AI 打下手，人自己做"
+          },
+          "definition": {
+            "en": "AI helps in places; a person does the whole delivery.",
+            "zh-CN": "AI 在局部帮忙，交付整体由人完成。"
+          }
+        },
+        "2": {
+          "label": {
+            "en": "AI drafts, a person fixes each",
+            "zh-CN": "AI 出初稿，人逐件改"
+          },
+          "definition": {
+            "en": "AI produces the bulk; a person reviews and corrects every item.",
+            "zh-CN": "AI 产出主体内容，人逐件复核并修正。"
+          }
+        },
+        "3": {
+          "label": {
+            "en": "AI finishes, a person spot-checks",
+            "zh-CN": "AI 做完，人抽查"
+          },
+          "definition": {
+            "en": "AI completes it; a person spot-checks rather than reviews each one.",
+            "zh-CN": "AI 独立做完，人抽查而不是逐件复核。"
+          }
+        },
+        "4": {
+          "label": {
+            "en": "No person, within a set scope",
+            "zh-CN": "限定场景里不用人"
+          },
+          "definition": {
+            "en": "AI delivers alone inside a defined scope, running in real business.",
+            "zh-CN": "AI 在限定范围内独立交付，且已在真实业务中运行。"
+          }
+        },
+        "5": {
+          "label": {
+            "en": "No person, anywhere",
+            "zh-CN": "任何场景都不用人"
+          },
+          "definition": {
+            "en": "AI delivers alone in any setting, with no defined scope limiting it.",
+            "zh-CN": "AI 在任何场景下独立交付，没有限定范围兜底。"
+          }
+        }
+      },
+      "closed": true,
+      "top_rung_is_permanent": {
+        "zh-CN": "5 不因为当前没有证据就从刻度上撤掉。空的最高档是一个发现，不是一个缺口。"
+      }
+    },
+    "autonomy_stage": {
+      "label": {
+        "en": "Autonomy stage",
+        "zh-CN": "自主阶段"
+      },
+      "scale": "0-4，允许 0.5 步长",
+      "terms": {
+        "0": {
+          "label": {
+            "zh-CN": "无",
+            "en": "None"
+          },
+          "definition": {
+            "zh-CN": "AI 不参与这项工作。",
+            "en": "AI takes no part in this work."
+          }
+        },
+        "1": {
+          "label": {
+            "zh-CN": "辅助",
+            "en": "Assisting"
+          },
+          "definition": {
+            "zh-CN": "AI 提供片段性帮助，人完成全部交付。",
+            "en": "AI helps in pieces; a person produces the whole deliverable."
+          }
+        },
+        "2": {
+          "label": {
+            "zh-CN": "有人监督",
+            "en": "Supervised"
+          },
+          "definition": {
+            "zh-CN": "AI 产出主要内容，人逐项审查并修正。",
+            "en": "AI produces the substance; a person reviews and corrects every item."
+          }
+        },
+        "3": {
+          "label": {
+            "zh-CN": "自主试点",
+            "en": "Autonomous pilot"
+          },
+          "definition": {
+            "zh-CN": "AI 独立完成，人抽检；限定范围内已在真实业务中运行。",
+            "en": "AI completes the work independently and a person spot-checks; running in real operations within a bounded scope."
+          }
+        },
+        "4": {
+          "label": {
+            "zh-CN": "自主生产",
+            "en": "Autonomous production"
+          },
+          "definition": {
+            "zh-CN": "AI 独立完成并交付，人只提目标与验收。",
+            "en": "AI completes and delivers independently; a person only sets the goal and accepts the result."
+          }
+        }
+      },
+      "disjoint_from": {
+        "adoption_stage": {
+          "zh-CN": "adoption_stage 是证据属性（某个采用方走到哪一步），autonomy_stage 是能力结论（这项工作 AI 能独立到哪一步）。两者不互换，adoption_stage 只作为证据层级的输入之一。"
+        }
+      },
+      "retired": true,
+      "superseded_by": "activity_level"
+    },
+    "person_event_role": {
+      "label": {
+        "en": "Role of a person in an event",
+        "zh-CN": "人物在事件中的角色"
+      },
+      "terms": {
+        "announcer": {
+          "label": {
+            "zh-CN": "官方宣布者",
+            "en": "Official announcer"
+          },
+          "implies_tier": "T3",
+          "definition": {
+            "en": "Speaking for the publishing organisation."
+          }
+        },
+        "spokesperson": {
+          "label": {
+            "zh-CN": "发言人",
+            "en": "Spokesperson"
+          },
+          "implies_tier": "T3",
+          "definition": {
+            "en": "Speaking on the organisation's behalf."
+          }
+        },
+        "researcher": {
+          "label": {
+            "zh-CN": "研究者",
+            "en": "Researcher"
+          },
+          "implies_tier": "T3",
+          "definition": {
+            "en": "Reporting their own work at the publishing organisation."
+          }
+        },
+        "third_party_evaluator": {
+          "label": {
+            "zh-CN": "第三方评测方",
+            "en": "Third-party evaluator"
+          },
+          "implies_tier": "T1",
+          "definition": {
+            "en": "Testing something they did not build."
+          }
+        },
+        "adopter_engineer": {
+          "label": {
+            "zh-CN": "采用方技术负责人",
+            "en": "Adopter's engineer"
+          },
+          "implies_tier": "T1",
+          "definition": {
+            "en": "Reporting how their own organisation uses it."
+          }
+        },
+        "community_self_report": {
+          "label": {
+            "zh-CN": "社区自述",
+            "en": "Community self-report"
+          },
+          "implies_tier": "T4",
+          "definition": {
+            "en": "An account that cannot be traced to a responsible party."
+          }
+        }
+      },
+      "closed": true
+    },
+    "org_affiliation_role": {
+      "label": {
+        "en": "Role of a person in an organization",
+        "zh-CN": "人物任职角色"
+      },
+      "terms": {
+        "executive": {
+          "label": {
+            "zh-CN": "高管",
+            "en": "Executive"
+          },
+          "definition": {
+            "en": "Holds decision authority in the organisation."
+          }
+        },
+        "board_member": {
+          "label": {
+            "zh-CN": "董事会成员",
+            "en": "Board member"
+          },
+          "definition": {
+            "en": "Sits on the governing body."
+          }
+        },
+        "researcher": {
+          "label": {
+            "zh-CN": "研究人员",
+            "en": "Researcher"
+          },
+          "definition": {
+            "en": "Does research at the organisation."
+          }
+        },
+        "engineer": {
+          "label": {
+            "zh-CN": "工程人员",
+            "en": "Engineer"
+          },
+          "definition": {
+            "en": "Builds or operates the organisation's systems."
+          }
+        },
+        "communications": {
+          "label": {
+            "zh-CN": "传播与公关",
+            "en": "Communications"
+          },
+          "definition": {
+            "en": "Speaks publicly for the organisation."
+          }
+        },
+        "unknown": {
+          "label": {
+            "zh-CN": "未知",
+            "en": "Unknown"
+          },
+          "definition": {
+            "en": "The role is not established. Not a claim that there is none."
+          }
+        }
+      },
+      "closed": true
+    },
+    "gate_type": {
+      "label": {
+        "en": "Gate type",
+        "zh-CN": "闸门类型"
+      },
+      "terms": {
+        "regulatory": {
+          "label": {
+            "zh-CN": "法规",
+            "en": "Regulatory"
+          },
+          "definition": {
+            "zh-CN": "法律或行业规章要求。",
+            "en": "A law or regulation requires it be done a particular way, or by a particular kind of party."
+          }
+        },
+        "liability": {
+          "label": {
+            "zh-CN": "责任归属",
+            "en": "Liability"
+          },
+          "definition": {
+            "zh-CN": "出错时须由可追责的人或机构承担。",
+            "en": "Someone must be answerable for the outcome, so an organisation assigns an accountable person."
+          }
+        },
+        "human_authority": {
+          "label": {
+            "zh-CN": "人的授权",
+            "en": "Human authority"
+          },
+          "definition": {
+            "zh-CN": "须由具备资格的人签字、批准或确认。",
+            "en": "A person holding a specific authorisation must decide or sign."
+          }
+        },
+        "physical_presence": {
+          "label": {
+            "zh-CN": "物理在场",
+            "en": "Physical presence"
+          },
+          "definition": {
+            "zh-CN": "须在现场进行物理操作。",
+            "en": "The work requires being somewhere and acting on the physical world."
+          }
+        },
+        "data_access": {
+          "label": {
+            "zh-CN": "数据获取",
+            "en": "Data access"
+          },
+          "definition": {
+            "zh-CN": "所需数据不可得或不可用。",
+            "en": "The information needed is not available to an automated system."
+          }
+        }
+      },
+      "closed": true
+    },
+    "relation_method": {
+      "label": {
+        "en": "How a relation was established",
+        "zh-CN": "关系的产生方式"
+      },
+      "terms": {
+        "source_id": {
+          "label": {
+            "zh-CN": "来源自带",
+            "en": "From the source"
+          },
+          "definition": {
+            "zh-CN": "直接来自外部来源的结构，不含本项目判断。",
+            "en": "The relation comes from the source data's own structure."
+          }
+        },
+        "ai_proposed": {
+          "label": {
+            "zh-CN": "AI 提议",
+            "en": "Machine-proposed"
+          },
+          "definition": {
+            "zh-CN": "由模型提出，未经人工确认。",
+            "en": "A model proposed it. It stays a candidate until a person confirms it."
+          }
+        },
+        "reviewed": {
+          "label": {
+            "zh-CN": "已审阅",
+            "en": "Reviewed"
+          },
+          "definition": {
+            "zh-CN": "经人逐条确认。",
+            "en": "A named person confirmed it, at a recorded time."
+          }
+        }
+      },
+      "closed": true
+    },
+    "relation_status": {
+      "label": {
+        "en": "Relation status",
+        "zh-CN": "关系状态"
+      },
+      "terms": {
+        "source_reference": {
+          "label": {
+            "zh-CN": "来源引用",
+            "en": "Source reference"
+          },
+          "definition": {
+            "en": "Carried over from the source; not a judgement of ours."
+          }
+        },
+        "candidate": {
+          "label": {
+            "zh-CN": "候选",
+            "en": "Candidate"
+          },
+          "definition": {
+            "en": "Proposed and not yet reviewed. Must not enter a calculation."
+          }
+        },
+        "reviewed": {
+          "label": {
+            "zh-CN": "已审阅",
+            "en": "Reviewed"
+          },
+          "definition": {
+            "en": "Confirmed by a person."
+          }
+        },
+        "rejected": {
+          "label": {
+            "zh-CN": "已否决",
+            "en": "Rejected"
+          },
+          "definition": {
+            "en": "A person declined it. Kept so it is not proposed again as if unseen."
+          }
+        }
+      },
+      "closed": true
+    },
+    "lifecycle": {
+      "label": {
+        "en": "Concept lifecycle",
+        "zh-CN": "概念生命周期"
+      },
+      "terms": {
+        "active": {
+          "label": {
+            "zh-CN": "在用",
+            "en": "Active"
+          },
+          "definition": {
+            "en": "In use."
+          }
+        },
+        "deprecated": {
+          "label": {
+            "zh-CN": "已停用",
+            "en": "Deprecated"
+          },
+          "requires_fields": [
+            "replaced_by",
+            "obsolescence_reason"
+          ],
+          "definition": {
+            "en": "Retired. Must name a replacement or say why it is obsolete; its id is never reused."
+          }
+        }
+      },
+      "closed": true
+    },
+    "judge": {
+      "label": {
+        "en": "Judge",
+        "zh-CN": "判断者"
+      },
+      "terms": {
+        "deepseek": {
+          "label": {
+            "en": "DeepSeek batch judge",
+            "zh-CN": "DeepSeek 批量判断"
+          },
+          "definition": {
+            "en": "A general chat model answering the same question, for comparison."
+          }
+        },
+        "typesafe": {
+          "label": {
+            "en": "TypeSafe typed judge",
+            "zh-CN": "TypeSafe 类型化判断"
+          },
+          "definition": {
+            "en": "A typed-judgment service returning a calibrated decision rather than text."
+          }
+        },
+        "interactive_review": {
+          "label": {
+            "en": "Interactive review",
+            "zh-CN": "评审对话"
+          },
+          "definition": {
+            "zh-CN": "在与人的评审对话中由模型提出、当场附上依据原文的边。与批量判断同属 ai_proposed，同样必须经人工确认才能改为 reviewed。",
+            "en": "Proposed by a model during a review conversation with a person, with its source text attached. Still machine-proposed: it needs confirming like any other."
+          }
+        }
+      },
+      "closed": true
+    },
+    "judgment_task": {
+      "label": {
+        "en": "Judgment task",
+        "zh-CN": "判断任务"
+      },
+      "terms": {
+        "requires": {
+          "label": {
+            "en": "Work requires capability",
+            "zh-CN": "工作需要能力"
+          },
+          "definition": {
+            "en": "Does completing this work autonomously require this capability?"
+          }
+        },
+        "blocked_by": {
+          "label": {
+            "en": "Work blocked by gate",
+            "zh-CN": "工作受阻于闸门"
+          },
+          "definition": {
+            "en": "Does this gate stop this work even when the capabilities are met?"
+          }
+        },
+        "demonstrates": {
+          "label": {
+            "en": "Event demonstrates capability",
+            "zh-CN": "事件佐证能力"
+          },
+          "definition": {
+            "en": "What does this event show about this capability, and how strongly?"
+          }
+        },
+        "event_kind": {
+          "label": {
+            "en": "Event kind classification",
+            "zh-CN": "事件类型判定"
+          },
+          "definition": {
+            "en": "Which controlled kind is this event?"
+          }
+        },
+        "gate_state": {
+          "label": {
+            "en": "Gate state",
+            "zh-CN": "闸门状态"
+          },
+          "definition": {
+            "en": "Has any published statement moved this blocking condition?",
+            "zh-CN": "有没有已发布的声明移动了这个阻塞条件？"
+          }
+        },
+        "serves_market": {
+          "label": {
+            "en": "Serves market",
+            "zh-CN": "服务于该赛道"
+          },
+          "definition": {
+            "zh-CN": "这个职业是否在做该赛道所描述的活。用来把赛道接到职业的任务上——赛道自己那 614 个工作节点与职业任务零重叠，没有这条映射赛道就没有分母。",
+            "en": "Whether an occupation does the work a market describes. It is the bridge that gives a market a denominator: the market side's own work items do not overlap the occupation tasks at all."
+          },
+          "discriminator": {
+            "zh-CN": "问的是「这个职业做不做这个活」，不是「这个职业属不属于这个行业」。一个职业可以服务多个赛道，因此跨赛道的数字不可相加。"
+          }
+        },
+        "verification": {
+          "label": {
+            "zh-CN": "第三方验证",
+            "en": "Third-party verification"
+          },
+          "definition": {
+            "zh-CN": "名单帖子是否独立证实了一条被证据层级压低的厂商声明。",
+            "en": "Whether a panel post independently confirms a vendor claim that was held down by its evidence tier."
+          }
+        },
+        "model_identification": {
+          "label": {
+            "en": "Models an update names",
+            "zh-CN": "更新提到的模型"
+          },
+          "definition": {
+            "en": "Which AI models does this update name, and in what role?"
+          }
+        }
+      },
+      "closed": true
+    },
+    "panel_role": {
+      "label": {
+        "zh-CN": "名单角色",
+        "en": "Panel role"
+      },
+      "closed": true,
+      "note": {
+        "zh-CN": "账号在 AI 领域发什么，只作描述。证据层级由帖子本身的性质和作者的独立性决定，不由账号角色决定（用户 2026-09-23：不必区分用途，直接看发帖）。"
+      },
+      "terms": {
+        "evaluator": {
+          "label": {
+            "zh-CN": "评测者",
+            "en": "Evaluator"
+          },
+          "definition": {
+            "zh-CN": "独立评测机构或其成员，发布自己跑出的评测结果。",
+            "en": "An independent evaluation organisation or its staff, publishing results they ran."
+          }
+        },
+        "practitioner": {
+          "label": {
+            "zh-CN": "实测者",
+            "en": "Practitioner"
+          },
+          "definition": {
+            "zh-CN": "亲手使用新模型或工具并公布具体结果的人。",
+            "en": "Someone who uses new models or tools themselves and publishes concrete results."
+          }
+        },
+        "adopter": {
+          "label": {
+            "zh-CN": "采用方",
+            "en": "Adopter"
+          },
+          "definition": {
+            "zh-CN": "非模型厂商的机构负责人或工程团队，谈本机构在生产中的使用。",
+            "en": "A leader or engineering team at an organisation that is not a model vendor, describing its own production use."
+          }
+        },
+        "researcher": {
+          "label": {
+            "zh-CN": "研究者",
+            "en": "Researcher"
+          },
+          "definition": {
+            "zh-CN": "以实验或研究为依据评估能力的学者或独立研究者。",
+            "en": "An academic or independent researcher assessing capability from experiments or research."
+          }
+        },
+        "commentator": {
+          "label": {
+            "zh-CN": "评论者",
+            "en": "Commentator"
+          },
+          "definition": {
+            "zh-CN": "发表观点，不提供可核对的依据。",
+            "en": "Publishes opinions without checkable evidence."
+          }
+        },
+        "executive": {
+          "label": {
+            "zh-CN": "高管",
+            "en": "Executive"
+          },
+          "definition": {
+            "zh-CN": "AI 公司的负责人；谈自家产品属于厂商自证。",
+            "en": "A leader at an AI company; about its own products this is a vendor claim."
+          }
+        },
+        "lab_insider": {
+          "label": {
+            "zh-CN": "实验室内部人",
+            "en": "Lab insider"
+          },
+          "definition": {
+            "zh-CN": "在模型厂商任职的研究员或产品人员；谈自家产品属于厂商自证。",
+            "en": "A researcher or product person employed by a model vendor; about its own products this is a vendor claim."
+          }
+        },
+        "relay": {
+          "label": {
+            "zh-CN": "资讯转发",
+            "en": "Relay"
+          },
+          "definition": {
+            "zh-CN": "主要转发他人公告；转述不是证据。",
+            "en": "Mainly reposts others' announcements; restating is not evidence."
+          }
+        },
+        "official": {
+          "label": {
+            "zh-CN": "官方账号",
+            "en": "Official account"
+          },
+          "definition": {
+            "zh-CN": "机构自己运营的公司、产品、平台或研究部门账号；谈本机构属于厂商自证。",
+            "en": "An account an organisation runs for itself, a product, platform or research unit; about that organisation this is a vendor claim."
+          }
+        }
+      }
+    },
+    "panel_state": {
+      "label": {
+        "zh-CN": "名单状态",
+        "en": "Panel state"
+      },
+      "closed": true,
+      "note": {
+        "zh-CN": "由检查日志推导，不手工修改。见 rule:panel-lifecycle。"
+      },
+      "terms": {
+        "candidate": {
+          "label": {
+            "zh-CN": "候选",
+            "en": "Candidate"
+          },
+          "definition": {
+            "zh-CN": "已收录，身份尚未确认。",
+            "en": "Listed; identity not yet confirmed."
+          }
+        },
+        "identity_confirmed": {
+          "label": {
+            "zh-CN": "身份已确认",
+            "en": "Identity confirmed"
+          },
+          "definition": {
+            "zh-CN": "平台稳定 ID 已解析，且有一手或本人简介依据。",
+            "en": "Platform ID resolved and backed by first-party or own-bio evidence."
+          }
+        },
+        "enabled": {
+          "label": {
+            "zh-CN": "启用",
+            "en": "Enabled"
+          },
+          "definition": {
+            "zh-CN": "满足启用条件，帖子进入采集与判定。",
+            "en": "Meets the enabling conditions; its posts are collected and judged."
+          }
+        },
+        "suspended": {
+          "label": {
+            "zh-CN": "暂停",
+            "en": "Suspended"
+          },
+          "definition": {
+            "zh-CN": "启用条件暂时不满足，条件恢复后自动启用。",
+            "en": "An enabling condition currently fails; re-enabled automatically when it holds again."
+          }
+        },
+        "retired": {
+          "label": {
+            "zh-CN": "退出",
+            "en": "Retired"
+          },
+          "definition": {
+            "zh-CN": "账号注销或连续两次复核失败。",
+            "en": "Account gone, or two consecutive re-checks failed."
+          }
+        }
+      }
+    },
+    "affiliation_relation": {
+      "label": {
+        "zh-CN": "机构关系",
+        "en": "Affiliation relation"
+      },
+      "closed": true,
+      "note": {
+        "zh-CN": "人物与机构的关系种类。breaks_independence 为真的关系，使该人物谈该机构产品时不算第三方。与 org_affiliation_role（职务）是两件事。"
+      },
+      "terms": {
+        "employee": {
+          "label": {
+            "zh-CN": "雇员",
+            "en": "Employee"
+          },
+          "definition": {
+            "zh-CN": "在该机构任职。",
+            "en": "Works for the organisation."
+          },
+          "breaks_independence": true
+        },
+        "founder": {
+          "label": {
+            "zh-CN": "创始人",
+            "en": "Founder"
+          },
+          "definition": {
+            "zh-CN": "创立或共同创立该机构。",
+            "en": "Founded or co-founded the organisation."
+          },
+          "breaks_independence": true
+        },
+        "investor": {
+          "label": {
+            "zh-CN": "投资人",
+            "en": "Investor"
+          },
+          "definition": {
+            "zh-CN": "持有该机构的股份或投资。",
+            "en": "Holds equity or an investment in the organisation."
+          },
+          "breaks_independence": true
+        },
+        "advisor": {
+          "label": {
+            "zh-CN": "顾问",
+            "en": "Advisor"
+          },
+          "definition": {
+            "zh-CN": "为该机构担任顾问。",
+            "en": "Advises the organisation."
+          },
+          "breaks_independence": true
+        },
+        "partner": {
+          "label": {
+            "zh-CN": "合作方",
+            "en": "Partner"
+          },
+          "definition": {
+            "zh-CN": "与该机构有付费或正式合作。",
+            "en": "Has a paid or formal partnership with the organisation."
+          },
+          "breaks_independence": true
+        },
+        "academic": {
+          "label": {
+            "zh-CN": "学术关系",
+            "en": "Academic"
+          },
+          "definition": {
+            "zh-CN": "在该机构从事学术工作。大学不是模型厂商，但大学自有模型时同样不独立。",
+            "en": "Holds an academic post there. Universities are not model vendors, but are not independent of their own models."
+          },
+          "breaks_independence": true
+        },
+        "former": {
+          "label": {
+            "zh-CN": "前任",
+            "en": "Former"
+          },
+          "definition": {
+            "zh-CN": "曾经任职，现已离开。结束日期之后不影响独立性。",
+            "en": "Used to be affiliated and has left. Does not affect independence after the end date."
+          },
+          "breaks_independence": false
+        }
+      }
+    },
+    "account_check_kind": {
+      "label": {
+        "zh-CN": "账号检查类型",
+        "en": "Account check kind"
+      },
+      "closed": true,
+      "terms": {
+        "identity": {
+          "label": {
+            "zh-CN": "身份",
+            "en": "Identity"
+          },
+          "definition": {
+            "zh-CN": "确认 handle 属于该人物或机构，并记录依据等级。",
+            "en": "Confirms the handle belongs to the person or organisation, with the grade of evidence."
+          }
+        },
+        "platform_id": {
+          "label": {
+            "zh-CN": "平台 ID",
+            "en": "Platform ID"
+          },
+          "definition": {
+            "zh-CN": "解析账号在平台上的稳定 ID。",
+            "en": "Resolves the account's stable platform ID."
+          }
+        },
+        "affiliation": {
+          "label": {
+            "zh-CN": "任职",
+            "en": "Affiliation"
+          },
+          "definition": {
+            "zh-CN": "核对当前的机构关系。",
+            "en": "Checks current affiliations."
+          }
+        },
+        "activity": {
+          "label": {
+            "zh-CN": "活跃度",
+            "en": "Activity"
+          },
+          "definition": {
+            "zh-CN": "记录最近一次发帖时间。",
+            "en": "Records the most recent post time."
+          }
+        },
+        "profile": {
+          "label": {
+            "zh-CN": "资料",
+            "en": "Profile"
+          },
+          "definition": {
+            "zh-CN": "账号公开资料的快照：显示名、简介、粉丝数等。简介变化会把任职送回复核。",
+            "en": "A snapshot of the public profile: name, bio, counts. A changed bio sends the affiliation back for review."
+          }
+        }
+      }
+    },
+    "identity_evidence_grade": {
+      "label": {
+        "zh-CN": "身份依据等级",
+        "en": "Identity evidence grade"
+      },
+      "closed": true,
+      "terms": {
+        "first_party_link": {
+          "label": {
+            "zh-CN": "一手链接",
+            "en": "First-party link"
+          },
+          "definition": {
+            "zh-CN": "本人或机构自己控制的页面（个人主页、GitHub、官网）链接到该账号。",
+            "en": "A page the person or organisation controls links to the account."
+          },
+          "rank": 3
+        },
+        "official_bio": {
+          "label": {
+            "zh-CN": "本人简介",
+            "en": "Own bio"
+          },
+          "definition": {
+            "zh-CN": "账号自己的简介或帖子表明身份。",
+            "en": "The account's own bio or posts establish who it is."
+          },
+          "rank": 2
+        },
+        "third_party_list": {
+          "label": {
+            "zh-CN": "第三方名单",
+            "en": "Third-party list"
+          },
+          "definition": {
+            "zh-CN": "只出现在别人整理的名单中。",
+            "en": "Only appears in someone else's list."
+          },
+          "rank": 1
+        }
+      }
+    },
+    "post_nature": {
+      "label": {
+        "zh-CN": "帖子性质",
+        "en": "Post nature"
+      },
+      "closed": true,
+      "note": {
+        "zh-CN": "名单帖子对一项能力声明说了什么。判官只选性质；能否成为证据、算哪一层，由 rule:verification-tier 推出。"
+      },
+      "terms": {
+        "hands_on_test": {
+          "label": {
+            "zh-CN": "亲手测试",
+            "en": "Hands-on test"
+          },
+          "definition": {
+            "zh-CN": "作者自己用了该产品，并给出具体过程或结果。",
+            "en": "The author used the product themselves and gives concrete steps or results."
+          },
+          "level_cap": 3
+        },
+        "independent_evaluation": {
+          "label": {
+            "zh-CN": "独立评测",
+            "en": "Independent evaluation"
+          },
+          "definition": {
+            "zh-CN": "作者或其机构运行了评测或基准，并公布结果。",
+            "en": "The author or their organisation ran an evaluation or benchmark and published the result."
+          },
+          "level_cap": 3
+        },
+        "own_production_use": {
+          "label": {
+            "zh-CN": "本机构生产使用",
+            "en": "Own production use"
+          },
+          "definition": {
+            "zh-CN": "作者所在的非厂商机构在真实业务中使用该产品。",
+            "en": "The author's organisation, not the vendor, uses the product in real work."
+          },
+          "level_cap": 5
+        },
+        "expert_assessment": {
+          "label": {
+            "zh-CN": "专家评估",
+            "en": "Expert assessment"
+          },
+          "definition": {
+            "zh-CN": "有依据的评价，但不是作者亲自测试的结果。",
+            "en": "A reasoned assessment that is not the author's own test."
+          },
+          "level_cap": 3
+        },
+        "opinion": {
+          "label": {
+            "zh-CN": "观点",
+            "en": "Opinion"
+          },
+          "definition": {
+            "zh-CN": "只有看法，没有可核对的依据。",
+            "en": "A view with nothing checkable behind it."
+          },
+          "level_cap": 0
+        },
+        "relay": {
+          "label": {
+            "zh-CN": "转述",
+            "en": "Relay"
+          },
+          "definition": {
+            "zh-CN": "转述厂商或他人的说法。",
+            "en": "Restates the vendor's or someone else's claim."
+          },
+          "level_cap": 0
+        },
+        "unrelated": {
+          "label": {
+            "zh-CN": "无关",
+            "en": "Unrelated"
+          },
+          "definition": {
+            "zh-CN": "没有谈到这项能力。",
+            "en": "Does not address this capability."
+          },
+          "level_cap": 0
+        }
+      }
+    },
+    "post_link": {
+      "label": {
+        "zh-CN": "帖子与事件的关联方式",
+        "en": "Post-to-event link"
+      },
+      "closed": true,
+      "note": {
+        "zh-CN": "帖子如何归属到一个事件。前四种沿原始数据里的上游关系确定，不需要判断；提及是文本匹配，需要判官确认内容。"
+      },
+      "terms": {
+        "source": {
+          "label": {
+            "zh-CN": "原帖",
+            "en": "Source"
+          },
+          "definition": {
+            "zh-CN": "事件抽取所依据的官方帖子本身。",
+            "en": "A post the event was extracted from."
+          },
+          "deterministic": true
+        },
+        "reply": {
+          "label": {
+            "zh-CN": "回复",
+            "en": "Reply"
+          },
+          "definition": {
+            "zh-CN": "回复了已归属该事件的帖子。",
+            "en": "Replies to a post already linked to the event."
+          },
+          "deterministic": true
+        },
+        "quote": {
+          "label": {
+            "zh-CN": "引用",
+            "en": "Quote"
+          },
+          "definition": {
+            "zh-CN": "引用了已归属该事件的帖子。",
+            "en": "Quotes a post already linked to the event."
+          },
+          "deterministic": true
+        },
+        "repost": {
+          "label": {
+            "zh-CN": "转发",
+            "en": "Repost"
+          },
+          "definition": {
+            "zh-CN": "原样转发了已归属该事件的帖子；没有自己的内容，只算热度。",
+            "en": "Reposts a linked post as is; carries no content of its own, so attention only."
+          },
+          "deterministic": true
+        },
+        "mention": {
+          "label": {
+            "zh-CN": "提及",
+            "en": "Mention"
+          },
+          "definition": {
+            "zh-CN": "没有上游关系，但在事件发生后 7 天内提到了产品名。",
+            "en": "No upstream link, but names the product within 7 days of the event."
+          },
+          "deterministic": false
+        }
+      }
+    },
+    "model_level": {
+      "label": {
+        "en": "Model level",
+        "zh-CN": "模型层级"
+      },
+      "closed": true,
+      "note": {
+        "zh-CN": "系列不带版本号和变体；具体版本挂在一个系列下。"
+      },
+      "terms": {
+        "family": {
+          "label": {
+            "en": "Family",
+            "zh-CN": "系列"
+          },
+          "definition": {
+            "en": "A line of models under one name, with no version.",
+            "zh-CN": "同一名字下的一条模型线，不带版本。"
+          }
+        },
+        "release": {
+          "label": {
+            "en": "Release",
+            "zh-CN": "具体版本"
+          },
+          "definition": {
+            "en": "One released model, with its version or variant.",
+            "zh-CN": "一个具体发布的模型，带版本或变体。"
+          }
+        }
+      }
+    },
+    "model_status": {
+      "label": {
+        "en": "Model status",
+        "zh-CN": "模型状态"
+      },
+      "closed": true,
+      "note": {
+        "zh-CN": "只由 rule:model-confirmed-by-owner-release 推导。目录收录不改变状态。"
+      },
+      "terms": {
+        "candidate": {
+          "label": {
+            "en": "Candidate",
+            "zh-CN": "候选"
+          },
+          "definition": {
+            "en": "Named in an update or listed in the catalog; not yet confirmed by its maker's own release update.",
+            "zh-CN": "被某条更新提到或被目录收录，尚未被厂商自己的发布帖确认。"
+          }
+        },
+        "confirmed": {
+          "label": {
+            "en": "Confirmed",
+            "zh-CN": "已确认"
+          },
+          "definition": {
+            "en": "The maker's own release update names it as its subject.",
+            "zh-CN": "厂商自己的发布帖以它为主体。"
+          }
+        }
+      }
+    },
+    "model_role": {
+      "label": {
+        "en": "Model's role in an update",
+        "zh-CN": "模型在更新里的角色"
+      },
+      "closed": true,
+      "note": {
+        "zh-CN": "定义与识别 prompt 逐字一致，由单元测试核对。"
+      },
+      "terms": {
+        "subject": {
+          "label": {
+            "en": "Subject",
+            "zh-CN": "主体"
+          },
+          "definition": {
+            "en": "the update releases this model or changes the model itself",
+            "zh-CN": "这条更新发布了这个模型，或改动了模型本身"
+          }
+        },
+        "adopted": {
+          "label": {
+            "en": "Adopted",
+            "zh-CN": "被采用"
+          },
+          "definition": {
+            "en": "someone builds on it or uses it: an integration, a customer, a demo, a contest or a piece of work made with it",
+            "zh-CN": "有人基于它构建或使用它：集成、客户、演示、比赛，或用它做出的作品"
+          }
+        },
+        "distributed": {
+          "label": {
+            "en": "Distributed",
+            "zh-CN": "被分发"
+          },
+          "definition": {
+            "en": "it becomes available on another platform, cloud or service",
+            "zh-CN": "它在另一个平台、云或服务上可用了"
+          }
+        },
+        "compared": {
+          "label": {
+            "en": "Compared",
+            "zh-CN": "被比较"
+          },
+          "definition": {
+            "en": "it is named in a benchmark, ranking or comparison, including its own vendor reporting where it ranks",
+            "zh-CN": "它出现在基准、排名或对比里，包括厂商自己报告它的名次"
+          }
+        }
+      }
+    },
+    "provider_kind": {
+      "label": {
+        "en": "Provider kind",
+        "zh-CN": "供应商类型"
+      },
+      "closed": true,
+      "note": {
+        "zh-CN": "区分厂商自己的 API 和转售多家模型的平台。"
+      },
+      "terms": {
+        "first_party": {
+          "label": {
+            "en": "First party",
+            "zh-CN": "官方"
+          },
+          "definition": {
+            "en": "The maker's own API.",
+            "zh-CN": "厂商自己的 API。"
+          }
+        },
+        "cloud": {
+          "label": {
+            "en": "Cloud",
+            "zh-CN": "云平台"
+          },
+          "definition": {
+            "en": "A platform serving several makers' models, whoever runs it.",
+            "zh-CN": "提供多家厂商模型的平台，不论由谁运营。"
+          }
+        }
+      }
+    },
+    "modality": {
+      "label": {
+        "en": "Modality",
+        "zh-CN": "模态"
+      },
+      "closed": true,
+      "note": {
+        "zh-CN": "只用于模型的产出。"
+      },
+      "terms": {
+        "text": {
+          "label": {
+            "en": "Text",
+            "zh-CN": "文本"
+          },
+          "definition": {
+            "en": "Text, including code.",
+            "zh-CN": "文本，含代码。"
+          }
+        },
+        "image": {
+          "label": {
+            "en": "Image",
+            "zh-CN": "图像"
+          },
+          "definition": {
+            "en": "Still images.",
+            "zh-CN": "静态图像。"
+          }
+        },
+        "audio": {
+          "label": {
+            "en": "Audio",
+            "zh-CN": "音频"
+          },
+          "definition": {
+            "en": "Speech, music or other sound.",
+            "zh-CN": "语音、音乐或其他声音。"
+          }
+        },
+        "video": {
+          "label": {
+            "en": "Video",
+            "zh-CN": "视频"
+          },
+          "definition": {
+            "en": "Moving images.",
+            "zh-CN": "视频。"
+          }
+        }
+      }
+    },
+    "concept_origin": {
+      "label": {
+        "en": "Concept origin",
+        "zh-CN": "概念来源"
+      },
+      "closed": true,
+      "terms": {
+        "editorial_ai": {
+          "label": {
+            "en": "Editorial, AI-proposed",
+            "zh-CN": "编辑目录（AI 提议）"
+          },
+          "definition": {
+            "en": "Written for our own market and work catalog; an AI proposal, not a reviewed fact.",
+            "zh-CN": "为我们自己的赛道与工作目录而写；是 AI 提议，未经审定。"
+          }
+        },
+        "onet_projection": {
+          "label": {
+            "en": "O*NET projection",
+            "zh-CN": "O*NET 投影"
+          },
+          "definition": {
+            "en": "Projected from an O*NET record; the source identity is kept.",
+            "zh-CN": "由 O*NET 记录投影而来，保留来源身份。"
+          }
+        }
+      }
+    },
+    "translation_status": {
+      "label": {
+        "en": "Translation status",
+        "zh-CN": "翻译状态"
+      },
+      "closed": true,
+      "terms": {
+        "ai_translated": {
+          "label": {
+            "en": "AI translated",
+            "zh-CN": "AI 翻译"
+          },
+          "definition": {
+            "en": "The Chinese label is an AI translation.",
+            "zh-CN": "中文名是 AI 翻译。"
+          }
+        },
+        "pending": {
+          "label": {
+            "en": "Pending",
+            "zh-CN": "待翻译"
+          },
+          "definition": {
+            "en": "No Chinese label yet.",
+            "zh-CN": "还没有中文名。"
+          }
+        },
+        "source_original": {
+          "label": {
+            "en": "Source original",
+            "zh-CN": "原文"
+          },
+          "definition": {
+            "en": "The label is the source's own wording.",
+            "zh-CN": "名称是来源的原文。"
+          }
+        }
+      }
+    },
+    "scope_status": {
+      "label": {
+        "en": "Scope status",
+        "zh-CN": "范围状态"
+      },
+      "closed": true,
+      "terms": {
+        "starter_catalog": {
+          "label": {
+            "en": "Starter catalog",
+            "zh-CN": "起步目录"
+          },
+          "definition": {
+            "en": "An editorial starter entry whose scope is not yet defined by a source.",
+            "zh-CN": "编辑起步条目，范围尚无来源定义。"
+          }
+        },
+        "defined": {
+          "label": {
+            "en": "Defined",
+            "zh-CN": "已定义"
+          },
+          "definition": {
+            "en": "Scope is given by a source description or task statement.",
+            "zh-CN": "范围由来源的描述或任务原文给出。"
+          }
+        },
+        "source_missing_tasks": {
+          "label": {
+            "en": "Source has no tasks",
+            "zh-CN": "来源无任务"
+          },
+          "definition": {
+            "en": "The source occupation carries no task statements.",
+            "zh-CN": "来源职业没有任务原文。"
+          }
+        }
+      }
+    },
+    "definition_basis": {
+      "label": {
+        "en": "Definition basis",
+        "zh-CN": "定义依据"
+      },
+      "closed": true,
+      "terms": {
+        "source_occupation_description": {
+          "label": {
+            "en": "Source occupation description",
+            "zh-CN": "来源职业描述"
+          },
+          "definition": {
+            "en": "The existing English description of the mapped O*NET occupation, copied without new interpretation.",
+            "zh-CN": "所映射 O*NET 职业的英文描述原文，不加新解释。"
+          }
+        },
+        "source_task_statement": {
+          "label": {
+            "en": "Source task statement",
+            "zh-CN": "来源任务原文"
+          },
+          "definition": {
+            "en": "The existing English statement of the mapped O*NET task, copied without new interpretation.",
+            "zh-CN": "所映射 O*NET 任务的英文原文，不加新解释。"
+          }
+        },
+        "editorial_scope_note": {
+          "label": {
+            "en": "Editorial scope note",
+            "zh-CN": "编辑范围说明"
+          },
+          "definition": {
+            "en": "An existing editorial scope note, retaining its editorial status.",
+            "zh-CN": "已有的编辑范围说明，保留其编辑身份。"
+          }
+        }
+      }
+    },
+    "concept_view": {
+      "label": {
+        "en": "Browsing view",
+        "zh-CN": "浏览视图"
+      },
+      "closed": true,
+      "note": {
+        "zh-CN": "两个视图并列，不相加；同一项工作可以出现在两个视图里。"
+      },
+      "terms": {
+        "markets": {
+          "label": {
+            "en": "Markets",
+            "zh-CN": "赛道"
+          },
+          "definition": {
+            "en": "Our own market and work catalog.",
+            "zh-CN": "我们自己的赛道与工作目录。"
+          }
+        },
+        "occupations": {
+          "label": {
+            "en": "Occupations",
+            "zh-CN": "职业"
+          },
+          "definition": {
+            "en": "The O*NET occupation and task projection.",
+            "zh-CN": "O*NET 职业与任务投影。"
+          }
+        }
+      }
+    },
+    "mapping_relation": {
+      "label": {
+        "en": "External mapping relation",
+        "zh-CN": "外部映射关系"
+      },
+      "closed": true,
+      "terms": {
+        "source_projection": {
+          "label": {
+            "en": "Source projection",
+            "zh-CN": "来源投影"
+          },
+          "definition": {
+            "en": "The concept is the projection of this external record.",
+            "zh-CN": "该概念就是这条外部记录的投影。"
+          }
+        },
+        "related": {
+          "label": {
+            "en": "Related",
+            "zh-CN": "相关"
+          },
+          "definition": {
+            "en": "Related without a broader or narrower claim.",
+            "zh-CN": "相关，不断言上下位。"
+          }
+        },
+        "broader": {
+          "label": {
+            "en": "Broader",
+            "zh-CN": "更宽"
+          },
+          "definition": {
+            "en": "The external entry is broader than the concept.",
+            "zh-CN": "外部条目比该概念更宽。"
+          }
+        },
+        "narrower": {
+          "label": {
+            "en": "Narrower",
+            "zh-CN": "更窄"
+          },
+          "definition": {
+            "en": "The external entry is narrower than the concept.",
+            "zh-CN": "外部条目比该概念更窄。"
+          }
+        },
+        "exact": {
+          "label": {
+            "en": "Exact",
+            "zh-CN": "等同"
+          },
+          "definition": {
+            "en": "The two mean the same thing. An AI proposal cannot assert this.",
+            "zh-CN": "两者含义相同。AI 提议不得断言等同。"
+          }
+        }
+      }
+    },
+    "account_owner_kind": {
+      "label": {
+        "en": "Account owner kind",
+        "zh-CN": "账号归属类型"
+      },
+      "closed": true,
+      "terms": {
+        "person": {
+          "label": {
+            "en": "Person",
+            "zh-CN": "个人"
+          },
+          "definition": {
+            "en": "The account belongs to a person.",
+            "zh-CN": "账号属于一个人。"
+          }
+        },
+        "organization": {
+          "label": {
+            "en": "Organization",
+            "zh-CN": "机构"
+          },
+          "definition": {
+            "en": "The account belongs to an organization.",
+            "zh-CN": "账号属于一个机构。"
+          }
+        }
+      }
+    },
+    "account_language": {
+      "label": {
+        "en": "Account language",
+        "zh-CN": "账号语言"
+      },
+      "closed": true,
+      "terms": {
+        "en": {
+          "label": {
+            "en": "English",
+            "zh-CN": "英文"
+          },
+          "definition": {
+            "en": "Posts mainly in English.",
+            "zh-CN": "主要用英文发帖。"
+          }
+        },
+        "zh": {
+          "label": {
+            "en": "Chinese",
+            "zh-CN": "中文"
+          },
+          "definition": {
+            "en": "Posts mainly in Chinese.",
+            "zh-CN": "主要用中文发帖。"
+          }
+        },
+        "both": {
+          "label": {
+            "en": "Both",
+            "zh-CN": "双语"
+          },
+          "definition": {
+            "en": "Posts in both.",
+            "zh-CN": "两种语言都用。"
+          }
+        }
+      }
+    },
+    "occurrence_status": {
+      "label": {
+        "en": "Occurrence status",
+        "zh-CN": "发生状态"
+      },
+      "closed": true,
+      "terms": {
+        "unknown": {
+          "label": {
+            "en": "Unknown",
+            "zh-CN": "未知"
+          },
+          "definition": {
+            "en": "The text does not say whether it has happened.",
+            "zh-CN": "文本没有说明是否已发生。"
+          }
+        },
+        "scheduled": {
+          "label": {
+            "en": "Scheduled",
+            "zh-CN": "已排期"
+          },
+          "definition": {
+            "en": "Announced for a future time.",
+            "zh-CN": "已宣布，将在未来发生。"
+          }
+        },
+        "occurred": {
+          "label": {
+            "en": "Occurred",
+            "zh-CN": "已发生"
+          },
+          "definition": {
+            "en": "It has happened.",
+            "zh-CN": "已经发生。"
+          }
+        },
+        "postponed": {
+          "label": {
+            "en": "Postponed",
+            "zh-CN": "推迟"
+          },
+          "definition": {
+            "en": "Moved to a later time.",
+            "zh-CN": "已推迟。"
+          }
+        },
+        "cancelled": {
+          "label": {
+            "en": "Cancelled",
+            "zh-CN": "取消"
+          },
+          "definition": {
+            "en": "Will not happen.",
+            "zh-CN": "已取消。"
+          }
+        }
+      }
+    },
+    "identity_confidence": {
+      "label": {
+        "en": "Identity confidence",
+        "zh-CN": "同一性置信度"
+      },
+      "closed": true,
+      "terms": {
+        "high": {
+          "label": {
+            "en": "High",
+            "zh-CN": "高"
+          },
+          "definition": {
+            "en": "The subject of the update is stated outright.",
+            "zh-CN": "更新的对象在文本里写明。"
+          }
+        },
+        "low": {
+          "label": {
+            "en": "Low",
+            "zh-CN": "低"
+          },
+          "definition": {
+            "en": "The subject had to be read from context.",
+            "zh-CN": "更新的对象要从上下文读出。"
+          }
+        }
+      }
+    },
+    "source_role": {
+      "label": {
+        "en": "Source role",
+        "zh-CN": "来源角色"
+      },
+      "closed": true,
+      "terms": {
+        "primary": {
+          "label": {
+            "en": "Primary",
+            "zh-CN": "主要"
+          },
+          "definition": {
+            "en": "The post the update is mainly drawn from.",
+            "zh-CN": "更新主要依据的帖子。"
+          }
+        },
+        "corroborating": {
+          "label": {
+            "en": "Corroborating",
+            "zh-CN": "佐证"
+          },
+          "definition": {
+            "en": "Supports the same update.",
+            "zh-CN": "佐证同一条更新。"
+          }
+        },
+        "context": {
+          "label": {
+            "en": "Context",
+            "zh-CN": "背景"
+          },
+          "definition": {
+            "en": "Gives background only.",
+            "zh-CN": "只提供背景。"
+          }
+        }
+      }
+    },
+    "evidence_sign": {
+      "label": {
+        "en": "Evidence sign",
+        "zh-CN": "证据方向"
+      },
+      "closed": true,
+      "terms": {
+        "positive": {
+          "label": {
+            "en": "Positive",
+            "zh-CN": "正向"
+          },
+          "definition": {
+            "en": "Shows the work being done at the observed level.",
+            "zh-CN": "表明工作在所观察的级别上被完成。"
+          }
+        },
+        "negative": {
+          "label": {
+            "en": "Negative",
+            "zh-CN": "反向"
+          },
+          "definition": {
+            "en": "Shows a failure or a limit at that level.",
+            "zh-CN": "表明在该级别上失败或受限。"
+          }
+        }
+      }
+    },
+    "concept_kind": {
+      "label": {
+        "en": "Concept kind",
+        "zh-CN": "概念类型"
+      },
+      "closed": true,
+      "terms": {
+        "market_group": {
+          "label": {
+            "en": "Market group",
+            "zh-CN": "领域"
+          },
+          "definition": {
+            "en": "An editorial domain organizing related markets; not an industry weight or capability score.",
+            "zh-CN": "归拢相关赛道的编辑领域；不是行业权重，也不是能力分数。"
+          }
+        },
+        "market": {
+          "label": {
+            "en": "Market",
+            "zh-CN": "赛道"
+          },
+          "definition": {
+            "en": "An editorial market or service area grouping work that serves a related production or service need.",
+            "zh-CN": "一个编辑赛道或服务领域，把服务于同一类生产或服务需求的工作归在一起。"
+          }
+        },
+        "work": {
+          "label": {
+            "en": "Work",
+            "zh-CN": "工作"
+          },
+          "definition": {
+            "en": "A named scope of work, either an editorial work item or a source occupation task; matching labels do not establish identity.",
+            "zh-CN": "一项有名字的工作范围：编辑的工作条目，或来源职业的任务。名称相同不代表是同一项。"
+          }
+        },
+        "occupation_group": {
+          "label": {
+            "en": "Occupation group",
+            "zh-CN": "职业大类"
+          },
+          "definition": {
+            "en": "An O*NET occupation family used to organize source occupations.",
+            "zh-CN": "用来组织来源职业的 O*NET 职业大类。"
+          }
+        },
+        "occupation": {
+          "label": {
+            "en": "Occupation",
+            "zh-CN": "职业"
+          },
+          "definition": {
+            "en": "An O*NET occupation with its source identity and occupational description.",
+            "zh-CN": "一个 O*NET 职业，带来源身份和职业描述。"
+          }
+        }
+      }
+    }
+  },
+  "constraints": [
+    {
+      "id": "rule:tier-caps-stage",
+      "statement": {
+        "zh-CN": "一个能力状态的自主阶段，不得超过支撑它的最高证据层级所允许的上限。"
+      },
+      "expression": {
+        "cap_by": "evidence_tier.stage_cap"
+      },
+      "enforced_by": [
+        "scorer",
+        "sql_check"
+      ]
+    },
+    {
+      "id": "rule:role-implies-tier",
+      "statement": {
+        "zh-CN": "证据层级由发布者在该事件中的角色推出；模型不得自行指定高于角色允许的层级。"
+      },
+      "expression": {
+        "derive": "person_event_role.implies_tier"
+      },
+      "enforced_by": [
+        "jev",
+        "sql_check"
+      ]
+    },
+    {
+      "id": "rule:ai-proposed-cannot-assert-equivalence",
+      "statement": {
+        "zh-CN": "method 为 ai_proposed 的关系，status 必须是 candidate，且不得断言 exact 或 source_projection。"
+      },
+      "enforced_by": [
+        "validator",
+        "sql_check"
+      ]
+    },
+    {
+      "id": "rule:definition-must-equal-source",
+      "statement": {
+        "zh-CN": "概念定义若声明 basis 为来源文本，其正文必须逐字等于该来源原文。"
+      },
+      "enforced_by": [
+        "validator"
+      ]
+    },
+    {
+      "id": "rule:deprecated-needs-replacement",
+      "statement": {
+        "zh-CN": "lifecycle 为 deprecated 的概念，必须同时给出 replaced_by 或 obsolescence_reason；被停用的 ID 不得被新概念复用。"
+      },
+      "enforced_by": [
+        "validator",
+        "ontology:check"
+      ]
+    },
+    {
+      "id": "rule:blocked-by-needs-source-task",
+      "statement": {
+        "zh-CN": "每条 blocked_by 边必须指出依据的任务 ID，不能只写理由文字。"
+      },
+      "enforced_by": [
+        "validator"
+      ],
+      "retired": true
+    },
+    {
+      "id": "rule:no-other-bucket",
+      "statement": {
+        "zh-CN": "受控词表不设 other。判不出来返回 null 并记 unresolved_reason。"
+      },
+      "enforced_by": [
+        "jev",
+        "sql_check"
+      ]
+    },
+    {
+      "id": "rule:org-must-be-id",
+      "statement": {
+        "zh-CN": "任何指向组织的字段必须是组织 ID，不得为自由文本名称。"
+      },
+      "enforced_by": [
+        "sql_check"
+      ]
+    },
+    {
+      "id": "rule:type-layer-has-no-state",
+      "statement": {
+        "zh-CN": "类型层节点不得携带状态、时间或置信度字段。能力与闸门的状态一律存 PG。"
+      },
+      "enforced_by": [
+        "validator",
+        "ontology:check"
+      ]
+    },
+    {
+      "id": "rule:event-identity-is-triple",
+      "statement": {
+        "zh-CN": "事件身份为 (primary_org_id, kind, subject_key) 三元组；标题只作展示，不参与身份。subject_key 缺失时退回标题 slug 并标记 identity_confidence=low。"
+      },
+      "enforced_by": [
+        "extractor",
+        "sql_check"
+      ]
+    },
+    {
+      "id": "rule:breadth-limits-discrimination",
+      "statement": {
+        "zh-CN": "一项能力若被判定为超过半数已判断工作节点所需要，就不再能区分工作，因此不得进入职业层结论、不得进入影响力排序；它的边保留、公开，并在页面上带着这个比例一起显示。",
+        "en": "A capability required by more than half of the judged work nodes no longer distinguishes between kinds of work, so it cannot carry an occupation-level conclusion or enter impact ranking. Its edges are kept and published, shown with the measured share attached."
+      },
+      "expression": {
+        "breadth": "work_nodes_requiring / work_nodes_judged",
+        "threshold": 0.5,
+        "excluded_from": [
+          "occupation_conclusions",
+          "impact_ranking"
+        ]
+      },
+      "enforced_by": [
+        "scorer",
+        "publisher",
+        "site"
+      ],
+      "scope": {
+        "applies_to": [
+          "capabilities"
+        ],
+        "zh-CN": "目前只作用于能力，不作用于闸门。同样的道理对闸门成立——一个挡住所有工作的闸门也说不出挡住的是哪些工作——但全量闸门扫描跑到一半时，最宽的 gate:physical-presence 约占已判断工作的三成，离 0.5 还有距离，没有一个闸门接近这条线。为一个当前无人触发的情形先建一套机制，比把这个缺口写下来更糟。等到有闸门越过阈值时再实现，并在这里补上理由。"
+      },
+      "retired": true
+    },
+    {
+      "id": "rule:tier-caps-level",
+      "statement": {
+        "zh-CN": "一条活动证据能支持到的活动层级，不得超过它自己的证据层级所允许的上限。",
+        "en": "The level a piece of activity evidence can support may not exceed the cap its own evidence tier allows."
+      },
+      "expression": {
+        "cap_by": "evidence_tier.level_cap"
+      },
+      "enforced_by": [
+        "activity_state",
+        "publish"
+      ]
+    },
+    {
+      "id": "rule:task-level-is-the-minimum",
+      "statement": {
+        "zh-CN": "一条任务的层级，取覆盖它的各条活动中最低的那个，不是最高的。任务要整件做完才算做完，任何一环 AI 做不了，这条任务就没做完。",
+        "en": "A task's level is the LOWEST among the activities that cover it, never the highest. A task is done only when all of it is done, so AI failing at any part means the task is not done."
+      },
+      "expression": {
+        "aggregate": "min",
+        "over": "activity_task_edges"
+      },
+      "enforced_by": [
+        "activity_state",
+        "publish"
+      ]
+    },
+    {
+      "id": "rule:three-states-are-not-zero",
+      "statement": {
+        "zh-CN": "已判定、未知、未触及是三种状态，没有一种等于 0。「问过但没有任何方向的证据」和「从没问过」都不是「AI 做不了」。",
+        "en": "Assessed, unknown and untouched are three states and none of them is zero. Neither \"asked and nothing came back\" nor \"never asked\" means \"AI cannot do this\"."
+      },
+      "expression": {
+        "states": [
+          "assessed",
+          "unknown",
+          "untouched"
+        ],
+        "none_is": 0
+      },
+      "enforced_by": [
+        "publish",
+        "site"
+      ]
+    },
+    {
+      "id": "rule:panel-lifecycle",
+      "statement": {
+        "zh-CN": "名单账号的状态只由检查日志推导：身份依据至少为本人简介且平台 ID 已解析，才算身份已确认；未被剔除、任职检查未过期、近期活跃，才启用；任一条件失效即暂停，恢复后自动启用。"
+      },
+      "expression": {
+        "identity_min_grade": "official_bio",
+        "affiliation_recheck_days": 120,
+        "dormant_after_days": 90,
+        "activity_window_days": 180,
+        "retire_after_failed_rechecks": 2
+      },
+      "enforced_by": [
+        "panel"
+      ]
+    },
+    {
+      "id": "rule:panel-independence",
+      "statement": {
+        "zh-CN": "独立性按公司、按时间判断：帖子发布时，账号与被谈论机构存在 breaks_independence 的有效关系，或账号本身就是该机构运营的账号，其帖子对该机构只算厂商自证。"
+      },
+      "expression": {
+        "derive": "affiliation_relation.breaks_independence",
+        "at": "post.published_at",
+        "owner_organization_breaks": true
+      },
+      "enforced_by": [
+        "panel",
+        "judge"
+      ]
+    },
+    {
+      "id": "rule:verification-trigger",
+      "statement": {
+        "zh-CN": "一条更新同时满足「有被证据层级压低的声明」和「足够重要」，才去名单里找第三方；重要指热度位于窗口前 20%，或更新类型属于指定类型。 在第 7 天热度定稿后才判断，暂估热度不触发。"
+      },
+      "expression": {
+        "requires_capped_reading": true,
+        "attention_percentile": 0.8,
+        "important_kinds": [
+          "version_release",
+          "capability_update",
+          "benchmark_result"
+        ],
+        "lookup_days_after": 7,
+        "requires_final_attention": true
+      },
+      "enforced_by": [
+        "verification"
+      ]
+    },
+    {
+      "id": "rule:attention-baseline",
+      "statement": {
+        "zh-CN": "每条帖子只采两次：首次发现时一次，发帖后第 7 天一次作为定稿。热度以第 7 天的互动量（点赞 + 转发 + 引用 + 回复）排名，并附相对该账号中位互动量的倍数；不满 7 天的为暂估，只用于展示，不参与定稿排名、不触发验证。缺失为空，不当作 0；热度不进入任何级别计算。",
+        "en": "Each post is captured twice: when first seen, and at day 7 after posting as the final reading. Attention is ranked by day-7 engagement (likes + reposts + quotes + replies), with its multiple of the account's median alongside. Under 7 days it is provisional: shown, but not ranked as final and never used to trigger verification. Missing is null, never zero; attention never enters any level."
+      },
+      "expression": {
+        "rank_by": "engagement",
+        "engagement": [
+          "likes",
+          "reposts",
+          "quotes",
+          "replies"
+        ],
+        "relative_to": "account_median_engagement_in_window",
+        "captures": [
+          "first_seen",
+          "day_7"
+        ],
+        "final_snapshot_age_hours": [
+          144,
+          192
+        ],
+        "never_affects": "activity_level"
+      },
+      "enforced_by": [
+        "publish"
+      ]
+    },
+    {
+      "id": "rule:gate-caps-level",
+      "statement": {
+        "zh-CN": "非技术障碍把环节可记的级别上限定为 L3：必须有人在场、签字或担责的工作，到不了无人交付（L4/L5），但 AI 仍可做到 L1–L3。障碍作为单独标签展示，不藏进级别。",
+        "en": "A non-technical barrier caps an activity at L3: work that needs a person present, signing or answerable cannot reach delivery without a person (L4/L5), but AI can still do L1-L3 of it. The barrier is shown as its own label, not hidden in the level."
+      },
+      "expression": {
+        "cap": 3
+      },
+      "enforced_by": [
+        "activity_state",
+        "publish"
+      ]
+    },
+    {
+      "id": "rule:score-below-one-is-not-a-level",
+      "statement": {
+        "zh-CN": "判官分数低于 1 的证据不构成级别：它说明「有关，但没达到 L1」，只保留作记录，不参与计算。只有这类证据的环节是证据不全，不是 L0。",
+        "en": "A judge score below 1 is not a level: it says 'related, but short of L1'. Kept on record, not counted. An activity with only such evidence has incomplete evidence, not L0."
+      },
+      "expression": {
+        "min_score": 1
+      },
+      "enforced_by": [
+        "activity_state",
+        "publish"
+      ]
+    },
+    {
+      "id": "rule:verification-tier",
+      "statement": {
+        "zh-CN": "名单帖子的证据层级只由帖子性质和作者独立性决定：作者与被谈论机构不独立时不产生证据；亲手测试、独立评测、本机构生产使用算第三方验证（T1）；专家评估算多方印证（T2）；观点、转述、无关不产生证据。账号角色不参与。",
+        "en": "A panel post's tier comes from the post and its author's independence only: no evidence when the author is tied to the company; hands-on test, independent evaluation or own production use is T1; expert assessment is T2; opinion, relay and unrelated give none. The account's role plays no part."
+      },
+      "expression": {
+        "requires_independence": true,
+        "T1": [
+          "hands_on_test",
+          "independent_evaluation",
+          "own_production_use"
+        ],
+        "T2": [
+          "expert_assessment"
+        ],
+        "none": [
+          "opinion",
+          "relay",
+          "unrelated"
+        ]
+      },
+      "enforced_by": [
+        "verification"
+      ]
+    },
+    {
+      "id": "rule:identity-from-profile",
+      "statement": {
+        "zh-CN": "账号自己的资料可以确立身份：个人账号的显示名与人物姓名一致，且简介提到该人物已记录的任职机构，视为本人简介依据（official_bio）；机构账号的显示名与机构名一致即可。仅名字一致不足以确认个人身份，冒名账号常用同名。",
+        "en": "An account's own profile can establish identity: for a person, the display name matches and the bio names an affiliation already on record; for an organisation, the display name matches. A matching name alone never confirms a person - impersonators use the same name."
+      },
+      "expression": {
+        "grade": "official_bio",
+        "person_requires": [
+          "name_match",
+          "recorded_affiliation_in_bio"
+        ],
+        "organization_requires": [
+          "name_match"
+        ],
+        "min_org_key_length": 4
+      },
+      "enforced_by": [
+        "panel"
+      ]
+    },
+    {
+      "id": "rule:nature-caps-level",
+      "statement": {
+        "zh-CN": "帖子性质决定它最多能证明到哪一级：L4 要求「已在真实业务中运行」，只有本机构生产使用能证明；亲手测试、独立评测、专家评估再强也只能证明到 L3。",
+        "en": "What a post is limits how far it can show: L4 requires running in real business, which only own production use can show; a hands-on test, an independent evaluation or an expert assessment shows L3 at most."
+      },
+      "expression": {
+        "cap_by": "post_nature.level_cap"
+      },
+      "enforced_by": [
+        "activity_state",
+        "publish"
+      ]
+    },
+    {
+      "id": "rule:post-links-to-event",
+      "statement": {
+        "zh-CN": "帖子沿回复、引用、转发链归属到事件：链上游是事件原帖或已归属的帖子，就归属同一事件，并记录深度。没有上游关系的帖子，在事件发生后 7 天内提到产品全部关键词，记为提及。一条帖子可以归属多个事件（例如一条帖子同时宣布两个模型）。 产品标识若是其他产品标识的前缀（如 gemini 之于 gemini 3 8 flash），属于品牌名而非具体产品，不参与提及匹配。一条提及只归属一个事件：取产品名最具体者，再取帖子之前最近发生者。",
+        "en": "A post links to an event through reply, quote and repost chains whose upstream is the event's source post or an already linked post, with its depth. A post with no upstream that names every word of the product within 7 days of the event is a mention. A post may link to several events."
+      },
+      "expression": {
+        "follow": [
+          "reply",
+          "quote",
+          "repost"
+        ],
+        "mention_within_days": 7,
+        "max_depth": 6,
+        "mention_excludes": "subject_that_prefixes_another_subject",
+        "mention_targets": "one_event: most_specific_terms, then latest_before_post"
+      },
+      "enforced_by": [
+        "post_events"
+      ]
+    },
+    {
+      "id": "rule:product-is-not-model",
+      "statement": {
+        "en": "A product, app, agent, feature, platform or service never enters the model registry, even when it runs on a model or shares its brand.",
+        "zh-CN": "产品、应用、智能体、功能、平台、服务不进模型表，即使它跑在模型上或与模型同名。"
+      },
+      "enforced_by": [
+        "model_identification_prompt"
+      ]
+    },
+    {
+      "id": "rule:model-confirmed-by-owner-release",
+      "statement": {
+        "en": "A model is confirmed, and dated, only by its maker's own release update that names it as subject. A catalog listing or another company's mention confirms nothing.",
+        "zh-CN": "模型只由厂商自己、以它为主体的发布帖确认并取得发布时间。目录收录或别家公司的提及都不构成确认。"
+      },
+      "expression": {
+        "role": "subject",
+        "event_kinds": [
+          "version_release",
+          "product_launch"
+        ],
+        "event_org": "equals model owner"
+      },
+      "enforced_by": [
+        "model_identification.confirm"
+      ]
+    },
+    {
+      "id": "rule:model-owner-is-not-provider",
+      "statement": {
+        "en": "A model's owner is the maker named in the catalog's canonical id or stated in the post, never the provider that lists it.",
+        "zh-CN": "模型的归属方是目录规范标识里的出品方或帖子写明的出品方，不是上架它的供应商。"
+      },
+      "enforced_by": [
+        "model_catalog.select"
+      ]
+    },
+    {
+      "id": "rule:catalog-resolves-before-candidate",
+      "statement": {
+        "en": "A mention is looked up in the alias table, which holds the catalog's names, before a new candidate is opened. The judge never picks a registry row.",
+        "zh-CN": "提及先查别名表（含目录的名字），查不到才开新候选。判官不直接选模型行。"
+      },
+      "enforced_by": [
+        "model_identification.Registry.resolve",
+        "model_catalog.apply"
+      ]
+    },
+    {
+      "id": "rule:catalog-disagreement-is-null",
+      "statement": {
+        "en": "A catalog attribute is taken from the maker's own listing; without one, only when every listing agrees. Otherwise it stays null.",
+        "zh-CN": "目录属性取厂商自己的条目；没有时，只有所有条目一致才取。否则留空。"
+      },
+      "enforced_by": [
+        "model_catalog.select"
+      ]
+    }
+  ]
+}

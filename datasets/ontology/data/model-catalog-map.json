@@ -1,0 +1,39 @@
+{
+  "source": "models.dev",
+  "url": "https://models.dev/api.json",
+  "since": "2026-01-01",
+  "note": "Which catalog owners are companies we follow, and which catalog providers we keep. Owners are the prefix of canonical_model_id. Hand-confirmed; nothing here is matched by name.",
+  "owners": {
+    "openai": "org:openai",
+    "anthropic": "org:anthropic",
+    "google": "org:google",
+    "meta": "org:meta",
+    "xai": "org:xai",
+    "deepseek": "org:deepseek",
+    "alibaba": "org:alibaba",
+    "moonshotai": "org:moonshot",
+    "minimax": "org:minimax",
+    "zhipuai": "org:zhipu",
+    "bytedance-seed": "org:bytedance",
+    "tencent": "org:tencent",
+    "microsoft": "org:microsoft"
+  },
+  "providers": [
+    {"key": "openai", "name": "OpenAI", "kind": "first_party", "org_id": "org:openai"},
+    {"key": "anthropic", "name": "Anthropic", "kind": "first_party", "org_id": "org:anthropic"},
+    {"key": "google", "name": "Google", "kind": "first_party", "org_id": "org:google"},
+    {"key": "meta", "name": "Meta", "kind": "first_party", "org_id": "org:meta"},
+    {"key": "xai", "name": "xAI", "kind": "first_party", "org_id": "org:xai"},
+    {"key": "deepseek", "name": "DeepSeek", "kind": "first_party", "org_id": "org:deepseek"},
+    {"key": "alibaba", "name": "Alibaba", "kind": "first_party", "org_id": "org:alibaba"},
+    {"key": "moonshotai", "name": "Moonshot AI", "kind": "first_party", "org_id": "org:moonshot"},
+    {"key": "minimax", "name": "MiniMax", "kind": "first_party", "org_id": "org:minimax"},
+    {"key": "zhipuai", "name": "Zhipu AI", "kind": "first_party", "org_id": "org:zhipu"},
+    {"key": "volcengine", "name": "Volcengine Ark", "kind": "cloud", "org_id": "org:bytedance"},
+    {"key": "tencent-tokenhub", "name": "Tencent TokenHub", "kind": "cloud", "org_id": "org:tencent"},
+    {"key": "azure", "name": "Azure", "kind": "cloud", "org_id": "org:microsoft"},
+    {"key": "amazon-bedrock", "name": "Amazon Bedrock", "kind": "cloud", "org_id": null},
+    {"key": "google-vertex", "name": "Vertex", "kind": "cloud", "org_id": "org:google"},
+    {"key": "openrouter", "name": "OpenRouter", "kind": "cloud", "org_id": null}
+  ]
+}

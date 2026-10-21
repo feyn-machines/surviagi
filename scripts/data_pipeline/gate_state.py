@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 
 from psycopg.types.json import Jsonb
 
+from . import ontology_schema
 from .judge import JudgeError, TypeSafeJudge, _post, TYPESAFE_URL, METHOD_VERSION
 from .pipeline import digest
 
@@ -42,12 +43,9 @@ STATUS_CRITERIA = {
 }
 
 
-def load_policy_events(conn, vocabulary: str | None = "event_kind-2.0.0") -> list[dict]:
-    clause = "e.kind = 'policy_statement'"
-    params: list = []
-    if vocabulary:
-        clause += " AND e.kind_vocabulary = %s"
-        params.append(vocabulary)
+def load_policy_events(conn, vocabulary: str | None = None) -> list[dict]:
+    clause = "e.kind = 'policy_statement' AND e.primary_org_id IS NOT NULL AND e.kind_vocabulary = ANY(%s)"
+    params: list = [ontology_schema.event_kind_markers(vocabulary)]
     with conn.cursor() as cursor:
         cursor.execute(
             f"""SELECT e.event_id, e.title, e.summary, e.occurred_at,
@@ -67,12 +65,12 @@ def load_gates(conn) -> list[dict]:
         return cursor.fetchall()
 
 
-def compute(conn, vocabulary: str | None = "event_kind-2.0.0", progress=None) -> dict:
+def compute(conn, vocabulary: str | None = None, progress=None) -> dict:
     say = progress or (lambda message: print(message, file=sys.stderr, flush=True))
     judge = TypeSafeJudge()
     gates = load_gates(conn)
     if not gates:
-        raise ValueError("No active gates; run seed-semantic first")
+        raise ValueError("No active gates; run seed-ontology-data first")
     events = load_policy_events(conn, vocabulary)
     say(f"{len(gates)} gates against {len(events)} policy statements")
 

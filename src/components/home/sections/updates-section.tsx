@@ -278,7 +278,7 @@ export function UpdatesSection({ data, language, index }: { data: HomeData; lang
                 </>
               );
               return u.url
-                ? <Link key={u.id} className={s.upd} href={updateHref(u.id)}>{body}</Link>
+                ? <Link key={u.id} className={s.upd} href={updateHref(language, u.id)}>{body}</Link>
                 : <div key={u.id} className={s.upd}>{body}</div>;
             })}
           </div>

@@ -1,6 +1,0 @@
-# Local X crawler subsystem (scripts/crawler). Project-owned; replaces the
-# collector skill dependency. Pinned to the versions verified in the skill venv.
-twikit==2.3.3
-httpx==0.28.1
-# Reads source_accounts and ingests runs through data_pipeline (crawler/core/store.py).
-psycopg[binary]==3.3.5

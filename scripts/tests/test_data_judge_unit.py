@@ -20,10 +20,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from data_pipeline import judge  # noqa: E402
-from data_pipeline import semantic  # noqa: E402
+from data_pipeline import ontology_schema  # noqa: E402
 
-SEMANTIC_MODEL = json.loads(
-    (Path(__file__).resolve().parents[2] / "datasets/semantic/semantic-model.v2.json")
+SCHEMA = json.loads(
+    (Path(__file__).resolve().parents[2] / "datasets/ontology/schema/schema.json")
     .read_text(encoding="utf-8"))
 
 
@@ -155,12 +155,12 @@ class EvidenceQuestionShapeTests(unittest.TestCase):
 
 
 class AutonomyRubricTests(unittest.TestCase):
-    """The rubric is read from the semantic layer, never restated in the prompt."""
+    """The rubric is read from the schema, never restated in the prompt."""
 
     def test_five_levels_in_stage_order_from_the_semantic_model(self):
         levels = judge.autonomy_levels()
         self.assertEqual(len(levels), 5)
-        terms = SEMANTIC_MODEL["vocabularies"]["autonomy_stage"]["terms"]
+        terms = SCHEMA["vocabularies"]["autonomy_stage"]["terms"]
         for stage in range(5):
             body = terms[str(stage)]
             self.assertIn(body["label"]["zh-CN"], levels[stage])
@@ -170,16 +170,16 @@ class AutonomyRubricTests(unittest.TestCase):
     def test_levels_are_not_a_second_copy_of_the_vocabulary(self):
         # Proof that the text is read at call time: change the model, and the
         # rubric changes with it. A hard-coded copy would not move.
-        original = semantic.load_model
-        model = json.loads(json.dumps(SEMANTIC_MODEL))
+        original = ontology_schema.load_schema
+        model = json.loads(json.dumps(SCHEMA))
         model["vocabularies"]["autonomy_stage"]["terms"]["4"]["label"]["zh-CN"] = "改过的标签"
-        semantic.load_model = lambda *a, **k: model
-        self.addCleanup(lambda: setattr(semantic, "load_model", original))
+        ontology_schema.load_schema = lambda *a, **k: model
+        self.addCleanup(lambda: setattr(ontology_schema, "load_schema", original))
         self.assertIn("改过的标签", judge.autonomy_levels()[4])
 
     def test_rubric_labels_are_not_duplicated_in_judge_source(self):
         source = (Path(judge.__file__)).read_text(encoding="utf-8")
-        terms = SEMANTIC_MODEL["vocabularies"]["autonomy_stage"]["terms"]
+        terms = SCHEMA["vocabularies"]["autonomy_stage"]["terms"]
         for stage in range(5):
             definition = terms[str(stage)]["definition"]["zh-CN"]
             self.assertNotIn(definition, source,
@@ -629,11 +629,11 @@ class EvidenceParsingTests(_JudgeTestCase):
         stub.model = "jev-latest"
         before = stub.evidence_prompt_sha256()
         self.assertEqual(len(before), 64)
-        original = semantic.load_model
-        model = json.loads(json.dumps(SEMANTIC_MODEL))
+        original = ontology_schema.load_schema
+        model = json.loads(json.dumps(SCHEMA))
         model["vocabularies"]["autonomy_stage"]["terms"]["3"]["definition"]["zh-CN"] = "改动"
-        semantic.load_model = lambda *a, **k: model
-        self.addCleanup(lambda: setattr(semantic, "load_model", original))
+        ontology_schema.load_schema = lambda *a, **k: model
+        self.addCleanup(lambda: setattr(ontology_schema, "load_schema", original))
         self.assertNotEqual(before, stub.evidence_prompt_sha256())
 
 

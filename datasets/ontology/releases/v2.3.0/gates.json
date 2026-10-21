@@ -1,0 +1,326 @@
+{
+  "version": "gates-1",
+  "status": "candidate",
+  "method": "ai_proposed",
+  "note": {
+    "zh-CN": "闸门是不随模型变强而松动的条件——执照、责任规则、物理要求、人身在场。它们过去和能力共用一个文件，因为提议那一遍问的是「这项工作需要什么」，模型会把闸门也说成一种能力：physical-presence 覆盖 14 个职业大类，成为覆盖面最广的一条「能力」，而它恰恰是最典型的闸门。能力层已退役，闸门没有——它们挂在活动上（activity_gate_edges），一道闸门把活动按在 L0，无论证据说什么。",
+    "en": "A gate is a condition that does not lift because a model improved: a licence, a liability rule, a physical requirement, a person who must be present. Gates used to share a file with capabilities because the proposing pass asked what work requires, and a model will call a gate a capability - physical-presence reached 14 occupation groups, the broadest 'capability' proposed, and it is the most textbook gate there is. The capability layer is retired; gates are not."
+  },
+  "derived_from": {
+    "reviewed_seed": "the reviewed evidence pass",
+    "discovery": "capability-discovery-1",
+    "ontology": "1.0.0"
+  },
+  "gates": [
+    {
+      "id": "gate:clinician-signoff",
+      "gate_type": "human_authority",
+      "label": {
+        "en": "Clinician sign-off",
+        "zh-CN": "医师签字"
+      },
+      "source_task": "oaw:task:9416",
+      "source_text": "Return dictated reports in printed or electronic form for physician's review, signature, and corrections",
+      "definition": {
+        "en": "A licensed clinician must review and sign the output before it becomes a record. The requirement attaches to the person, not to the quality of the text.",
+        "zh-CN": "成稿必须经执业医师审阅并签字才能成为病案。该要求约束的是人的授权，与文本质量无关——模型再准也不解除。"
+      },
+      "source": "evidence-review-1"
+    },
+    {
+      "id": "gate:payment-authority",
+      "gate_type": "liability",
+      "label": {
+        "en": "Payment authority",
+        "zh-CN": "款项处置权"
+      },
+      "source_task": "oaw:task:2583",
+      "source_text": "Determine charges for services requested, collect deposits or payments, or arrange for billing.",
+      "definition": {
+        "en": "Deciding charges and handling deposits, payments or billing carries financial liability that an organisation assigns to an accountable person.",
+        "zh-CN": "定价、收取押金与开票承担资金责任，机构必须指派可追责的人承担，不因模型变强而解除。"
+      },
+      "source": "evidence-review-1"
+    },
+    {
+      "id": "gate:physical-presence",
+      "label": {
+        "en": "Physical Presence",
+        "zh-CN": "现场在场"
+      },
+      "definition": {
+        "en": "Being physically present at a site to observe conditions directly and perform hands-on tasks.",
+        "zh-CN": "亲自到场观察实际情况并执行动手任务。"
+      },
+      "source": "capability-discovery-1",
+      "occupation_group_breadth": 14,
+      "source_tasks": [
+        {
+          "work_id": "oaw:task:20843",
+          "work_text": "Inspect government property, such as construction sites or public housing, to ensure compliance with contract specifications or legal requirements."
+        },
+        {
+          "work_id": "oaw:task:10054",
+          "work_text": "Heat-treat parts, using acetylene torches."
+        },
+        {
+          "work_id": "oaw:task:21400",
+          "work_text": "Administer first aid in emergency situations."
+        },
+        {
+          "work_id": "oaw:task:21426",
+          "work_text": "Pay and process claims within designated authority level."
+        }
+      ],
+      "classification_confidence": 0.98,
+      "gate_type": "physical_presence"
+    },
+    {
+      "id": "gate:equipment-maintenance",
+      "label": {
+        "en": "Equipment Maintenance",
+        "zh-CN": "设备维护"
+      },
+      "definition": {
+        "en": "Inspecting, maintaining, and repairing equipment and machinery to ensure proper functioning and safety.",
+        "zh-CN": "检查、维护和修理设备与机械，以确保其正常运行和安全。"
+      },
+      "source": "capability-discovery-1",
+      "occupation_group_breadth": 6,
+      "source_tasks": [
+        {
+          "work_id": "oaw:task:4308",
+          "work_text": "Clean, maintain, and sterilize instruments or equipment."
+        },
+        {
+          "work_id": "oaw:task:22983",
+          "work_text": "Clean and maintain fire stations and fire fighting equipment and apparatus."
+        },
+        {
+          "work_id": "oaw:task:13605",
+          "work_text": "Clean installation surfaces, equipment, tools, work sites, or storage areas, using water, chemical solutions, oxygen lances, or polishing machines."
+        },
+        {
+          "work_id": "oaw:task:3001",
+          "work_text": "Repair and replace damaged or worn parts."
+        }
+      ],
+      "classification_confidence": 0.39,
+      "review_first": {
+        "zh-CN": "分类置信度仅 0.39——判断者自己也没把握它是能力还是闸门。两者混淆会把「制度没变」算成「AI 没进步」，所以这一条必须先人工定性。"
+      },
+      "gate_type": "physical_presence"
+    },
+    {
+      "id": "gate:payment-processing",
+      "label": {
+        "en": "Payment Processing",
+        "zh-CN": "支付处理"
+      },
+      "definition": {
+        "en": "Arranging and executing payments, including cash handling and financial transactions, in compliance with regulations.",
+        "zh-CN": "安排并执行付款，包括现金处理和金融交易，并遵守相关规定。"
+      },
+      "source": "capability-discovery-1",
+      "occupation_group_breadth": 5,
+      "source_tasks": [
+        {
+          "work_id": "oaw:task:1155",
+          "work_text": "Arrange the payment of duty and freight charges."
+        },
+        {
+          "work_id": "oaw:task:678",
+          "work_text": "Compute charges for merchandise or services and receive payments."
+        },
+        {
+          "work_id": "oaw:task:9751",
+          "work_text": "Prepare customer invoices and accept payment."
+        },
+        {
+          "work_id": "oaw:task:642",
+          "work_text": "Operate cash registers to receive payments from patrons."
+        }
+      ],
+      "classification_confidence": 0.71,
+      "gate_type": "regulatory"
+    },
+    {
+      "id": "gate:manual-dexterity",
+      "label": {
+        "en": "Manual Dexterity",
+        "zh-CN": "手部灵巧"
+      },
+      "definition": {
+        "en": "Using hands and tools skillfully to handle materials, plants, or samples without causing damage.",
+        "zh-CN": "熟练使用双手和工具处理材料、植物或样本，且不造成损坏。"
+      },
+      "source": "capability-discovery-1",
+      "occupation_group_breadth": 4,
+      "source_tasks": [
+        {
+          "work_id": "oaw:task:15452",
+          "work_text": "Draw samples of biofuels products or secondary by-products for quality control testing."
+        },
+        {
+          "work_id": "oaw:task:10198",
+          "work_text": "Repair or replace damaged molds, pipes, belts, chains, or other equipment, using hand tools, hand-powered presses, or jib cranes."
+        },
+        {
+          "work_id": "oaw:task:23386",
+          "work_text": "Dig, cut, and transplant seedlings, cuttings, trees, and shrubs."
+        },
+        {
+          "work_id": "oaw:task:3060",
+          "work_text": "Operate engine lathe to grind, file, and turn machine parts to dimensional specifications."
+        }
+      ],
+      "classification_confidence": 0.27,
+      "review_first": {
+        "zh-CN": "分类置信度仅 0.27——判断者自己也没把握它是能力还是闸门。两者混淆会把「制度没变」算成「AI 没进步」，所以这一条必须先人工定性。"
+      },
+      "gate_type": "physical_presence"
+    },
+    {
+      "id": "gate:animal-handling",
+      "label": {
+        "en": "Animal Handling",
+        "zh-CN": "动物处置"
+      },
+      "definition": {
+        "en": "Safely restraining and managing animals during procedures to prevent injury to the animal and handler.",
+        "zh-CN": "在操作过程中安全约束和管理动物，以防止动物和操作人员受伤。"
+      },
+      "source": "capability-discovery-1",
+      "occupation_group_breadth": 3,
+      "source_tasks": [
+        {
+          "work_id": "oaw:task:4310",
+          "work_text": "Provide emergency first aid to sick or injured animals."
+        },
+        {
+          "work_id": "oaw:task:5089",
+          "work_text": "Transfer animals between enclosures to facilitate breeding, birthing, shipping, or rearrangement of exhibits."
+        },
+        {
+          "work_id": "oaw:task:21082",
+          "work_text": "Exercise animals to keep them in healthy condition."
+        },
+        {
+          "work_id": "oaw:task:13427",
+          "work_text": "Groom, clip, trim, or castrate animals, dock ears and tails, or shear coats to collect hair."
+        }
+      ],
+      "classification_confidence": 0.44,
+      "review_first": {
+        "zh-CN": "分类置信度仅 0.44——判断者自己也没把握它是能力还是闸门。两者混淆会把「制度没变」算成「AI 没进步」，所以这一条必须先人工定性。"
+      },
+      "gate_type": "physical_presence"
+    },
+    {
+      "id": "gate:student-supervision",
+      "label": {
+        "en": "Student Supervision",
+        "zh-CN": "学生看管"
+      },
+      "definition": {
+        "en": "Monitoring students in non-classroom settings to ensure safety and appropriate behavior.",
+        "zh-CN": "在非课堂环境中监督学生，以确保安全和行为得当。"
+      },
+      "source": "capability-discovery-1",
+      "occupation_group_breadth": 2,
+      "source_tasks": [
+        {
+          "work_id": "oaw:task:6702",
+          "work_text": "Perform administrative duties, such as school library assistance, hall and cafeteria monitoring, and bus loading and unloading."
+        },
+        {
+          "work_id": "oaw:task:23085",
+          "work_text": "Direct students boarding and exiting the school bus."
+        }
+      ],
+      "classification_confidence": 0.67,
+      "gate_type": "physical_presence"
+    },
+    {
+      "id": "gate:material-handling",
+      "label": {
+        "en": "Material Handling",
+        "zh-CN": "材料搬运"
+      },
+      "definition": {
+        "en": "Safely moving and positioning materials and tools as directed by craft workers.",
+        "zh-CN": "按技工指示安全移动和放置材料与工具。"
+      },
+      "source": "capability-discovery-1",
+      "occupation_group_breadth": 2,
+      "source_tasks": [
+        {
+          "work_id": "oaw:task:11471",
+          "work_text": "Provide assistance to craft workers, such as carpenters, plasterers, or masons."
+        },
+        {
+          "work_id": "oaw:task:4969",
+          "work_text": "Transport materials and products to and from work areas, manually or using carts, handtrucks, or hoists."
+        }
+      ],
+      "classification_confidence": 0.5,
+      "review_first": {
+        "zh-CN": "分类置信度仅 0.5——判断者自己也没把握它是能力还是闸门。两者混淆会把「制度没变」算成「AI 没进步」，所以这一条必须先人工定性。"
+      },
+      "gate_type": "physical_presence"
+    },
+    {
+      "id": "gate:chemical-application",
+      "label": {
+        "en": "Chemical Application",
+        "zh-CN": "化学品施用"
+      },
+      "definition": {
+        "en": "Mixing and applying fertilizers, insecticides, herbicides, or fungicides according to safety and environmental guidelines.",
+        "zh-CN": "按照安全和环境准则混合并施用肥料、杀虫剂、除草剂或杀菌剂。"
+      },
+      "source": "capability-discovery-1",
+      "occupation_group_breadth": 2,
+      "source_tasks": [
+        {
+          "work_id": "oaw:task:11210",
+          "work_text": "Direct or perform mixing or application of fertilizers, insecticides, herbicides, or fungicides."
+        },
+        {
+          "work_id": "oaw:task:7032",
+          "work_text": "Spray or inject vegetation with insecticides to kill insects or to protect against disease or with herbicides to reduce competing vegetation."
+        }
+      ],
+      "classification_confidence": 0.57,
+      "review_first": {
+        "zh-CN": "分类置信度仅 0.57——判断者自己也没把握它是能力还是闸门。两者混淆会把「制度没变」算成「AI 没进步」，所以这一条必须先人工定性。"
+      },
+      "gate_type": "regulatory"
+    },
+    {
+      "id": "gate:tool-use",
+      "label": {
+        "en": "Tool Use",
+        "zh-CN": "工具使用"
+      },
+      "definition": {
+        "en": "Using hand tools and power tools effectively and safely to perform tasks.",
+        "zh-CN": "有效且安全地使用手动工具和电动工具来完成任务。"
+      },
+      "source": "capability-discovery-1",
+      "occupation_group_breadth": 2,
+      "source_tasks": [
+        {
+          "work_id": "oaw:task:13547",
+          "work_text": "Fit, wrap, staple, or glue insulating materials to structures or surfaces, using hand tools or wires."
+        },
+        {
+          "work_id": "oaw:task:23571",
+          "work_text": "Measure, cut, thread, or bend pipe or tubing, using pipe fitter's tools."
+        }
+      ],
+      "classification_confidence": 0.62,
+      "gate_type": "physical_presence"
+    }
+  ]
+}

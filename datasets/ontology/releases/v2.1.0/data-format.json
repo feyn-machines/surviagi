@@ -1,0 +1,564 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openaiwill.com/schemas/ontology/2.1.0/data-format.json",
+  "title": "openaiwill ontology 2.1.0 data format",
+  "type": "object",
+  "properties": {
+    "concepts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "enum": [
+              "market_group",
+              "market",
+              "work",
+              "occupation_group",
+              "occupation"
+            ]
+          },
+          "label_en": {
+            "type": "string",
+            "minLength": 1
+          },
+          "label_zh_cn": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "origin": {
+            "enum": [
+              "editorial_ai",
+              "onet_projection"
+            ]
+          },
+          "translation_status": {
+            "enum": [
+              "ai_translated",
+              "pending",
+              "source_original"
+            ]
+          },
+          "scope_status": {
+            "enum": [
+              "starter_catalog",
+              "defined",
+              "source_missing_tasks"
+            ]
+          },
+          "scope_note": {
+            "type": "string",
+            "minLength": 1
+          },
+          "definition": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "language": {
+                    "enum": [
+                      "en",
+                      "zh-CN"
+                    ]
+                  },
+                  "basis": {
+                    "enum": [
+                      "source_occupation_description",
+                      "source_task_statement",
+                      "editorial_scope_note"
+                    ]
+                  }
+                },
+                "required": [
+                  "text",
+                  "language",
+                  "basis"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "label_en",
+          "label_zh_cn",
+          "origin",
+          "translation_status",
+          "scope_status",
+          "definition"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "relations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "enum": [
+              "has_market",
+              "has_work",
+              "has_occupation",
+              "has_task"
+            ]
+          },
+          "view": {
+            "enum": [
+              "markets",
+              "occupations"
+            ]
+          },
+          "parent_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "child_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "view",
+          "parent_id",
+          "child_id",
+          "order"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "external_mappings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "concept_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "external_type": {
+            "enum": [
+              "onet_family",
+              "onet_occupation",
+              "onet_task",
+              "onet_activity",
+              "isic_section"
+            ]
+          },
+          "external_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "relation": {
+            "enum": [
+              "source_projection",
+              "related",
+              "broader",
+              "narrower",
+              "exact"
+            ]
+          },
+          "method": {
+            "enum": [
+              "source_id",
+              "ai_proposed",
+              "reviewed"
+            ]
+          },
+          "status": {
+            "enum": [
+              "source_reference",
+              "candidate",
+              "reviewed",
+              "rejected"
+            ]
+          },
+          "explanation": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "concept_id",
+          "source_id",
+          "external_type",
+          "external_id",
+          "relation",
+          "method",
+          "status"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "license": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": [
+              "reference",
+              "editorial_draft"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "url",
+          "license",
+          "status"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "reference_occupation_groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "label_en": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_version": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "source_code",
+          "label_en",
+          "source_version"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "reference_occupations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "family_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "label_en": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description_en": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_version": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_url": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "id",
+          "source_code",
+          "family_id",
+          "label_en",
+          "description_en",
+          "source_version",
+          "source_url"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "reference_tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_task_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "occupation_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "statement_en": {
+            "type": "string",
+            "minLength": 1
+          },
+          "task_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_version": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "source_task_id",
+          "occupation_id",
+          "statement_en",
+          "task_type",
+          "source_version"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "reference_activities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "enum": [
+              "GWA",
+              "IWA",
+              "DWA"
+            ]
+          },
+          "label_en": {
+            "type": "string",
+            "minLength": 1
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "source_id",
+          "kind",
+          "label_en",
+          "parent_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "reference_task_activity_links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "activity_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_updated_month": {
+            "type": "string",
+            "minLength": 1
+          },
+          "domain_source": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "task_id",
+          "activity_id",
+          "source_updated_month",
+          "domain_source"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "reference_taxonomy_codes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "enum": [
+              "section",
+              "division",
+              "group",
+              "class"
+            ]
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "source_code",
+          "kind",
+          "parent_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "coverage": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "isic_section": {
+            "type": "string",
+            "minLength": 1
+          },
+          "domain_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "coverage_note": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "isic_section",
+          "domain_ids",
+          "coverage_note"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "concepts",
+    "relations",
+    "external_mappings",
+    "sources",
+    "reference_occupation_groups",
+    "reference_occupations",
+    "reference_tasks",
+    "reference_activities",
+    "reference_task_activity_links",
+    "reference_taxonomy_codes",
+    "coverage"
+  ],
+  "additionalProperties": false
+}

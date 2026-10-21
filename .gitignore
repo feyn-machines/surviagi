@@ -101,3 +101,9 @@ docs/data/*
 # Locally generated website snapshot: machine-proposed, unreviewed data.
 # The site renders without it (src/lib/snapshot.ts falls back when missing).
 /datasets/published/
+
+# Local-only tools kept out of Git (X login module: AGPL code and X script snapshots).
+/local/
+
+# local release staging
+/.release/

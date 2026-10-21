@@ -1,0 +1,122 @@
+/* Topics: an open question, its answers, who argued each and what weighs on it. */
+.group{margin:0 0 56px}
+.groupTitle{margin:0 0 4px;font-size:22px;font-weight:600;letter-spacing:-.01em}
+.groupSub{margin:0 0 14px;font-family:var(--ah-font-mono);font-size:12px;color:var(--ah-color-subtle)}
+.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--ah-color-line)}
+.item{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:24px;align-items:start;padding:18px 4px;border-bottom:1px solid var(--ah-color-line)}
+.question{font-size:19px;line-height:1.35;font-weight:500}
+a.question:hover{color:var(--ah-color-signal)}
+.about{display:block;margin-top:5px;font-size:12px;color:var(--ah-color-subtle)}
+.answers{display:flex;flex-wrap:wrap;gap:6px 8px;margin:10px 0 0;padding:0;list-style:none}
+.answers li{padding:4px 9px;border:1px solid var(--ah-color-line);font-size:13px;color:var(--ah-color-muted)}
+.answers li b{margin-left:8px;font-family:var(--ah-font-mono);font-size:12px;font-weight:500;color:var(--ah-color-text)}
+.answers li.unargued{border-style:dashed;color:var(--ah-color-subtle)}
+.counts{font-family:var(--ah-font-mono);font-size:12px;line-height:1.7;color:var(--ah-color-subtle);text-align:right}
+.counts b{color:var(--ah-color-text);font-weight:500}
+.option{margin:0 0 40px;border:1px solid var(--ah-color-line);background:var(--ah-color-surface)}
+.optionHead{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:10px 24px;padding:18px 22px;border-bottom:1px solid var(--ah-color-line)}
+.optionText{margin:0;font-size:22px;line-height:1.3;font-weight:600;letter-spacing:-.01em}
+.optionCounts{font-family:var(--ah-font-mono);font-size:12px;color:var(--ah-color-subtle)}
+.optionCounts b{color:var(--ah-color-text);font-weight:500}
+.optionBody{padding:6px 22px 16px}
+.label{margin:16px 0 6px;font-family:var(--ah-font-mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ah-color-subtle)}
+.rows{list-style:none;margin:0;padding:0}
+.rows li{display:grid;grid-template-columns:92px minmax(0,1fr);gap:14px;padding:10px 0;border-top:1px solid var(--ah-color-line);font-size:14.5px;line-height:1.55}
+.rows li:first-child{border-top:0}
+.sign{font-family:var(--ah-font-mono);font-size:11px;letter-spacing:.04em;padding-top:3px}
+.supports{color:var(--ah-color-signal)}
+.contradicts{color:var(--ah-color-warning)}
+.who{font-family:var(--ah-font-mono);font-size:12px;color:var(--ah-color-muted);padding-top:2px;overflow-wrap:anywhere}
+.rows small{display:block;margin-top:3px;font-size:12px;color:var(--ah-color-subtle)}
+.rows a:hover{color:var(--ah-color-signal)}
+.outside{margin-left:6px;padding:1px 5px;border:1px solid var(--ah-color-line);font-family:var(--ah-font-mono);font-size:10.5px;color:var(--ah-color-subtle)}
+.none{margin:10px 0 4px;font-size:13.5px;color:var(--ah-color-subtle)}
+.quarters{width:100%;border-collapse:collapse;margin:0 0 56px;font-size:14px}
+.quarters th,.quarters td{padding:9px 10px;border-bottom:1px solid var(--ah-color-line);text-align:left}
+.quarters th{font-family:var(--ah-font-mono);font-size:11px;letter-spacing:.05em;font-weight:500;color:var(--ah-color-subtle)}
+.quarters td.n{font-family:var(--ah-font-mono)}
+.editorial{margin:0 0 56px;padding:24px;border:1px solid var(--ah-color-line);background:var(--ah-color-surface)}
+.editorialMeta{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 20px;font-family:var(--ah-font-mono);font-size:11px;letter-spacing:.04em;color:var(--ah-color-subtle)}
+.editorialMeta span:first-child{color:var(--ah-color-signal)}
+.editorialTitle{margin:18px 0 12px;font-size:26px;line-height:1.3;font-weight:600;letter-spacing:-.01em}
+.editorialSummary{margin:0;max-width:80ch;font-size:16px;line-height:1.65;color:var(--ah-color-text)}
+.editorialPoints{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;list-style:none;padding:22px 0;margin:22px 0 0;border-top:1px solid var(--ah-color-line);border-bottom:1px solid var(--ah-color-line)}
+.editorialPoints h3{margin:0 0 8px;font-size:17px;line-height:1.4;font-weight:500;letter-spacing:0}
+.editorialPoints p{margin:0 0 10px;font-size:14px;line-height:1.6;color:var(--ah-color-muted)}
+.editorialPoints a{font-size:12px;color:var(--ah-color-signal);text-underline-offset:3px}
+.editorialNext{margin:18px 0;font-size:14px;line-height:1.6;color:var(--ah-color-muted)}
+.editorialLink{display:inline-block;font-size:15px;color:var(--ah-color-signal);text-decoration:underline;text-underline-offset:4px}
+@media(max-width:900px){
+  .item{grid-template-columns:1fr;gap:8px}
+  .counts{text-align:left}
+  .rows li{grid-template-columns:1fr;gap:2px}
+  .editorialPoints{grid-template-columns:1fr;gap:22px}
+  .editorial{padding:20px}
+}
+
+/* The list page: figures, the topics argued both ways, the fields, then everything with filters and pages. */
+.h2{margin:0 0 6px;font-size:28px;letter-spacing:-.02em;font-weight:600}
+.sub{margin:0 0 20px;font-size:15px;color:var(--ah-color-muted)}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:0 0 64px}
+.card{display:flex;flex-direction:column;gap:14px;padding:22px 24px;border:1px solid var(--ah-color-line);background:var(--ah-color-surface)}
+.card:hover{border-color:var(--ah-color-signal)}
+.cardKind{font-family:var(--ah-font-mono);font-size:11px;letter-spacing:.06em;color:var(--ah-color-signal)}
+.cardQuestion{margin:0;font-size:24px;line-height:1.25;font-weight:600;letter-spacing:-.015em}
+.cardFoot{margin-top:auto;font-family:var(--ah-font-mono);font-size:12px;color:var(--ah-color-subtle)}
+.cardFoot b{color:var(--ah-color-text);font-weight:500}
+.bars{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.bar{display:grid;grid-template-columns:minmax(0,1fr) 34px;gap:4px 10px;align-items:center;font-size:13.5px;color:var(--ah-color-muted)}
+.barText{grid-column:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.barCount{grid-column:2;grid-row:1 / span 2;font-family:var(--ah-font-mono);font-size:15px;color:var(--ah-color-text);text-align:right}
+.barTrack{grid-column:1;height:4px;background:var(--ah-color-line)}
+.barFill{display:block;height:4px;background:var(--ah-color-signal)}
+.bar.unargued{color:var(--ah-color-subtle)}
+.bar.unargued .barCount{color:var(--ah-color-subtle)}
+.marks{margin-left:8px;font-family:var(--ah-font-mono);font-size:11px}
+.fields{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 64px}
+.field{padding:9px 13px;border:1px solid var(--ah-color-line);background:var(--ah-color-surface);font-size:14px}
+.field:hover,.field.on{border-color:var(--ah-color-signal);color:var(--ah-color-signal)}
+.field small{margin-left:9px;font-family:var(--ah-font-mono);font-size:11px;color:var(--ah-color-subtle)}
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 28px;margin:0 0 4px;padding:12px 0;border-top:1px solid var(--ah-color-control);border-bottom:1px solid var(--ah-color-line)}
+.tabs{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:14.5px}
+.tabs a{padding:4px 0;color:var(--ah-color-muted);border-bottom:2px solid transparent}
+.tabs a:hover{color:var(--ah-color-text)}
+.tabs a.on{color:var(--ah-color-text);border-bottom-color:var(--ah-color-signal)}
+.tabs small{margin-left:6px;font-family:var(--ah-font-mono);font-size:11px;color:var(--ah-color-subtle)}
+.tabsLabel{font-family:var(--ah-font-mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ah-color-subtle)}
+.shown{margin:14px 0 0;font-family:var(--ah-font-mono);font-size:12px;color:var(--ah-color-subtle)}
+.shown a{margin-left:10px;color:var(--ah-color-signal)}
+.rowsList{list-style:none;margin:8px 0 0;padding:0}
+.topicRow{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,4fr);gap:20px 40px;align-items:start;padding:24px 4px;border-bottom:1px solid var(--ah-color-line)}
+.topicMeta{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:10px;font-family:var(--ah-font-mono);font-size:12px;color:var(--ah-color-subtle)}
+.topicMeta b{color:var(--ah-color-text);font-weight:500}
+.both{color:var(--ah-color-signal)}
+.pager{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:28px 0 0;font-family:var(--ah-font-mono);font-size:13px;color:var(--ah-color-subtle)}
+.pager a{padding:9px 14px;border:1px solid var(--ah-color-line);color:var(--ah-color-text)}
+.pager a:hover{border-color:var(--ah-color-signal);color:var(--ah-color-signal)}
+.pager span.off{padding:9px 14px;border:1px solid var(--ah-color-line);opacity:.35}
+@media(max-width:900px){
+  .cards{grid-template-columns:1fr}
+  .topicRow{grid-template-columns:1fr}
+}
+
+/* Readers' votes: a block of its own, apart from the evidence. */
+.vote{margin:0 0 56px;padding:22px 24px 14px;border:1px solid var(--ah-color-control)}
+.voteHead{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 20px;margin-bottom:14px}
+.voteTitle{margin:0;font-size:20px;font-weight:600;letter-spacing:-.01em}
+.voteQuarter{font-family:var(--ah-font-mono);font-size:12px;color:var(--ah-color-subtle)}
+.voteList{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.voteRow{display:grid;grid-template-columns:76px minmax(0,1fr) 44px;gap:5px 14px;align-items:center}
+.voteButton{font:inherit;font-family:var(--ah-font-mono);font-size:12px;padding:7px 0;border:1px solid var(--ah-color-line);background:transparent;color:var(--ah-color-text);cursor:pointer}
+.voteButton:hover{border-color:var(--ah-color-signal);color:var(--ah-color-signal)}
+.voteButton:disabled{opacity:.5;cursor:default}
+.voteButton:focus-visible,.voteWithdraw:focus-visible{outline:3px solid var(--ah-color-focus);outline-offset:3px}
+.mine .voteButton{background:var(--ah-color-signal);border-color:var(--ah-color-signal);color:var(--ah-color-ink)}
+.voteText{font-size:16px;line-height:1.4}
+.voteCount{font-family:var(--ah-font-mono);font-size:16px;text-align:right}
+.voteTrack{grid-column:2 / span 2;height:3px;background:var(--ah-color-line)}
+.voteFill{display:block;height:3px;background:var(--ah-color-muted)}
+.mine .voteFill{background:var(--ah-color-signal)}
+.voteNote{margin:10px 0 0;min-height:1.2em;font-size:13px;color:var(--ah-color-subtle)}
+.voteWithdraw{font:inherit;font-family:var(--ah-font-mono);font-size:12px;padding:0;border:0;background:none;color:var(--ah-color-subtle);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.voteWithdraw:hover{color:var(--ah-color-text)}

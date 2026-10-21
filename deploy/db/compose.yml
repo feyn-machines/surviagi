@@ -1,0 +1,64 @@
+# The server database. Started by `pnpm db:setup` from <DEPLOY_ROOT>/db/, with
+# --env-file db.env (written on the server; never in Git).
+name: openaiwill-db
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: openaiwill-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run pnpm db:setup first}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5434:5432"
+    networks:
+      openaiwill:
+        aliases:
+          - openaiwill-db
+    healthcheck:
+      # TCP, not the socket: the image's first-start temporary server listens on the socket only.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  # Daily dump of schema app (user data) into <DEPLOY_ROOT>/backups, kept 14 days, made as oaw_app (the schema's
+  # owner) so the superuser's password never enters this container. The kg schema is not dumped: a data release can
+  # recreate it. A dump is renamed into place only when it succeeded, passes gzip -t and is not tiny. A failed
+  # dump (for instance before db:setup has created schema app) is retried in five minutes, a good one in a day.
+  backup:
+    image: postgres:16-alpine
+    container_name: openaiwill-db-backup
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${OAW_APP_PASSWORD:?run pnpm db:setup first}
+    volumes:
+      - ../backups:/backups
+    networks:
+      - openaiwill
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        set -o pipefail
+        umask 077
+        while true; do
+          rm -f /backups/app-*.sql.gz.tmp
+          out=/backups/app-$$(date -u +%Y%m%dT%H%M%SZ).sql.gz
+          if pg_dump -h openaiwill-db -U oaw_app -d openaiwill -n app | gzip > "$$out.tmp" && gzip -t "$$out.tmp" && [ "$$(wc -c < "$$out.tmp")" -gt 500 ]; then
+            mv "$$out.tmp" "$$out"
+            find /backups -name 'app-*.sql.gz' -mtime +14 -delete
+            sleep 86400
+          else
+            rm -f "$$out.tmp"
+            echo "app backup failed; retrying in 5 minutes" >&2
+            sleep 300
+          fi
+        done
+volumes:
+  pgdata:
+networks:
+  openaiwill:
+    external: true

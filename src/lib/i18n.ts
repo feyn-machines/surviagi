@@ -1,14 +1,14 @@
 /**
  * Language selection for the bilingual site.
  *
- * Precedence, per CLAUDE.md / DESIGN.md: an explicit language in the URL wins,
- * then a saved user choice, then English. The browser `Accept-Language` header
- * is deliberately never consulted, so a Chinese browser still opens the English
- * default until the reader chooses otherwise.
+ * Precedence, per CLAUDE.md / DESIGN.md: the language in the path wins, then
+ * for an unprefixed address the saved user choice, then English. The browser
+ * `Accept-Language` header is deliberately never consulted, so a Chinese
+ * browser still opens the English default until the reader chooses otherwise.
  *
- * This module has no static `next/*` imports on purpose: `src/proxy.ts` (edge)
- * and `scripts/tests/test_i18n_unit.mjs` (plain node) both import the pure
- * resolver, and `next/headers` cannot be loaded outside a server render.
+ * This module has no static `next/*` imports on purpose: `src/proxy.ts` (edge),
+ * Client Components and `scripts/tests/test_i18n_unit.mjs` (plain node) all
+ * import it. The render-time reader of the path language is `./locale`.
  */
 
 export const LANGUAGES = ["en", "zh-CN"] as const;
@@ -25,12 +25,6 @@ export const LANGUAGE_COOKIE = "openaiwill_language";
 
 /** One year, refreshed on every explicit choice. */
 export const LANGUAGE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
-
-/** Request header the proxy uses to hand the validated URL language to the render. */
-export const LANGUAGE_HEADER = "x-openaiwill-language";
-
-/** Request header the proxy uses to hand the current path + query to the render. */
-export const REQUEST_URL_HEADER = "x-openaiwill-url";
 
 const LANGUAGE_NAMES: Record<Language, string> = { en: "EN", "zh-CN": "中文" };
 
@@ -76,17 +70,102 @@ export function urlLanguage(url: string | null | undefined): Language | null {
   return normalizeLanguage(new URLSearchParams(query).get(LANGUAGE_PARAM));
 }
 
-/** The same path and query with the language parameter set to `language`. */
-export function languageHref(url: string | null | undefined, language: Language): string {
-  const fallback = `?${LANGUAGE_PARAM}=${language}`;
-  if (!url) return fallback;
-  try {
-    const target = new URL(url, "http://openaiwill.invalid");
-    target.searchParams.set(LANGUAGE_PARAM, language);
-    return `${target.pathname}${target.search}`;
-  } catch {
-    return fallback;
+/** The public address of `path` in `language`. English has no prefix. */
+export function localizedPath(language: Language, path: string): string {
+  const clean = path.startsWith("/") ? path : `/${path}`;
+  if (language === DEFAULT_LANGUAGE) return clean;
+  return clean === "/" ? `/${language}` : `/${language}${clean}`;
+}
+
+/**
+ * `/zh-CN/markets` -> zh-CN + `/markets`. Normalizes slashes (backslash to `/`,
+ * collapses `//+` to `/`, removes trailing `/` unless path is `/`).
+ *
+ * `exact` is true only when the pathname is already in canonical form:
+ * - For no-language paths: `pathname === path` (already normalized).
+ * - For language paths: the language tag is in published casing AND pathname matches
+ *   `/{language}{path}` (where path is the normalized trailing-slash-stripped form).
+ *
+ * `exact: false` means a redirect is needed to canonicalise slashes or casing.
+ */
+export function splitLanguagePath(pathname: string): { language: Language | null; path: string; exact: boolean } {
+  // Normalize: backslash → slash, collapse /+ to /, remove trailing / unless root
+  const clean = pathname.replace(/\\/g, "/").replace(/\/+/g, "/").replace(/\/$/, "") || "/";
+
+  const [, first = "", ...rest] = clean.split("/");
+  const language = normalizeLanguage(first);
+  if (!language) {
+    return { language: null, path: clean, exact: pathname === clean };
   }
+
+  const path = `/${rest.join("/")}`.replace(/\/$/, "") || "/";
+  // exact: true only if language tag is in published casing AND pathname is already normalized
+  const exact = first === language && pathname === clean;
+  return { language, path, exact };
+}
+
+export type LanguageRoute =
+  | { kind: "redirect"; status: 307 | 308; location: string; save: Language | null }
+  | { kind: "rewrite"; pathname: string }
+  | { kind: "pass" };
+
+/**
+ * What the proxy does with one request. Pure, so every rule is unit tested.
+ *
+ * Rules, in order:
+ * 1. `?lang=` parameter: redirect to the target language with other params preserved (307, temporary).
+ * 2. Canonicalization: redirect if not exact (slashes, casing, trailing slashes need fixing) (308, permanent).
+ * 3. Saved language preference: redirect navigation (not prefetch) from English to saved language (307).
+ * 4. Default: rewrite to `/en` prefix internally (no public redirect).
+ *
+ * Redirect locations are relative on purpose: the origin sits behind a tunnel
+ * and sees plain HTTP on an internal host, and a relative Location cannot
+ * leak either (never `://`, `//`, or backslash escapes).
+ *
+ * `?lang=` redirects are temporary (307). A browser caches a permanent redirect (308)
+ * and stops asking the server, so the second click on a language link would no longer save.
+ */
+export function languageRoute(request: {
+  pathname: string;
+  search: string;
+  savedLanguage?: string | null;
+  navigation: boolean;
+}): LanguageRoute {
+  const { language: prefix, path, exact } = splitLanguagePath(request.pathname);
+  const params = new URLSearchParams(request.search);
+
+  if (params.has(LANGUAGE_PARAM)) {
+    const requested = urlLanguage(request.search);
+    params.delete(LANGUAGE_PARAM);
+    const query = params.toString();
+    const target = requested ?? prefix ?? DEFAULT_LANGUAGE;
+    return {
+      kind: "redirect",
+      status: 307,
+      location: `${localizedPath(target, path)}${query ? `?${query}` : ""}`,
+      save: request.navigation ? requested : null,
+    };
+  }
+
+  if (prefix === DEFAULT_LANGUAGE) {
+    return { kind: "redirect", status: 308, location: `${path}${request.search}`, save: null };
+  }
+  if (prefix) {
+    return exact
+      ? { kind: "pass" }
+      : { kind: "redirect", status: 308, location: `${localizedPath(prefix, path)}${request.search}`, save: null };
+  }
+
+  // No language prefix. Canonicalise if needed (slashes, trailing /).
+  if (!exact) {
+    return { kind: "redirect", status: 308, location: `${path}${request.search}`, save: null };
+  }
+
+  const saved = normalizeLanguage(request.savedLanguage);
+  if (saved && saved !== DEFAULT_LANGUAGE && request.navigation) {
+    return { kind: "redirect", status: 307, location: `${localizedPath(saved, path)}${request.search}`, save: null };
+  }
+  return { kind: "rewrite", pathname: `/${DEFAULT_LANGUAGE}${path === "/" ? "" : path}` };
 }
 
 /**
@@ -101,24 +180,4 @@ export function bilingual<T extends Record<string, string>>(copy: {
   "zh-CN": Record<keyof T, string>;
 }): Record<Language, Record<keyof T, string>> {
   return copy;
-}
-
-/**
- * The current request language. Server Components only: reading the request
- * opts the route into dynamic rendering.
- */
-export async function getLocale(): Promise<{ language: Language }> {
-  const { cookies, headers } = await import("next/headers");
-  const [cookieStore, requestHeaders] = await Promise.all([cookies(), headers()]);
-  const language = resolveLanguage({
-    urlLanguage: requestHeaders.get(LANGUAGE_HEADER),
-    savedLanguage: cookieStore.get(LANGUAGE_COOKIE)?.value,
-  });
-  return { language };
-}
-
-/** The current path and query, as handed over by the proxy. */
-export async function getRequestUrl(): Promise<string | null> {
-  const { headers } = await import("next/headers");
-  return (await headers()).get(REQUEST_URL_HEADER);
 }

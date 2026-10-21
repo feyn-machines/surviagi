@@ -1,0 +1,41 @@
+import { bilingual } from "@/lib/i18n";
+
+/** The update page's words, shared with its Markdown copy. */
+export const copy = bilingual({
+  en: {
+    back: "← All updates",
+    say: "This update bears on {n} {n|kind|kinds} of work in {m} {m|market|markets}. Highest level accepted: {level}.",
+    work: "Work",
+    markets: "Markets",
+    top: "Highest accepted",
+    views: "Views",
+    listTitle: "The work it bears on",
+    listSub: "Highest level first. Open a kind of work to see everything else that moved it.",
+    claimed: "Claimed L{c} · Accepted L{a}",
+    sources: "Published at",
+    source: "Source {i} ↗",
+    original: "ORIGINAL",
+    undated: "Undated",
+    all: "All updates",
+    home: "Back to the overview",
+    meta: "SurviAGI",
+  },
+  "zh-CN": {
+    back: "← 全部更新",
+    say: "这条更新涉及 {m} 条赛道的 {n} 项工作，最高采信到 {level}。",
+    work: "工作",
+    markets: "赛道",
+    top: "最高采信",
+    views: "浏览",
+    listTitle: "它涉及的工作",
+    listSub: "级别高的在前。点开一项工作，查看推动它的其他更新。",
+    claimed: "宣称 L{c} · 采信 L{a}",
+    sources: "发布于",
+    source: "来源 {i} ↗",
+    original: "原文",
+    undated: "无日期",
+    all: "全部更新",
+    home: "回到全览",
+    meta: "SurviAGI",
+  },
+});

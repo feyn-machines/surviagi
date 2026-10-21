@@ -1,4 +1,4 @@
-# openaiwill
+# SurviAGI
 
 [English](#english) · [简体中文](#zh-cn)
 
@@ -14,7 +14,7 @@ AI is changing the world—and what you can do.
 
 **PUBLIC WHITEPAPER**  
 v0.2 · October 3, 2026
-[openaiwill.com](https://openaiwill.com)
+[surviagi.com](https://surviagi.com)
 
 ### 1. Change begins with work you know
 
@@ -24,7 +24,7 @@ When AI can take on some of that work, your choices change. Something you could 
 
 Whether you run a business, work independently, have a job or simply want to make something with AI, those changes matter. They affect what you can offer, what you need to learn and where your effort is still needed.
 
-**openaiwill is an initiative to make AI’s progress toward independently completing major production and service work more transparent and credible.** We actively collect and analyze AI developments, connecting them to the work they affect. Our website carries this record; community contributions can help fill gaps and correct our judgments.
+**SurviAGI is an initiative to make AI’s progress toward independently completing major production and service work more transparent and credible.** We actively collect and analyze AI developments, connecting them to the work they affect. Our website carries this record; community contributions can help fill gaps and correct our judgments.
 
 We want users to see what AI has actually achieved, where people are still needed and which possibilities are worth exploring.
 
@@ -106,7 +106,7 @@ You can begin with an attempt you know well.
 
 **Organize experience you may want to reuse.** Keep examples and acceptance criteria that you have the right to use. They may help you prepare evaluations or training material for your own AI. You decide whether to share them; any future upload must meet the public-reuse conditions above.
 
-For now, keep these records for yourself. We will publish contribution instructions on [openaiwill.com](https://openaiwill.com) when the channel opens. The open-resource and post-training proposals in this whitepaper are directions for the initiative, not currently available submission or training services.
+For now, keep these records for yourself. We will publish contribution instructions on [surviagi.com](https://surviagi.com) when the channel opens. The open-resource and post-training proposals in this whitepaper are directions for the initiative, not currently available submission or training services.
 
 **We want more people to understand AI’s progress—and what they can do with it.**
 
@@ -140,7 +140,7 @@ AI 正在改变世界，也在改变你能做的事。
 
 **公众白皮书**  
 v0.2 · 2026年10月3日
-[openaiwill.com](https://openaiwill.com)
+[surviagi.com](https://surviagi.com)
 
 ### 1. 变化从你熟悉的工作开始
 
@@ -150,7 +150,7 @@ v0.2 · 2026年10月3日
 
 无论你正在经营公司、独立接项目、上班，还是想用 AI 做点什么，这些变化都与你有关。它们影响你能提供什么、需要学什么，以及哪些地方仍然需要你的投入。
 
-**openaiwill 是一项让 AI 独立完成主要生产与服务工作的进展更透明、更可信的倡议。** 我们主动采集和分析 AI 的变化，把它们与具体工作连接起来。网站承载这些记录，社区共建帮助补充遗漏、纠正判断。
+**SurviAGI 是一项让 AI 独立完成主要生产与服务工作的进展更透明、更可信的倡议。** 我们主动采集和分析 AI 的变化，把它们与具体工作连接起来。网站承载这些记录，社区共建帮助补充遗漏、纠正判断。
 
 我们希望用户能看清 AI 实际做到了什么，哪些地方仍然需要人，以及哪些新的可能值得尝试。
 
@@ -232,7 +232,7 @@ v0.2 · 2026年10月3日
 
 **整理可能用得上的经验。** 保留自己有权使用的示例和验收标准。它们可能帮助你为自己的 AI 准备评测或训练材料。是否分享，由你决定；未来上传的材料也必须符合上述公开复用条件。
 
-目前可以先为自己保留这些记录。提交入口开放时，我们会在 [openaiwill.com](https://openaiwill.com) 公布参与说明。本文中的开放资源和后训练主张，是倡议的建设方向；提交和训练服务目前尚未提供。
+目前可以先为自己保留这些记录。提交入口开放时，我们会在 [surviagi.com](https://surviagi.com) 公布参与说明。本文中的开放资源和后训练主张，是倡议的建设方向；提交和训练服务目前尚未提供。
 
 **让更多人看清 AI 的进展，也看清自己可以做什么。**
 

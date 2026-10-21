@@ -1,0 +1,45 @@
+.root{position:relative;display:flex;align-items:center;min-width:64px;justify-content:flex-end}
+.placeholder{display:block;width:64px;height:var(--ah-control-height)}
+.signIn,.item{font:inherit;font-family:var(--ah-font-mono);font-size:var(--ah-text-label);letter-spacing:var(--ah-tracking-label);color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:var(--ah-radius-control);min-height:var(--ah-control-height);padding:0 12px;cursor:pointer;white-space:nowrap}
+.signIn:hover,.item:hover{background:var(--ah-color-line)}
+.signIn:focus-visible,.item:focus-visible,.summary:focus-visible{outline:3px solid var(--ah-color-focus);outline-offset:3px}
+.details{position:relative}
+.summary{display:flex;list-style:none;cursor:pointer;border-radius:50%}
+.summary::-webkit-details-marker{display:none}
+.avatar{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;object-fit:cover;background:var(--ah-color-line);color:var(--ink);font-size:13px;font-weight:700}
+.panel{position:absolute;right:0;top:calc(100% + 8px);z-index:30;display:flex;flex-direction:column;gap:var(--ah-space-2);min-width:160px;max-width:calc(100vw - 40px);padding:var(--ah-space-3);background:var(--bg);border:1px solid var(--line);border-radius:var(--ah-radius-control)}
+.name{margin:0;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item{text-align:left}
+a.item{display:flex;align-items:center;text-decoration:none}
+@media(max-width:600px){.signIn{padding:0 8px}.placeholder{width:56px}.root{min-width:56px}}
+.submitButton{font:inherit;font-family:var(--ah-font-mono);font-size:var(--ah-text-label);letter-spacing:var(--ah-tracking-label);color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:var(--ah-radius-control);min-height:var(--ah-control-height);padding:0 12px;cursor:pointer;white-space:nowrap}
+.submitButton:hover{background:var(--ah-color-line)}
+.submitButton:focus-visible,.input:focus-visible{outline:3px solid var(--ah-color-focus);outline-offset:3px}
+.submitButton:disabled{opacity:.5;cursor:default}
+.primary{background:var(--ink);color:var(--bg)}
+.primary:hover{background:var(--ink);opacity:.85}
+.dialog{width:min(440px,calc(100vw - 32px));padding:0;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:var(--ah-radius-control)}
+.dialog::backdrop{background:rgba(0,0,0,.5)}
+.form{display:flex;flex-direction:column;gap:var(--ah-space-4);padding:var(--ah-space-5)}
+.dialogTitle{margin:0;font-size:18px;font-weight:700}
+.field{display:flex;flex-direction:column;gap:6px;font-family:var(--ah-font-mono);font-size:var(--ah-text-label);letter-spacing:var(--ah-tracking-label)}
+.input{font:inherit;font-family:inherit;font-size:16px;letter-spacing:normal;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:var(--ah-radius-control);padding:8px 10px;width:100%;box-sizing:border-box;resize:vertical}
+.count{align-self:flex-end;color:var(--ah-color-subtle)}
+.line{margin:0;min-height:1.5em;font-size:14px}
+.actions{display:flex;justify-content:flex-end;gap:var(--ah-space-3)}
+.mine{margin-top:var(--ah-space-7)}
+.mineTitle{margin:0 0 var(--ah-space-3);font-size:24px;font-weight:700;letter-spacing:-.4px;line-height:1.25}
+.mineList{list-style:none;margin:0;padding:0}
+.mineRow{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px var(--ah-space-4);padding:var(--ah-space-3) 0;border-bottom:1px solid var(--ah-color-line)}
+.mineHandle{font-weight:600;overflow-wrap:anywhere}
+.mineHandle:hover{text-decoration:underline;text-underline-offset:4px}
+.mineMeta,.mineStatus{font-family:var(--ah-font-mono);font-size:11px;letter-spacing:.03em;color:var(--ah-color-subtle)}
+.mineStatus[data-status="approved"]{color:var(--ah-color-signal)}
+.mineReason{flex-basis:100%;font-size:14px;color:var(--ah-color-subtle);overflow-wrap:anywhere}
+.footerButton{align-self:flex-start;text-align:left;font:inherit;color:inherit;background:transparent;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:4px}
+.footerButton:hover{color:var(--ink)}
+.footerButton:focus-visible{outline:2px solid var(--ah-color-focus);outline-offset:4px}
+.check{display:flex;align-items:center;gap:var(--ah-space-3);font-size:16px;cursor:pointer}
+.check input{width:20px;height:20px;margin:0;accent-color:var(--ink)}
+.note{font-size:13px;color:var(--ah-color-subtle);margin:0 var(--ah-space-3)}
+.root .note{margin:0 var(--ah-space-3) 0 0}

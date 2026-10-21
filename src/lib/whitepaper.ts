@@ -24,7 +24,9 @@ export type Block =
   | { kind: "heading"; level: 1 | 2 | 3; id?: string; inline: Inline[] }
   | { kind: "paragraph"; inline: Inline[] }
   | { kind: "list"; items: Inline[][] }
-  | { kind: "rule" };
+  | { kind: "bullets"; items: Inline[][] }
+  | { kind: "rule" }
+  | { kind: "image"; alt: string; src: string };
 
 const ANCHOR = /<a id="([^"]+)"><\/a>/g;
 
@@ -79,10 +81,43 @@ export function whitepaperBlocks(language: Language): Block[] {
   if (!whitepaperExists) return [];
   const section = sectionFor(readFileSync(WHITEPAPER_PATH, "utf8"), language);
   if (!section) return [];
+  return parseBlocks(section);
+}
 
+/**
+ * One language of the whitepaper as the Markdown it was written in, for the
+ * page's Markdown copy: the anchors that are only targets are left out, and a
+ * link into the document (`#…`) or the site (`/…`) is given its whole address,
+ * `page` being the whitepaper's own address in that language.
+ */
+export function whitepaperMarkdown(language: Language, page: string, site: string): string {
+  if (!whitepaperExists) return "";
+  const section = sectionFor(readFileSync(WHITEPAPER_PATH, "utf8"), language);
+  return section
+    .replace(/^\s*<a id="[^"]+"><\/a>\s*\n/gm, "")
+    .replace(/<a id="[^"]+"><\/a>/g, "")
+    .replace(/\]\((#[^)]*)\)/g, (_, anchor: string) => `](${page}${anchor})`)
+    .replace(/\]\((\/[^)]*)\)/g, (_, path: string) => `](${site}${path})`)
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    // The rule that only separates the two languages in the file ends nothing in one of them.
+    .replace(/\n+---+$/, "")
+    // The edition's title is the document's title.
+    .replace(/^## /, "# ");
+}
+
+/**
+ * The subset of Markdown the site's own documents use, as blocks. `bullets`
+ * turns on unordered lists, which articles use and the whitepaper does not: a
+ * line of the whitepaper that happens to begin with a dash stays a paragraph.
+ * `images` turns on a figure: a line that is only `![alt](/path)`, the path
+ * being a file the site serves itself.
+ */
+export function parseBlocks(section: string, options: { bullets?: boolean; images?: boolean } = {}): Block[] {
   const blocks: Block[] = [];
   let paragraph: string[] = [];
   let list: string[] = [];
+  let bullets: string[] = [];
 
   const flushParagraph = () => {
     if (paragraph.length) blocks.push({ kind: "paragraph", inline: parseInlineLines(paragraph) });
@@ -90,7 +125,9 @@ export function whitepaperBlocks(language: Language): Block[] {
   };
   const flushList = () => {
     if (list.length) blocks.push({ kind: "list", items: list.map((item) => parseInline(item)) });
+    if (bullets.length) blocks.push({ kind: "bullets", items: bullets.map((item) => parseInline(item)) });
     list = [];
+    bullets = [];
   };
   const flush = () => {
     flushParagraph();
@@ -115,6 +152,12 @@ export function whitepaperBlocks(language: Language): Block[] {
       blocks.push({ kind: "rule" });
       continue;
     }
+    const image = options.images ? line.trim().match(/^!\[([^\]]*)\]\((\/[^)\s]+)\)$/) : null;
+    if (image) {
+      flush();
+      blocks.push({ kind: "image", alt: image[1], src: image[2] });
+      continue;
+    }
     const heading = line.match(/^(#{1,3})\s+(.*)$/);
     if (heading) {
       flush();
@@ -129,6 +172,12 @@ export function whitepaperBlocks(language: Language): Block[] {
     if (item) {
       flushParagraph();
       list.push(item[1]);
+      continue;
+    }
+    const bullet = options.bullets ? line.match(/^\s*-\s+(.*)$/) : null;
+    if (bullet) {
+      flushParagraph();
+      bullets.push(bullet[1]);
       continue;
     }
     flushList();

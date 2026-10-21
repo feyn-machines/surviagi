@@ -1,0 +1,50 @@
+[
+  {
+    "slug": "ai-uses-software-for-you",
+    "date": "2026-10-19",
+    "title": {
+      "en": "Oct 19, 2026 | When AI starts using software for you, how many apps will you still open?",
+      "zh-CN": "2026 年 10 月 19 日｜当 AI 开始替你用软件，你还会打开多少个 App？"
+    },
+    "description": {
+      "en": "An $85 yoga receipt was found by ChatGPT and entered into an expense system. As AI moves between software for us, which product will we open first, and which subscriptions will we keep paying for?",
+      "zh-CN": "一张 85 美元的瑜伽课收据，用户让 ChatGPT 找出来，填进报销系统。AI 开始替人来回切换软件之后，用户会先打开谁，又会把订阅费付给谁？"
+    }
+  },
+  {
+    "slug": "what-ai-took-over-2026-10-11",
+    "date": "2026-10-11",
+    "title": {
+      "en": "Oct 5–11, 2026 | AI turned in 722 mathematics papers and passed 9.4% of its legal tasks",
+      "zh-CN": "2026 年 10 月 5 日至 11 日｜AI 交了 722 篇数学论文，法律任务只过 9.4%"
+    },
+    "description": {
+      "en": "What AI took over this week, what it changed, and what people are arguing about. Mathematical proofs, clinic intake and live dashboards were taken; legal documents were not; call center jobs began shrinking 4% a year. Every item links to its source.",
+      "zh-CN": "这一周 AI 接手了什么、带来什么影响、大家在争什么。数学证明、诊所问诊、实时看板被接了过去；法律文书没接住；呼叫中心岗位开始每年少 4%。每一条都能点回原帖。"
+    }
+  },
+  {
+    "slug": "will-ai-replace-saas",
+    "date": "2026-10-10",
+    "title": {
+      "en": "Oct 10, 2026 | Will AI replace SaaS? What are users still paying for?",
+      "zh-CN": "2026 年 10 月 10 日｜AI 会取代 SaaS 吗？用户到底为什么付费"
+    },
+    "description": {
+      "en": "Bespoke agents, established workflows and harder-to-sell side projects point to different questions. A source-linked analysis of what it would take to replace paid software.",
+      "zh-CN": "Agent 按需造软件、老牌 SaaS 熟悉工作流程、副业项目越来越难出售，这三条线说的是不同问题。沿原始来源，分析替代付费软件还需要做到什么。"
+    }
+  },
+  {
+    "slug": "judgment-for-two-cents",
+    "date": "2026-10-07",
+    "title": {
+      "en": "Sep 29–Oct 7, 2026 | Judgment now costs two cents",
+      "zh-CN": "2026 年 9 月 29 日至 10 月 7 日｜“做判断”只值两美分了"
+    },
+    "description": {
+      "en": "Five threads from nine days. Decision models became a category and started a price war. Evaluations moved from answering questions to doing long jobs. People handed whole chores to agents. Large models ran on personal machines. Open-weight releases came in a cluster.",
+      "zh-CN": "九天里的五条线：决策模型一周内变成品类并开始价格战；评测从答题变成让模型干一件长事；有人把杂事整件交给 agent；大模型跑进了自己的机器；开放权重模型密集发布。"
+    }
+  }
+]

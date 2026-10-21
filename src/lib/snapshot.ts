@@ -1,17 +1,15 @@
-import { readFileSync, existsSync } from "node:fs";
 import { LEVEL_NAMES } from "@/lib/level-names";
-import { join } from "node:path";
 import { activityAnchor } from "./anchors";
 
 // Re-exported so pages keep one import for everything about the snapshot,
 // while client components take it straight from ./anchors and stay free of
-// this module's file reads.
+// the data store this module holds.
 export { activityAnchor };
 
-// The website reads a published snapshot from disk. It never opens a database
-// connection and never starts a collection run: those are local operations whose
-// output is reviewed and exported, and a page render is not allowed to trigger them.
-const SNAPSHOT_DIR = join(process.cwd(), "datasets", "published", "latest");
+// The website renders from one data release held in memory. The release comes from
+// the server database (`DATABASE_URL`) or, in development and tests, from the
+// published snapshot files; see `snapshot-source.ts` and `instrumentation.ts`. A
+// page render never opens a connection and never starts a collection run.
 
 export type Bilingual = { en: string; "zh-CN": string };
 
@@ -19,7 +17,7 @@ export type Manifest = {
   snapshot_version: string;
   generated_at: string;
   ontology_version: string;
-  semantic_version: string;
+  schema_version: string;
   method_version: string;
   counts: Record<string, number>;
   content_sha256: string;
@@ -102,6 +100,26 @@ export type EvidenceRow = {
   confidence: number | null;
   rationale: string;
   status: string;
+  /** Posts by others that confirmed this reading; absent when none did, and in releases before 2026-10-16. */
+  confirmations?: Confirmation[];
+};
+
+/**
+ * One post by someone other than the vendor that confirmed a reading: a hands-on
+ * test, an independent evaluation. It counts toward the activity's level under its
+ * own tier and the cap of its kind of post, so it can carry a level the vendor's
+ * own claim could not - and a page showing that level has to show it.
+ */
+export type Confirmation = {
+  source_id: string;
+  account_key: string;
+  handle: string | null;
+  url: string | null;
+  posted_at: string | null;
+  post_nature: string;
+  evidence_tier: string;
+  observed_level: number | null;
+  level: number | null;
 };
 
 /** A reading with its activity and its update resolved, for rendering. */
@@ -184,7 +202,7 @@ export type Progress = {
   method_version: string;
   /** Published even where empty: an absent L5 is the headline, not a gap. */
   stages: number[];
-  /** The ladder's own words, projected from the semantic layer's activity_level. */
+  /** The ladder's own words, projected from the schema's activity_level. */
   levels: Record<string, Bilingual>;
   /** The full sentence per rung, so no component restates the ladder. */
   level_definitions: Record<string, Bilingual>;
@@ -284,18 +302,46 @@ export type Coverage = {
   }[];
 };
 
-function read<T>(name: string, fallback: T): T {
-  const path = join(SNAPSHOT_DIR, `${name}.json`);
-  if (!existsSync(path)) return fallback;
-  try {
-    return JSON.parse(readFileSync(path, "utf8")) as T;
-  } catch {
-    // A malformed snapshot must not take the site down; the page shows the gap.
-    return fallback;
-  }
-}
+/** One post an account wrote itself, in its original language. */
+export type SourcePost = {
+  source_id: string;
+  url: string;
+  published_at: string;
+  excerpt: string;
+  language: string | null;
+  likes: number | null;
+  views: number | null;
+  metrics_at: string;
+};
 
-export const snapshotExists = existsSync(join(SNAPSHOT_DIR, "manifest.json"));
+/**
+ * One account we collect from, with its owner. `posts` and `latest_post_at`
+ * are null when nothing was collected from it - not the same as silence.
+ * `followers` is what the platform reported at `followers_at`; `avatar_url`
+ * is the platform's own image address and is display only.
+ */
+export type Source = {
+  account_key: string;
+  handle: string;
+  platform: string;
+  owner_kind: "person" | "organization";
+  panel_role: string;
+  identity_grade: string;
+  identity_url: string | null;
+  language: string | null;
+  focus: string | null;
+  avatar_url: string | null;
+  person_id: string | null;
+  org_id: string | null;
+  name: string;
+  name_zh_cn: string | null;
+  affiliations: { org_id: string | null; org_name: string; relation: string; role_title: string | null }[];
+  followers: number | null;
+  followers_at: string | null;
+  posts: number | null;
+  latest_post_at: string | null;
+  latest: SourcePost[];
+};
 
 /**
  * One file, because the homepage reads a chain and not three tables: an update
@@ -320,29 +366,165 @@ export type GateEdge = {
   status: string;
 };
 
-const chain = read<Chain | null>("chain", null);
-
-export const manifest = read<Manifest | null>("manifest", null);
-export const activities = chain?.activities ?? [];
-export const gates = chain?.gates ?? [];
-export const evidence = chain?.evidence ?? [];
-export const chainEvents = chain?.events ?? [];
-export const gateEdges = chain?.gate_edges ?? [];
-export const marketEdges = read<MarketEdge[]>("markets", []);
-export const taskEdges = read<TaskEdge[]>("tasks", []);
-export const events = read<EventRow[]>("events", []);
-export const coverage = read<Coverage | null>("coverage", null);
-const publishedProgress = read<Progress | null>("progress", null);
-/**
- * The snapshot still carries the earlier wording of the level names. Pages read
- * the names from here, so the ruler is replaced once, on the way in, with v4.
- */
-export const progress: Progress | null = publishedProgress && {
-  ...publishedProgress,
-  levels: Object.fromEntries(
-    LEVEL_NAMES.en.map((en, level) => [String(level), { en, "zh-CN": LEVEL_NAMES["zh-CN"][level] }]),
-  ),
+/** One answer a reader can pick for a topic, with who argued it and what a judge found to weigh on it. */
+export type TopicOption = {
+  option_id: string;
+  key: string;
+  position: number;
+  text: Bilingual;
+  /** Accounts that argued this answer in the posts collected; not a count of who thinks so. */
+  accounts: number;
+  panel_accounts: number;
+  supports: number;
+  contradicts: number;
 };
+
+/** A post whose author asserts one answer. `account_key` is set only for an account the panel has confirmed. */
+export type TopicClaim = {
+  source_id: string;
+  option: string;
+  handle: string;
+  account_key: string | null;
+  url: string | null;
+  published_at: string;
+  says: string;
+  /** The post's own words, in its own language. */
+  quote: string | null;
+  views: number | null;
+};
+
+/** An update a judge found to weigh for or against one answer. No answer is declared right. */
+export type TopicEvidence = {
+  event_id: string;
+  option: string;
+  sign: "supports" | "contradicts";
+  confidence: number;
+  title: string;
+  kind: string | null;
+  occurred_at: string | null;
+  by: string | null;
+  source_url: string | null;
+};
+
+/** A closed question about one job or one kind of business. It carries no answer of its own. */
+export type Topic = {
+  topic_id: string;
+  slug: string;
+  question_type: "replacement" | "viability";
+  object: string;
+  question: Bilingual;
+  state: string;
+  origin: string;
+  sides: "open" | "one_sided";
+  about: ({ id: string; kind: string | null } & Bilingual) | null;
+  /** The occupation group or market group it is browsed under; null when the catalog has no entry for it. */
+  group?: ({ id: string } & Bilingual) | null;
+  opened_at: string;
+  latest_claim_at: string | null;
+  accounts: number;
+  posts: number;
+  options: TopicOption[];
+  claims: TopicClaim[];
+  evidence: TopicEvidence[];
+  /** Accounts arguing each answer, by calendar quarter (UTC). */
+  by_quarter: Record<string, Record<string, number>>;
+};
+
+/** What one data release holds, shaped as the snapshot files and the release database both deliver it. */
+export type Payload = {
+  chain: Chain;
+  manifest: Manifest;
+  markets: MarketEdge[];
+  tasks: TaskEdge[];
+  events: EventRow[];
+  coverage: Coverage;
+  progress: Progress;
+  sources: Source[];
+  /** Absent from a release made before topics were published. */
+  topics?: Topic[];
+};
+
+export type DataRelease = {
+  releaseId: string | null;
+  source: "database" | "files" | "none";
+  loadedAt: string | null;
+};
+
+/** One loaded release with the indexes folded out of it once, when it is swapped in. */
+type Store = {
+  data: Payload | null;
+  release: DataRelease;
+  chainEventById: Map<string, ChainEvent>;
+  activityIndex: Map<string, Activity>;
+  progress: Progress | null;
+};
+
+function buildStore(data: Payload | null, release: DataRelease): Store {
+  const published = data?.progress ?? null;
+  return {
+    data,
+    release,
+    chainEventById: new Map((data?.chain.events ?? []).map((e) => [e.event_id, e])),
+    activityIndex: new Map((data?.chain.activities ?? []).map((a) => [a.activity_id, a])),
+    /**
+     * The snapshot still carries the earlier wording of the level names. Pages read
+     * the names from here, so the ruler is replaced once, on the way in, with v4.
+     */
+    progress: published && {
+      ...published,
+      levels: Object.fromEntries(
+        LEVEL_NAMES.en.map((en, level) => [String(level), { en, "zh-CN": LEVEL_NAMES["zh-CN"][level] }]),
+      ),
+    },
+  };
+}
+
+/**
+ * The store sits on `globalThis` because the instrumentation hook and the route
+ * handlers are separate bundles with separate module instances. A replacement
+ * swaps this one reference, so a reader that takes the store once sees one release.
+ */
+const STORE = Symbol.for("openaiwill.snapshot.store");
+const g = globalThis as typeof globalThis & { [STORE]?: Store };
+
+const EMPTY = buildStore(null, { releaseId: null, source: "none", loadedAt: null });
+
+function current(): Store {
+  return g[STORE] ?? EMPTY;
+}
+
+/** Swap in a release, or `null` for a database with no active release or no data at all. */
+export function replaceSnapshot(
+  payload: Payload | null,
+  meta: { releaseId: string | null; source: "database" | "files" | "none"; loadedAt?: string },
+) {
+  g[STORE] = buildStore(payload, {
+    releaseId: meta.releaseId,
+    source: meta.source,
+    loadedAt: meta.source === "none" ? null : (meta.loadedAt ?? new Date().toISOString()),
+  });
+}
+
+/** Which data release the pages are rendering from. */
+export function dataRelease(): DataRelease {
+  return current().release;
+}
+
+export const snapshotExists = (): boolean => current().data?.manifest != null;
+export const manifest = (): Manifest | null => current().data?.manifest ?? null;
+export const activities = (): Activity[] => current().data?.chain.activities ?? [];
+export const gates = (): Gate[] => current().data?.chain.gates ?? [];
+export const evidence = (): EvidenceRow[] => current().data?.chain.evidence ?? [];
+export const chainEvents = (): ChainEvent[] => current().data?.chain.events ?? [];
+export const gateEdges = (): GateEdge[] => current().data?.chain.gate_edges ?? [];
+export const marketEdges = (): MarketEdge[] => current().data?.markets ?? [];
+export const taskEdges = (): TaskEdge[] => current().data?.tasks ?? [];
+export const events = (): EventRow[] => current().data?.events ?? [];
+export const coverage = (): Coverage | null => current().data?.coverage ?? null;
+export const progress = (): Progress | null => current().progress;
+export const sources = (): Source[] => current().data?.sources ?? [];
+export const topics = (): Topic[] => current().data?.topics ?? [];
+export const topicBySlug = (slug: string): Topic | undefined => topics().find((t) => t.slug === slug);
 
 /**
  * Where the middle occupation sits, so one occupation's share can be judged.
@@ -352,7 +534,7 @@ export const progress: Progress | null = publishedProgress && {
  */
 export function occupationMedianShare(): { occupations: number; median: number } {
   const shares: number[] = [];
-  for (const entry of Object.values(progress?.occupations ?? {})) {
+  for (const entry of Object.values(progress()?.occupations ?? {})) {
     const total = entry.tasks;
     if (!total) continue;
     shares.push((atOrAboveL2(entry.by_stage) / total) * 100);
@@ -370,14 +552,14 @@ export function groupSlug(id: string): string {
 }
 
 export function groupFromSlug(slug: string) {
-  const entries = Object.entries(progress?.groups ?? {});
+  const entries = Object.entries(progress()?.groups ?? {});
   const found = entries.find(([id]) => groupSlug(id) === slug);
   return found ? { id: found[0], ...found[1] } : undefined;
 }
 
 /** Squares for one occupation, or null when it is not in the snapshot. */
 export function progressFor(occupationId: string): StageCounts | null {
-  const entry = progress?.occupations?.[occupationId];
+  const entry = progress()?.occupations?.[occupationId];
   return entry ? entry.by_stage : null;
 }
 
@@ -387,12 +569,12 @@ export function marketSlug(id: string): string {
 }
 
 export function activityById(id: string): Activity | undefined {
-  return activities.find((a) => a.activity_id === id);
+  return current().activityIndex.get(id);
 }
 
 /** Every activity of one market, strongest evidence first, blanks last. */
 export function activitiesOfMarket(marketId: string): Activity[] {
-  return activities
+  return activities()
     .filter((a) => a.market_id === marketId)
     .sort((x, y) => (y.level ?? -1) - (x.level ?? -1));
 }
@@ -400,7 +582,7 @@ export function activitiesOfMarket(marketId: string): Activity[] {
 /** The markets, folded out of the activity rows so there is one source for both. */
 export function markets(): { id: string; en: string; zh_cn: string | null; activities: number }[] {
   const seen = new Map<string, { id: string; en: string; zh_cn: string | null; activities: number }>();
-  for (const a of activities) {
+  for (const a of activities()) {
     const found = seen.get(a.market_id);
     if (found) found.activities += 1;
     else seen.set(a.market_id, { id: a.market_id, en: a.market_en, zh_cn: a.market_zh_cn, activities: 1 });
@@ -410,23 +592,20 @@ export function markets(): { id: string; en: string; zh_cn: string | null; activ
 
 /** Occupations served by a market, most confident first. */
 export function occupationsOfMarket(marketId: string): MarketEdge[] {
-  return marketEdges
+  return marketEdges()
     .filter((e) => e.market_id === marketId)
     .sort((x, y) => (y.confidence ?? 0) - (x.confidence ?? 0));
 }
 
 /** Markets one occupation serves. The reverse of the edge above. */
 export function marketsOfOccupation(occupationId: string): MarketEdge[] {
-  return marketEdges.filter((e) => e.occupation_id === occupationId);
+  return marketEdges().filter((e) => e.occupation_id === occupationId);
 }
 
-const chainEventById = new Map(chainEvents.map((e) => [e.event_id, e]));
-const activityIndex = new Map(activities.map((a) => [a.activity_id, a]));
-
-/** Resolve a stored reading against its activity and its update. */
-function reading(row: EvidenceRow): Reading {
-  const activity = activityIndex.get(row.activity_id);
-  const event = chainEventById.get(row.event_id);
+/** Resolve a stored reading against its activity and its update, in the store the caller took. */
+function reading(store: Store, row: EvidenceRow): Reading {
+  const activity = store.activityIndex.get(row.activity_id);
+  const event = store.chainEventById.get(row.event_id);
   return {
     ...row,
     activity_en: activity?.label_en ?? row.activity_id,
@@ -442,25 +621,78 @@ function reading(row: EvidenceRow): Reading {
 
 /** The gates holding one activity. */
 export function gatesOfActivity(activityId: string): string[] {
-  return gateEdges.filter((e) => e.activity_id === activityId).map((e) => e.gate_id);
+  return gateEdges().filter((e) => e.activity_id === activityId).map((e) => e.gate_id);
 }
 
 /** The activities one gate holds, most confident first. */
 export function activitiesOfGate(gateId: string): string[] {
-  return gateEdges.filter((e) => e.gate_id === gateId).map((e) => e.activity_id);
+  return gateEdges().filter((e) => e.gate_id === gateId).map((e) => e.activity_id);
 }
 
 /** Every reading, joined. The chain stores positive readings only. */
 export function readings(): Reading[] {
-  return evidence.map(reading);
+  const store = current();
+  return (store.data?.chain.evidence ?? []).map((row) => reading(store, row));
 }
 
 /** Readings for one activity, newest update first. */
 export function evidenceForActivity(activityId: string): Reading[] {
-  return evidence
+  const store = current();
+  return (store.data?.chain.evidence ?? [])
     .filter((row) => row.activity_id === activityId)
-    .map(reading)
+    .map((row) => reading(store, row))
     .sort((a, b) => (b.occurred_at ?? "").localeCompare(a.occurred_at ?? ""));
+}
+
+/**
+ * The readings that count toward an activity's level: those with a level of their
+ * own, and those a confirmation lifted. Newest update first, as on the work page.
+ */
+export function countedReadings(activityId: string): Reading[] {
+  return evidenceForActivity(activityId).filter((r) => r.level !== null || (r.confirmations?.length ?? 0) > 0);
+}
+
+/** One rise in a work's level: the reading that first carried it there, dated by the evidence. */
+export type LevelStep = {
+  /** When the update or post appeared; null for evidence with no date, which is placed last. */
+  date: string | null;
+  from: number | null;
+  to: number;
+  reading: Reading;
+  /** Set when a post by someone else, not the update itself, carried the level. */
+  confirmation: Confirmation | null;
+};
+
+/**
+ * How a work reached its level, by the date of the evidence: each reading that
+ * raised the highest level so far. The level is the highest counted reading, so
+ * the last step always ends where the work stands. A gate holds the level below
+ * what the evidence reached; every step is held the same way, by capping at the
+ * level the work stands at. These are the dates the evidence carries, not the
+ * dates it was collected or published here.
+ */
+export function levelSteps(activityId: string): LevelStep[] {
+  const final = activityById(activityId)?.level ?? null;
+  if (final === null) return [];
+  const seen: Omit<LevelStep, "from">[] = [];
+  for (const reading of countedReadings(activityId)) {
+    if (reading.level !== null) seen.push({ date: reading.occurred_at, to: reading.level, reading, confirmation: null });
+    for (const confirmation of reading.confirmations ?? []) {
+      if (confirmation.level !== null) seen.push({ date: confirmation.posted_at, to: confirmation.level, reading, confirmation });
+    }
+  }
+  // Oldest first; on one day the higher reading first, so a day makes one step.
+  const dated = seen.filter((s) => s.date).sort((a, b) => a.date!.localeCompare(b.date!) || b.to - a.to);
+  const undated = seen.filter((s) => !s.date).sort((a, b) => b.to - a.to);
+  const steps: LevelStep[] = [];
+  let level: number | null = null;
+  for (const candidate of [...dated, ...undated]) {
+    const to = Math.min(candidate.to, final);
+    if (level !== null && to <= level) continue;
+    steps.push({ ...candidate, from: level, to });
+    level = to;
+  }
+  return steps;
 }
 
 export function occupationSlug(id: string): string {
@@ -475,15 +707,16 @@ export function occupationSlug(id: string): string {
  * per row rather than listing only the updates that happened to land.
  */
 export function evidenceForEvent(eventId: string): Reading[] {
-  return evidence
+  const store = current();
+  return (store.data?.chain.evidence ?? [])
     .filter((row) => row.event_id === eventId)
-    .map(reading)
+    .map((row) => reading(store, row))
     .sort((a, b) => (b.level ?? -1) - (a.level ?? -1));
 }
 
 /** Event ids that produced at least one reading, for counting in one pass. */
 export function eventsWithEvidence(): Set<string> {
-  return new Set(chainEvents.map((row) => row.event_id));
+  return new Set(chainEvents().map((row) => row.event_id));
 }
 
 /**
@@ -495,8 +728,15 @@ export function eventsWithEvidence(): Set<string> {
  * a second count of the same thing is a second answer waiting to diverge.
  */
 export function occupations() {
-  const rows = Object.entries(progress?.occupations ?? {}).map(([id, entry]) => {
-    const served = marketsOfOccupation(id);
+  // One store for the whole fold, so the progress rows and the edges come from one release.
+  const store = current();
+  const served = new Map<string, MarketEdge[]>();
+  for (const edge of store.data?.markets ?? []) {
+    const list = served.get(edge.occupation_id);
+    if (list) list.push(edge);
+    else served.set(edge.occupation_id, [edge]);
+  }
+  const rows = Object.entries(store.progress?.occupations ?? {}).map(([id, entry]) => {
     return {
       occupation_id: id,
       group_id: entry.group_id,
@@ -505,7 +745,7 @@ export function occupations() {
       tasks: entry.tasks,
       by_stage: entry.by_stage,
       assessed: assessedCount(entry.by_stage),
-      markets: served.map((e) => e.market_id),
+      markets: (served.get(id) ?? []).map((e) => e.market_id),
     };
   });
   // Most reached first; an occupation nothing reaches still appears, because a
@@ -515,7 +755,7 @@ export function occupations() {
 
 /** One occupation's label, from the ontology row the publisher carries. */
 export function occupationLabel(id: string): { en: string; zh_cn: string | null } | undefined {
-  const entry = progress?.occupations?.[id];
+  const entry = progress()?.occupations?.[id];
   if (!entry?.label_en) return undefined;
   return { en: entry.label_en, zh_cn: entry.label_zh_cn };
 }

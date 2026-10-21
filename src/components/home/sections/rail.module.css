@@ -10,6 +10,10 @@
 .ruler i.has{color:var(--ah-color-text)}
 .ruler i.has.past{color:var(--ah-color-signal)}
 .ruler em{font-style:normal;font-size:13px}
+.nav{justify-self:end;gap:20px;font-family:var(--ah-font-body);font-size:13px;letter-spacing:0;color:var(--ah-color-text);white-space:nowrap}
+.nav a{display:inline-flex;align-items:center;height:40px}
+.nav a:hover{color:var(--ah-color-signal)}
 .done{position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--ah-color-signal);transform-origin:left}
-@media(max-width:1000px){.rail{grid-template-columns:1fr}.ruler{display:none}}
+@media(max-width:1000px){.rail{grid-template-columns:minmax(0,1fr) auto}.ruler{display:none}}
+@media(max-width:600px){.rail{padding-inline:20px}.chapter span{display:none}.nav{gap:14px;font-size:12px}}
 @media(prefers-reduced-motion:reduce){.rail{transition:none}}

@@ -32,10 +32,11 @@ from . import checkpoint
 from .classify import Classifier, Option
 from .judge import JudgeError, TYPESAFE_URL, _post
 from .pipeline import digest
-from . import semantic
-from .semantic import EVENT_KIND_VOCABULARY
+from . import ontology_schema
+from .ontology_schema import EVENT_KIND_VOCABULARIES, event_kind_markers
 
 METHOD_VERSION = checkpoint.EVENT_ROUTING
+UNROUTED_KIND = ontology_schema.rule("rule:market-measurement-moves-no-level")["expression"]["kind"]
 
 BEARS_ABOVE = 0.6
 
@@ -58,7 +59,7 @@ LEVEL_QUESTION = (
 # IS L0-L5 and its order is load-bearing. Projected from the activity_level
 # vocabulary rather than typed here, because a copy of the ladder in the prompt
 # can drift from the ladder the answers are recorded against.
-LEVEL_SCALE = semantic.level_scale()
+LEVEL_SCALE = ontology_schema.level_scale()
 
 TIER_QUESTION = "Who produced this claim, and how checkable is it?"
 TIER_SCALE = {
@@ -69,13 +70,16 @@ TIER_SCALE = {
 }
 
 
-def events(conn, *, vocabulary: str | None = EVENT_KIND_VOCABULARY,
+def events(conn, *, vocabulary: str | None = None,
            limit: int | None = None, exclude: set[str] | None = None) -> list[dict]:
-    clauses = ["1 = 1"]
-    params: list = []
-    if vocabulary:
-        clauses.append("e.kind_vocabulary = %s")
-        params.append(vocabulary)
+    # Only a company's own updates are routed to work. An update whose actor is
+    # a person or a panel organisation is stored, but stays out of the readings
+    # until such accounts have their own identity checks.
+    clauses = ["e.kind_vocabulary = ANY(%s)", "e.primary_org_id IS NOT NULL",
+               # A market measurement says how much a market uses or pays, not how far a
+               # piece of work can be done (rule:market-measurement-moves-no-level).
+               "e.kind IS DISTINCT FROM %s"]
+    params: list = [event_kind_markers(vocabulary), UNROUTED_KIND]
     if exclude:
         # Resume, from the checkpoint table rather than from the evidence rows.
         # Asking "does this event have evidence?" looked equivalent and was not:
@@ -160,10 +164,11 @@ def run(conn, *, ontology_version: str = "1.0.0", limit: int | None = None,
         raise ValueError("No activities; nothing to route against")
     skipped = conn.execute(
         """SELECT count(*) AS n FROM public.extracted_events e
-            WHERE e.kind_vocabulary = %s
+            WHERE e.kind_vocabulary = ANY(%s) AND e.primary_org_id IS NOT NULL
+              AND e.kind IS DISTINCT FROM %s
               AND EXISTS (SELECT 1 FROM public.judgment_checkpoints c
                            WHERE c.method_version = %s AND c.subject_id = e.event_id)""",
-        (EVENT_KIND_VOCABULARY, METHOD_VERSION),
+        (EVENT_KIND_VOCABULARIES, UNROUTED_KIND, METHOD_VERSION),
     ).fetchone()["n"] if resume else 0
     if not rows:
         # Everything already decided is a result, not an error: the daily run
@@ -197,20 +202,23 @@ def run(conn, *, ontology_version: str = "1.0.0", limit: int | None = None,
         failures_before = step.failed_batches
         readings = step.classify(_state(event), options, progress)
         asked += len(options)
-        hits = [(r.option_id, by_id[r.option_id], r.value)
+        # Each reading keeps the judge that gave it: Jev, or the comparison model
+        # when Jev failed (a region block once answered every batch that way).
+        hits = [(r.option_id, by_id[r.option_id], r.value, r.judge)
                 for r in readings if r.value > BEARS_ABOVE]
         here = 0
         levels_read = True
         if hits:
             try:
-                levels = read_levels(step.primary, event, [(a, label) for a, label, _ in hits])
+                levels = read_levels(step.primary, event, [(a, label) for a, label, _, _ in hits])
             except JudgeError as error:
                 # Evidence with no level contributes nothing downstream, so this
-                # event is half-decided and must not be checkpointed.
+                # event is half-decided: it is neither checkpointed nor written,
+                # since a written row would block the retry's (ON CONFLICT DO NOTHING).
                 if progress:
                     progress(f"  level read failed for {event['event_id']}: {error}")
                 levels, levels_read = {}, False
-            for activity_id, label, value in hits:
+            for activity_id, label, value, judge in hits if levels_read else []:
                 detail = levels.get(activity_id) or {}
                 row = {
                     "event_id": event["event_id"],
@@ -220,7 +228,7 @@ def run(conn, *, ontology_version: str = "1.0.0", limit: int | None = None,
                     "evidence_sign": "positive",
                     "observed_level": detail.get("level"),
                     "confidence": round(value, 3),
-                    "judge": "typesafe",
+                    "judge": judge,
                     "method": "ai_proposed",
                     "status": "candidate",
                     "rationale": f"bears={value:.3f} on «{label}»",
