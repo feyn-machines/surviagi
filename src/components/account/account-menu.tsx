@@ -10,8 +10,8 @@ import { signOut, startSignIn, takeSignInFailure } from "./session";
 import { Subscribe } from "./subscribe";
 
 const copy = bilingual({
-  en: { signIn: "Sign in", signOut: "Sign out", account: "Account", admin: "Admin", failed: "Sign-in failed", retry: "Try again later" },
-  "zh-CN": { signIn: "登录", signOut: "退出", account: "账号", admin: "后台", failed: "登录失败", retry: "请稍后再试" },
+  en: { signIn: "Sign in", signOut: "Sign out", account: "Account", admin: "Admin", keys: "API keys", failed: "Sign-in failed", retry: "Try again later" },
+  "zh-CN": { signIn: "登录", signOut: "退出", account: "账号", admin: "后台", keys: "API Key", failed: "登录失败", retry: "请稍后再试" },
 });
 
 function initials(name: string) {
@@ -83,6 +83,9 @@ export function AccountMenu({ language, enabled }: { language: Language; enabled
         <div className={styles.panel}>
           <p className={styles.name}>{user.name}</p>
           <Subscribe language={language} enabled={enabled} variant="menu" onOpen={() => menu.current?.removeAttribute("open")} />
+          <a className={styles.item} href={`${href(language, "/agents")}#keys`} onClick={() => menu.current?.removeAttribute("open")}>
+            {c.keys}
+          </a>
           {me.admin ? (
             <Link className={styles.item} href={href(language, "/admin")} onClick={() => menu.current?.removeAttribute("open")}>
               {c.admin}

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHmac, randomBytes } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { after, before, test } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -18,6 +18,8 @@ const SKIP = existsSync(PASSWORD_FILE) || process.env.CI ? false : "no local Pos
 const SNAPSHOT_DIR = `${ROOT}datasets/published/latest`;
 const HAS_SNAPSHOT = existsSync(`${SNAPSHOT_DIR}/manifest.json`);
 const require = createRequire(import.meta.url);
+// Every file of db/app, in the order setup applies them.
+const APP_SQL = readdirSync(`${ROOT}db/app`).filter((name) => name.endsWith(".sql")).sort();
 
 const SECRET = randomBytes(24).toString("hex");
 let base;
@@ -67,7 +69,7 @@ before(async () => {
     await inner.end();
   }
   pool = new Pool({ host: "127.0.0.1", port: 7543, user: names.role, password, database: names.database, max: 4 });
-  await pool.query(readFileSync(`${ROOT}db/app/001_app.sql`, "utf8"));
+  for (const name of APP_SQL) await pool.query(readFileSync(`${ROOT}db/app/${name}`, "utf8"));
 
   await makeUser("a", { name: "Ada Admin Zq" });
   await makeUser("b", { name: "Bob <script>x</script> & Co" });
@@ -75,7 +77,10 @@ before(async () => {
   await makeUser("d", { name: "Dee Tester Zq" });
   await makeUser("e", { name: "Eve Tester Zq" });
   await makeUser("f", { name: "=cmd" });
-  await pool.query("INSERT INTO app.admins (email) VALUES ($1), ($2)", [people.a.email, people.c.email]);
+  await makeUser("g", { name: "Gil Agent Zq" });
+  await makeUser("h", { name: "Hal Agent Zq" });
+  await makeUser("i", { name: "Ivy Reviewer Zq" });
+  await pool.query("INSERT INTO app.admins (email) VALUES ($1), ($2), ($3)", [people.a.email, people.c.email, people.i.email]);
 
   const port = await freePort();
   base = `http://127.0.0.1:${port}`;
@@ -215,7 +220,7 @@ t("the eleventh pending submission is refused", async () => {
   for (let i = 1; i <= 10; i += 1) {
     assert.equal((await (await submit("e", { handle: `zqlim${i}`, ownerKind: "organization" })).json()).result, "created", `zqlim${i}`);
   }
-  assert.deepEqual(await (await submit("e", { handle: "zqlim11", ownerKind: "organization" })).json(), { result: "limit", limit: 10 });
+  assert.deepEqual(await (await submit("e", { handle: "zqlim11", ownerKind: "organization" })).json(), { result: "limit", scope: "pending", limit: 10 });
 });
 
 t("the administrator page shows the pending groups, escaped, in both languages", async () => {
@@ -477,7 +482,199 @@ test("with an unreachable user database /healthz says so, stays 200, and the pub
     assert.ok(!JSON.stringify(body).includes("ECONNREFUSED"), "no error text in the answer");
     assert.equal((await fetch(`${other}/`)).status, 200);
     assert.equal((await fetch(`${other}/zh-CN/voices`)).status, 200);
+    // Reading for agents never touches the user database; submitting says it is unavailable, without detail.
+    const found = await (await fetch(`${other}/api/agent/search?query=model`)).json();
+    assert.ok(Array.isArray(found.results));
+    const sent = await fetch(`${other}/api/agent/questions`, {
+      method: "POST",
+      headers: { authorization: `Bearer sag_${"B".repeat(32)}`, "content-type": "application/json" },
+      body: "{}",
+    });
+    assert.equal(sent.status, 503);
+    assert.ok(!(await sent.text()).includes("ECONNREFUSED"));
   } finally {
     await stop(proc);
   }
+});
+
+// ------------------------------------------------------------ agent access (Issue #5) ----
+
+const mcp = async (path, method, params, headers = {}) => {
+  const res = await fetch(`${base}${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json", accept: "application/json, text/event-stream", ...headers },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+  });
+  return { status: res.status, body: await res.json() };
+};
+const callTool = async (name, args, key) => {
+  const { body } = await mcp("/api/mcp/submit", "tools/call", { name, arguments: args }, key ? { authorization: `Bearer ${key}` } : {});
+  return { error: body.result.isError === true, value: body.result.structuredContent };
+};
+const makeKey = async (who, name = "WorkBuddy") => (await call("/api/keys", { who, method: "POST", body: { name } })).json();
+const question = (extra = {}) => ({
+  question: "Will AI agents replace most junior paralegals by 2028?",
+  why_it_matters: "Paralegal work is a common first legal job, and firms are piloting agents now.",
+  evidence_gap: "The records show legal tools but no firm that cut paralegal roles.",
+  ...extra,
+});
+
+t("keys: only a signed-in reader on the site's own origin makes one; the list never shows a secret", async () => {
+  assert.equal((await call("/api/keys", {})).status, 401);
+  assert.equal((await call("/api/keys", { method: "POST", body: { name: "x" } })).status, 401);
+  assert.equal((await call("/api/keys", { who: "g", method: "POST", body: { name: "x" }, origin: "https://evil.example" })).status, 403);
+  assert.equal((await call("/api/keys", { who: "g", method: "POST", body: { name: "x".repeat(61) } })).status, 400);
+  const made = await makeKey("g");
+  assert.equal(made.result, "created");
+  assert.match(made.secret, /^sag_[A-Za-z0-9_-]{32}$/);
+  const listed = await call("/api/keys", { who: "g" });
+  assert.match(listed.headers.get("cache-control") ?? "", /no-store/);
+  const text = await listed.text();
+  assert.ok(!text.includes(made.secret), "the list does not carry the secret");
+  const body = JSON.parse(text);
+  assert.equal(body.keys[0].prefix, made.secret.slice(0, 12));
+  assert.equal(body.usage.questions.dailyLimit, 5);
+  // Another reader neither sees nor revokes it.
+  assert.deepEqual((await (await call("/api/keys", { who: "h" })).json()).keys, []);
+  assert.deepEqual(await (await call("/api/keys/revoke", { who: "h", method: "POST", body: { id: made.key.id } })).json(), { revoked: false });
+});
+
+t("MCP submit: the submit endpoint lists five tools; a missing, invalid or revoked key is refused and reading still works", async () => {
+  const listed = await mcp("/api/mcp/submit", "tools/list", {});
+  assert.deepEqual(listed.body.result.tools.map((tool) => tool.name), ["search", "get_record", "submit_question", "suggest_account", "my_submissions"]);
+  const missing = await callTool("submit_question", question(), null);
+  assert.equal(missing.error, true);
+  assert.equal(missing.value.error, "missing_key");
+  const invalid = await callTool("submit_question", question(), `sag_${"Z".repeat(32)}`);
+  assert.equal(invalid.value.error, "invalid_key");
+  const garbage = await callTool("my_submissions", {}, "not a key");
+  assert.equal(garbage.value.error, "invalid_key");
+  const made = await makeKey("g", "to revoke");
+  assert.equal((await callTool("my_submissions", {}, made.secret)).error, false);
+  assert.deepEqual(await (await call("/api/keys/revoke", { who: "g", method: "POST", body: { id: made.key.id } })).json(), { revoked: true });
+  const revoked = await callTool("submit_question", question(), made.secret);
+  assert.equal(revoked.value.error, "invalid_key");
+  // A revoked or invalid key does not stand in the way of reading.
+  const read = await callTool("search", { query: "model", limit: 2 }, made.secret);
+  assert.equal(read.error, false);
+  assert.ok(Array.isArray(read.value.results));
+  const plain = await fetch(`${base}/api/agent/search?query=model`, { headers: { authorization: `Bearer ${made.secret}` } });
+  assert.equal(plain.status, 200);
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM app.questions WHERE user_id = $1", [people.g.id])).rows[0].n, 0, "nothing was registered");
+});
+
+t("MCP submit: a valid key registers a question, pending and private; a retry with its request_id does not register twice", async () => {
+  const { secret } = await makeKey("h");
+  const made = await callTool("submit_question", question({ request_id: "wb-0001-question", related_record_ids: ["ev-0123456789012345678901234567890123456789"] }), secret);
+  assert.equal(made.error, false, JSON.stringify(made.value));
+  assert.equal(made.value.result, "created");
+  assert.match(made.value.id, /^question:\d+$/);
+  assert.equal(made.value.status, "pending");
+  const retry = await callTool("submit_question", question({ request_id: "wb-0001-question" }), secret);
+  assert.equal(retry.value.result, "replayed");
+  assert.equal(retry.value.id, made.value.id);
+  const again = await callTool("submit_question", question({ question: "will AI agents replace most junior paralegals by 2028" }), secret);
+  assert.equal(again.value.result, "duplicate");
+  const { rows } = await pool.query("SELECT via, api_key_id, related FROM app.questions WHERE user_id = $1", [people.h.id]);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].via, "api");
+  assert.ok(rows[0].api_key_id);
+  // Not searchable: a submitted question is not published.
+  const found = await (await fetch(`${base}/api/agent/search?query=${encodeURIComponent("junior paralegals")}`)).json();
+  assert.equal(found.results.some((r) => r.title === question().question || r.id.startsWith("question:")), false);
+  // The value requirements are checked on the server, without any model.
+  for (const [args, field] of [
+    [question({ question: "short" }), "question"],
+    [question({ why_it_matters: "too short" }), "why_it_matters"],
+    [question({ evidence_gap: "" }), "evidence_gap"],
+    [question({ question: "https://example.com/a-question" }), "question"],
+    [question({ related_record_ids: ["not-an-id"] }), "related_record_ids"],
+    [question({ request_id: "bad id!" }), "request_id"],
+  ]) {
+    const refused = await callTool("submit_question", args, secret);
+    assert.equal(refused.value.error, "invalid", field);
+    assert.match(refused.value.message, new RegExp(field), field);
+  }
+});
+
+t("MCP submit: a published question is pointed to, not registered", { skip: !HAS_SNAPSHOT }, async () => {
+  const topics = JSON.parse(readFileSync(`${SNAPSHOT_DIR}/topics.json`, "utf8"));
+  const { secret } = await makeKey("h", "published");
+  const answer = await callTool("submit_question", question({ question: topics[0].question.en.toUpperCase() }), secret);
+  assert.equal(answer.value.result, "published");
+  assert.equal(answer.value.record_id, topics[0].topic_id);
+});
+
+t("account suggestions from an agent share the reader's quota with the site's form and keep the review stages", async () => {
+  const { secret } = await makeKey("d", "accounts");
+  const made = await callTool("suggest_account", { account: "https://x.com/ZqAgentPick", kind: "person", reason: "Writes hands-on agent tests", field: "AI agents", request_id: "acct-0001-zq" }, secret);
+  assert.equal(made.value.result, "created", JSON.stringify(made.value));
+  assert.equal(made.value.status, "pending");
+  assert.equal(made.value.lifecycle.stage, "pending_review");
+  assert.match(made.value.lifecycle.note, /identity confirmed/);
+  assert.equal((await callTool("suggest_account", { account: "@zqagentpick", kind: "person", reason: "again" }, secret)).value.result, "duplicate");
+  assert.equal((await callTool("suggest_account", { account: "@other_one", kind: "person", reason: "x", request_id: "acct-0001-zq" }, secret)).value.result, "replayed");
+  assert.equal((await callTool("suggest_account", { account: "x.com/home", kind: "person", reason: "x" }, secret)).value.error, "invalid");
+  assert.equal((await callTool("suggest_account", { account: "@zqfine", kind: "robot", reason: "x" }, secret)).value.error, "invalid");
+  // The same row is the reader's own on the site.
+  const mine = await (await call("/api/submissions", { who: "d" })).json();
+  const row = mine.submissions.find((s) => s.handle === "ZqAgentPick");
+  assert.equal(row.via, "api");
+  // Pending quota: d has web submissions from earlier tests; fill up to the limit with the site's form.
+  const status = await callTool("my_submissions", {}, secret);
+  let pending = status.value.quota.accounts.pending;
+  for (let n = 0; pending < status.value.quota.accounts.pending_limit; n += 1, pending += 1) {
+    assert.equal((await (await submit("d", { handle: `zqfill${n}`, ownerKind: "person" })).json()).result, "created");
+  }
+  const over = await callTool("suggest_account", { account: "@zqover", kind: "person", reason: "one more" }, secret);
+  assert.equal(over.value.error, "quota");
+  assert.equal(over.value.scope, "pending");
+  const plain = await fetch(`${base}/api/agent/accounts`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${secret}`, "content-type": "application/json" },
+    body: JSON.stringify({ account: "@zqover", kind: "person", reason: "one more" }),
+  });
+  assert.equal(plain.status, 429);
+  assert.equal((await plain.json()).scope, "pending");
+  // An account already monitored is said to be.
+  if (HAS_SNAPSHOT) {
+    const known = JSON.parse(readFileSync(`${SNAPSHOT_DIR}/sources.json`, "utf8")).find((s) => (s.platform ?? "x") === "x");
+    assert.equal((await callTool("suggest_account", { account: known.handle, kind: "person", reason: "x" }, secret)).value.result, "monitored");
+  }
+});
+
+t("plain HTTP: the key is checked before the body, and answers are never cached", async () => {
+  const bare = await fetch(`${base}/api/agent/questions`, { method: "POST", headers: { "content-type": "application/json" }, body: "not json" });
+  assert.equal(bare.status, 401);
+  assert.equal((await bare.json()).error, "missing_key");
+  const { secret } = await makeKey("e", "http");
+  const post = (body) => fetch(`${base}/api/agent/questions`, { method: "POST", headers: { authorization: `Bearer ${secret}`, "content-type": "application/json" }, body });
+  assert.equal((await post("[1]")).status, 400);
+  const made = await post(JSON.stringify(question({ question: "Will AI replace most court stenographers within five years?" })));
+  assert.equal(made.status, 200);
+  assert.match(made.headers.get("cache-control") ?? "", /no-store/);
+  assert.equal((await made.json()).result, "created");
+  const status = await fetch(`${base}/api/agent/submissions`, { headers: { authorization: `Bearer ${secret}` } });
+  assert.equal(status.status, 200);
+  const body = await status.json();
+  assert.equal(body.quota.questions.today, 1);
+  assert.equal(body.questions[0].question, "Will AI replace most court stenographers within five years?");
+  assert.equal((await fetch(`${base}/api/agent/submissions`)).status, 401);
+});
+
+t("an administrator reviews submitted questions; a reader cannot", async () => {
+  const { rows } = await pool.query("SELECT id FROM app.questions WHERE user_id = $1 LIMIT 1", [people.h.id]);
+  const id = String(rows[0].id);
+  // Ada signed out in an earlier test; Ivy is the reviewer here.
+  const page = await (await call("/admin?view=questions", { who: "i" })).text();
+  assert.ok(page.includes(">Questions<"), `the questions tab: ${page.replace(/<script[\s\S]*?<\/script>/g, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 400)}`);
+  assert.ok(page.includes("Will AI agents replace most junior paralegals by 2028?"));
+  assert.ok(page.includes("via API key"));
+  assert.equal((await call("/api/admin/questions", { who: "b", method: "POST", body: { id, decision: "accept" } })).status, 404);
+  assert.equal((await call("/api/admin/questions", { who: "i", method: "POST", body: { id, decision: "reject" } })).status, 400, "a rejection needs a reason");
+  assert.deepEqual(await (await call("/api/admin/questions", { who: "i", method: "POST", body: { id, decision: "accept" } })).json(), { changed: 1 });
+  assert.deepEqual(await (await call("/api/admin/questions", { who: "i", method: "POST", body: { id, decision: "reject", reason: "late" } })).json(), { changed: 0 });
+  const { secret } = await makeKey("h", "status");
+  const status = await callTool("my_submissions", {}, secret);
+  assert.equal(status.value.questions.find((q) => q.id === `question:${id}`).status, "accepted");
 });

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
-import { after, before, test } from "node:test";
+import { after, before, mock, test } from "node:test";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 
@@ -15,6 +15,8 @@ const PASSWORD_FILE = `${ROOT}data/postgres/password`;
 // there a missing file is not skipped: the setup fails loudly in `before`.
 const SKIP = existsSync(PASSWORD_FILE) || process.env.CI ? false : "no local PostgreSQL (data/postgres/password; run pnpm data:setup)";
 const require = createRequire(import.meta.url);
+// Every file of db/app, in the order setup applies them.
+const APP_SQL = readdirSync(`${ROOT}db/app`).filter((name) => name.endsWith(".sql")).sort();
 
 let store;
 let pool;
@@ -46,7 +48,7 @@ before(async () => {
     await inner.end();
   }
   pool = new Pool({ host: "127.0.0.1", port: 7543, user: names.role, password, database: names.database, max: 6 });
-  await pool.query(readFileSync(`${ROOT}db/app/001_app.sql`, "utf8"));
+  for (const name of APP_SQL) await pool.query(readFileSync(`${ROOT}db/app/${name}`, "utf8"));
   const js = transpile(`${ROOT}src/lib/app-store.ts`);
   store = await import(`data:text/javascript;charset=utf-8,${encodeURIComponent(js)}`);
 });
@@ -110,7 +112,7 @@ test("ten pending is the limit; a decision frees a place", { skip: SKIP }, async
   for (let n = 0; n < store.PENDING_LIMIT; n += 1) {
     assert.equal((await store.createSubmission(pool, input(id, `acct_${n}`))).result, "created");
   }
-  assert.equal((await store.createSubmission(pool, input(id, "acct_extra"))).result, "limit");
+  assert.deepEqual(await store.createSubmission(pool, input(id, "acct_extra")), { result: "limit", scope: "pending", limit: store.PENDING_LIMIT });
   // An existing account is still reported as a duplicate at the limit.
   assert.equal((await store.createSubmission(pool, input(id, "acct_3"))).result, "duplicate");
   await pool.query(
@@ -429,4 +431,202 @@ test("removing a reader removes their votes", { skip: SKIP }, async () => {
   await store.castVote(pool, { userId: ann, topicId: topic, optionId: `${topic}#a`, quarter });
   await pool.query('DELETE FROM app."user" WHERE id = $1', [ann]);
   assert.deepEqual(await store.voteCounts(pool, topic), {});
+});
+
+// ------------------------------------------------- agent access: keys, questions, quotas (Issue #5) ----
+
+test("db/app is repeatable: applying every file again changes nothing", { skip: SKIP }, async () => {
+  for (const name of APP_SQL) await pool.query(readFileSync(`${ROOT}db/app/${name}`, "utf8"));
+});
+
+const ask = (userId, extra = {}) => ({
+  userId,
+  question: "Will AI agents replace most junior accountants by 2028?",
+  why: "Junior accounting is a large entry-level job; the answer matters to students choosing a field.",
+  gap: "The records cover tools but no adoption by firms.",
+  leads: null,
+  related: [],
+  language: "en",
+  via: "api",
+  ...extra,
+});
+
+test("a key's secret is returned once and only its hash is stored; the key finds its reader", { skip: SKIP }, async () => {
+  const id = await user();
+  const made = await store.createKey(pool, { userId: id, name: "WorkBuddy" });
+  assert.equal(made.result, "created");
+  assert.match(made.secret, store.KEY_PATTERN);
+  assert.equal(made.key.prefix, made.secret.slice(0, 12));
+  assert.equal("secret" in made.key, false);
+  const { rows } = await pool.query("SELECT * FROM app.api_keys WHERE user_id = $1", [id]);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].secret_hash, await store.hashKey(made.secret));
+  assert.ok(!JSON.stringify(rows[0]).includes(made.secret), "the secret is not stored");
+  assert.equal(rows[0].last_used_at, null);
+  assert.deepEqual(await store.keyOwner(pool, made.secret), { userId: id, keyId: made.key.id });
+  const [listed] = await store.listKeys(pool, id);
+  assert.ok(listed.lastUsedAt, "a use is recorded");
+  assert.equal(JSON.stringify(await store.listKeys(pool, id)).includes(made.secret), false);
+});
+
+test("a malformed, unknown or revoked key finds nobody; revoking is final and only the owner's", { skip: SKIP }, async () => {
+  const [ann, bob] = [await user(), await user()];
+  const made = await store.createKey(pool, { userId: ann, name: "k" });
+  assert.equal(await store.keyOwner(pool, "not-a-key"), null);
+  assert.equal(await store.keyOwner(pool, `sag_${"A".repeat(32)}`), null);
+  assert.equal(await store.revokeKey(pool, bob, made.key.id), false, "another reader cannot revoke it");
+  assert.notEqual(await store.keyOwner(pool, made.secret), null);
+  assert.equal(await store.revokeKey(pool, ann, made.key.id), true);
+  assert.equal(await store.revokeKey(pool, ann, made.key.id), false, "revoked already");
+  assert.equal(await store.keyOwner(pool, made.secret), null);
+  await assert.rejects(pool.query("UPDATE app.api_keys SET revoked_at = NULL WHERE id = $1", [made.key.id]), /only used or revoked/);
+  await assert.rejects(pool.query("UPDATE app.api_keys SET name = 'x' WHERE id = $1", [made.key.id]), /only used or revoked/);
+  const [listed] = await store.listKeys(pool, ann);
+  assert.ok(listed.revokedAt);
+});
+
+test("at most five active keys; a revoked key frees a place; a reader who is gone has none", { skip: SKIP }, async () => {
+  const id = await user();
+  const made = [];
+  for (let n = 0; n < store.MAX_ACTIVE_KEYS; n += 1) made.push(await store.createKey(pool, { userId: id, name: `k${n}` }));
+  assert.deepEqual(await store.createKey(pool, { userId: id, name: "extra" }), { result: "limit", limit: store.MAX_ACTIVE_KEYS });
+  await store.revokeKey(pool, id, made[0].key.id);
+  assert.equal((await store.createKey(pool, { userId: id, name: "extra" })).result, "created");
+  assert.deepEqual(await store.createKey(pool, { userId: "nobody", name: "k" }), { result: "no_user" });
+  const keys = await store.listKeys(pool, id);
+  assert.equal(keys.length, 6);
+  assert.equal(keys.at(-1).revokedAt !== null, true, "revoked keys are listed last");
+});
+
+test("removing a reader removes their keys and questions", { skip: SKIP }, async () => {
+  const id = await user();
+  await store.createKey(pool, { userId: id, name: "k" });
+  await store.createQuestion(pool, ask(id));
+  await pool.query('DELETE FROM app."user" WHERE id = $1', [id]);
+  for (const table of ["api_keys", "questions"]) {
+    assert.equal((await pool.query(`SELECT 1 FROM app.${table} WHERE user_id = $1`, [id])).rows.length, 0, table);
+  }
+});
+
+test("a question is registered pending; the same question folded is a duplicate; a request_id replays", { skip: SKIP }, async () => {
+  const id = await user();
+  const key = await store.createKey(pool, { userId: id, name: "k" });
+  const made = await store.createQuestion(pool, ask(id, { apiKeyId: key.key.id, requestId: "req-00000001", related: ["ev-0123456789012345678901234567890123456789"] }));
+  assert.equal(made.result, "created");
+  assert.equal(made.question.status, "pending");
+  assert.equal(made.question.via, "api");
+  assert.deepEqual(made.question.related, ["ev-0123456789012345678901234567890123456789"]);
+  const again = await store.createQuestion(pool, ask(id, { question: "  will AI agents replace most junior ACCOUNTANTS by 2028  " }));
+  assert.equal(again.result, "duplicate");
+  assert.equal(again.question.id, made.question.id);
+  const replay = await store.createQuestion(pool, ask(id, { question: "A different question about lawyers and AI?", requestId: "req-00000001" }));
+  assert.equal(replay.result, "replayed");
+  assert.equal(replay.question.id, made.question.id);
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM app.questions WHERE user_id = $1", [id])).rows[0].n, 1);
+  assert.equal(store.questionKey("Will ＡＩ replace X?"), store.questionKey("will ai replace x"));
+  assert.equal((await store.listKeys(pool, id))[0].questions, 1, "the key's use is counted");
+  assert.deepEqual(await store.createQuestion(pool, ask("nobody")), { result: "no_user" });
+});
+
+test("questions: five new a day, counted per reader across keys and the site; refusals use nothing", { skip: SKIP }, async () => {
+  const id = await user();
+  const [k1, k2] = [await store.createKey(pool, { userId: id, name: "a" }), await store.createKey(pool, { userId: id, name: "b" })];
+  for (let n = 0; n < store.QUESTION_DAILY_LIMIT; n += 1) {
+    const extra = { question: `Will AI replace job number ${n} by 2030?`, apiKeyId: n % 2 ? k1.key.id : k2.key.id, via: n === 4 ? "web" : "api" };
+    assert.equal((await store.createQuestion(pool, ask(id, extra))).result, "created", `question ${n}`);
+  }
+  // A new key does not reset it.
+  const k3 = await store.createKey(pool, { userId: id, name: "c" });
+  assert.deepEqual(await store.createQuestion(pool, ask(id, { question: "Will AI replace job number 99?", apiKeyId: k3.key.id })), {
+    result: "limit", scope: "daily", limit: store.QUESTION_DAILY_LIMIT,
+  });
+  // A duplicate at the limit is still a duplicate, and nothing was written for the refusal.
+  assert.equal((await store.createQuestion(pool, ask(id, { question: "Will AI replace job number 0 by 2030?" }))).result, "duplicate");
+  const use = await store.usage(pool, id);
+  assert.deepEqual(use.questions, { pending: 5, pendingLimit: store.QUESTION_PENDING_LIMIT, today: 5, dailyLimit: store.QUESTION_DAILY_LIMIT });
+  assert.ok(Date.parse(use.resetsAt) > Date.now());
+  assert.equal(new Date(use.resetsAt).getUTCHours(), 0);
+});
+
+test("questions: earlier days count toward pending but not toward today", { skip: SKIP }, async () => {
+  const id = await user();
+  for (let n = 0; n < store.QUESTION_PENDING_LIMIT; n += 1) {
+    await pool.query(
+      `INSERT INTO app.questions (user_id, question, question_key, why, gap, language, created_at)
+       VALUES ($1, $2, $3, $4, $5, 'en', now() - interval '3 days')`,
+      [id, `Old question number ${n}?`, `oldquestionnumber${n}`, "x".repeat(20), "y".repeat(10)],
+    );
+  }
+  assert.deepEqual(await store.createQuestion(pool, ask(id)), { result: "limit", scope: "pending", limit: store.QUESTION_PENDING_LIMIT });
+  const someone = await user();
+  await pool.query("UPDATE app.questions SET status = 'accepted', decided_by = $2, decided_at = now() WHERE user_id = $1 AND question_key = 'oldquestionnumber0'", [id, someone]);
+  assert.equal((await store.createQuestion(pool, ask(id))).result, "created", "a decision frees a place");
+  assert.deepEqual((await store.usage(pool, id)).questions.today, 1);
+});
+
+test("concurrent questions and retries cannot pass the daily quota or register twice", { skip: SKIP }, async () => {
+  const id = await user();
+  const burst = await Promise.all(Array.from({ length: 9 }, (_, n) => store.createQuestion(pool, ask(id, { question: `Burst question number ${n} about AI?` }))));
+  assert.equal(burst.filter((r) => r.result === "created").length, store.QUESTION_DAILY_LIMIT);
+  assert.equal(burst.filter((r) => r.result === "limit").length, 9 - store.QUESTION_DAILY_LIMIT);
+  const other = await user();
+  const retries = await Promise.all(Array.from({ length: 4 }, () => store.createQuestion(pool, ask(other, { requestId: "retry-same-0001" }))));
+  assert.deepEqual(retries.map((r) => r.result).sort(), ["created", "replayed", "replayed", "replayed"]);
+  assert.equal((await store.usage(pool, other)).questions.today, 1);
+});
+
+test("a decided question stays decided, and a submitted one cannot be edited", { skip: SKIP }, async () => {
+  const [id, admin] = [await user(), await user()];
+  const made = await store.createQuestion(pool, ask(id));
+  await assert.rejects(pool.query("UPDATE app.questions SET question = 'changed question?' WHERE id = $1", [made.question.id]), /cannot be changed/);
+  assert.equal(await store.decideQuestion(pool, { id: made.question.id, decision: "rejected", reason: "out of scope", adminId: admin }), 1);
+  assert.equal(await store.decideQuestion(pool, { id: made.question.id, decision: "accepted", reason: null, adminId: admin }), 0);
+  await assert.rejects(pool.query("UPDATE app.questions SET status = 'accepted' WHERE id = $1", [made.question.id]), /stays decided/);
+  const decided = (await store.adminQuestions(pool, "decided")).find((q) => q.id === made.question.id);
+  assert.equal(decided.status, "rejected");
+  assert.equal(decided.reason, "out of scope");
+  assert.ok(decided.email.endsWith("@example.com"));
+  assert.equal((await store.adminQuestions(pool, "pending")).some((q) => q.id === made.question.id), false);
+  const [mine] = await store.listQuestions(pool, id);
+  assert.equal(mine.status, "rejected");
+});
+
+test("account requests: an agent's request carries its key and field; a request_id replays; the day's quota is shared", { skip: SKIP }, async () => {
+  const id = await user();
+  const key = await store.createKey(pool, { userId: id, name: "k" });
+  const made = await store.createSubmission(pool, input(id, "AgentPick", { note: "covers agents", field: "AI agents", via: "api", apiKeyId: key.key.id, requestId: "acct-req-0001" }));
+  assert.equal(made.result, "created");
+  assert.equal(made.submission.via, "api");
+  assert.equal(made.submission.field, "AI agents");
+  const replay = await store.createSubmission(pool, input(id, "SomeoneElse", { requestId: "acct-req-0001" }));
+  assert.equal(replay.result, "replayed");
+  assert.equal(replay.submission.id, made.submission.id);
+  assert.equal((await store.listKeys(pool, id))[0].accounts, 1);
+  // Old rows decided, so the pending quota is not the one that refuses.
+  const admin = await user();
+  for (let n = 1; n < store.ACCOUNT_DAILY_LIMIT; n += 1) {
+    const via = n % 2 ? "web" : "api";
+    assert.equal((await store.createSubmission(pool, input(id, `daily_${n}`, { via }))).result, "created", `account ${n}`);
+    await pool.query("UPDATE app.submissions SET status = 'approved', decided_by = $2, decided_at = now() WHERE user_id = $1 AND status = 'pending'", [id, admin]);
+  }
+  assert.deepEqual(await store.createSubmission(pool, input(id, "one_too_many")), { result: "limit", scope: "daily", limit: store.ACCOUNT_DAILY_LIMIT });
+  assert.equal((await store.usage(pool, id)).accounts.today, store.ACCOUNT_DAILY_LIMIT);
+  await assert.rejects(pool.query("UPDATE app.submissions SET field = 'x' WHERE user_id = $1 AND handle = 'agentpick'", [id]), /cannot be changed/);
+});
+
+test("a short-window limit never prunes a long-window one (anonymous reads must not reset hourly submit limits)", async () => {
+  const api = await import(`data:text/javascript;charset=utf-8,${encodeURIComponent(transpile(`${ROOT}src/lib/api.ts`))}`);
+  mock.timers.enable({ apis: ["Date"], now: 1_000_000 });
+  try {
+    assert.equal(api.rateLimit("submit:hourly", 2, 3600_000), true);
+    assert.equal(api.rateLimit("submit:hourly", 2, 3600_000), true);
+    mock.timers.tick(120_000);
+    assert.equal(api.rateLimit("agent-read:198.51.100.1", 60, 60_000), true);
+    assert.equal(api.rateLimit("submit:hourly", 2, 3600_000), false, "the hourly calls are still counted");
+    mock.timers.tick(3600_000);
+    assert.equal(api.rateLimit("agent-read:198.51.100.1", 60, 60_000), true);
+    assert.equal(api.rateLimit("submit:hourly", 2, 3600_000), true, "and expire after their own hour");
+  } finally {
+    mock.timers.reset();
+  }
 });

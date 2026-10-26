@@ -37,3 +37,7 @@
 .button:focus-visible, .reason:focus-visible { outline: 3px solid var(--ah-color-focus); outline-offset: 3px; }
 .line { color: var(--ah-color-subtle); font-size: 13px; }
 .none { margin-top: var(--ah-space-5); color: var(--ah-color-subtle); }
+.fields{display:grid;grid-template-columns:max-content 1fr;gap:4px var(--ah-space-4);margin:var(--ah-space-3) 0;font-size:14px}
+.fields dt{font-family:var(--ah-font-mono);font-size:11px;letter-spacing:.03em;color:var(--ah-color-subtle)}
+.fields dd{margin:0;overflow-wrap:anywhere}
+@media(max-width:600px){.fields{grid-template-columns:1fr}}

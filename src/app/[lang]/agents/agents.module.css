@@ -1,0 +1,21 @@
+/* The agents page: the legal pages' text column, plus code samples that scroll inside their own frame. */
+
+.lead {
+  font-size: var(--ah-text-body);
+  line-height: var(--ah-leading-body);
+  color: var(--ah-color-text);
+  margin: 0 0 var(--ah-space-6);
+}
+
+.code {
+  margin: 0 0 var(--ah-space-5);
+  padding: var(--ah-space-4);
+  overflow-x: auto;
+  border: 1px solid var(--ah-color-line);
+  border-radius: var(--ah-radius-control);
+  font-family: var(--ah-font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ah-color-text);
+  white-space: pre;
+}

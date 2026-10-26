@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "surviagi": {
+      "type": "streamableHttp",
+      "url": "https://surviagi.com/api/mcp",
+      "timeout": 30000
+    }
+  }
+}

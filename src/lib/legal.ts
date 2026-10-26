@@ -16,7 +16,7 @@ export const legalCopy: Record<Language, { privacy: Doc; terms: Doc }> = {
   en: {
     privacy: {
       title: "Privacy",
-      updated: "2026-10-04",
+      updated: "2026-10-26",
       sections: [
         {
           heading: "What we store",
@@ -24,12 +24,15 @@ export const legalCopy: Record<Language, { privacy: Doc; terms: Doc }> = {
             "When you sign in with Google: your email address, name and profile picture, as Google gives them to us. Signing in also records your IP address and browser type with the session, and Google's sign-in tokens, which we do not use for anything else.",
             "When you submit an account: the X handle, whether it is a person or a company, and your note.",
             "When you subscribe: which topics, your language, and when.",
+            "When you make an API key: its name, its first characters, when it was made, last used and revoked. Only a hash of the key itself is kept.",
+            "When you or your agent submits a research question: the question, why it matters, what is missing, your leads, the records you name, and which key sent it. A question stays private and is never published as written.",
+            "Searching and reading through the agent interface needs no account; it records nothing about you beyond the short-lived counts that limit request rates.",
           ],
         },
         {
           heading: "What we use it for",
           body: [
-            "To show you your own submissions and their status, to let an administrator review them, and to send the updates you subscribed to. Nothing else.",
+            "To show you your own submissions and their status, to let an administrator review them, to enforce the submission limits, and to send the updates you subscribed to. Nothing else.",
           ],
         },
         {
@@ -46,7 +49,7 @@ export const legalCopy: Record<Language, { privacy: Doc; terms: Doc }> = {
         {
           heading: "Your choices",
           body: [
-            "Unsubscribe at any time from the Subscribe control.",
+            "Unsubscribe at any time from the Subscribe control. Revoke an API key at any time on the agents page.",
             "To have your account and everything tied to it deleted, contact us on X at {x} or in our {discord}; we delete it within 30 days.",
           ],
         },
@@ -58,7 +61,7 @@ export const legalCopy: Record<Language, { privacy: Doc; terms: Doc }> = {
     },
     terms: {
       title: "Terms",
-      updated: "2026-10-04",
+      updated: "2026-10-26",
       sections: [
         {
           heading: "What this is",
@@ -77,6 +80,7 @@ export const legalCopy: Record<Language, { privacy: Doc; terms: Doc }> = {
           body: [
             "Submit only public X accounts that publish about AI. Do not submit accounts to harass someone or to impersonate them.",
             "A submission is a request: we may decline it, and approval does not mean the account's identity has been confirmed.",
+            "The same holds for research questions and for anything an agent submits with your API key: you are responsible for what is sent with your key. Keep it secret, and revoke it if it leaks.",
           ],
         },
         {
@@ -93,7 +97,7 @@ export const legalCopy: Record<Language, { privacy: Doc; terms: Doc }> = {
   "zh-CN": {
     privacy: {
       title: "隐私",
-      updated: "2026-10-04",
+      updated: "2026-10-26",
       sections: [
         {
           heading: "存储什么",
@@ -101,11 +105,14 @@ export const legalCopy: Record<Language, { privacy: Doc; terms: Doc }> = {
             "使用 Google 登录时：你的邮箱地址、姓名和头像，均为 Google 提供给我们的内容。登录时还会随会话记录你的 IP 地址和浏览器类型，以及 Google 的登录令牌，不作他用。",
             "提交帐号时：该 X 帐号的用户名、它属于个人还是公司，以及你写的备注。",
             "订阅时：订阅的主题、你的语言和订阅时间。",
+            "生成 API Key 时：Key 的名称、开头几个字符，以及创建、最近使用和撤销的时间。Key 本身只保存其哈希值。",
+            "你或你的助手提交研究问题时：问题本身、研究意义、资料缺口、你提供的线索和记录，以及提交所用的 Key。问题保持私有，不会按原文公开。",
+            "通过助手接口搜索和读取无需帐号，除用于限制请求频率的短时计数外，不记录与你有关的任何信息。",
           ],
         },
         {
           heading: "用来做什么",
-          body: ["用于向你展示你自己的提交及其状态，供管理员审核，并发送你订阅的更新。除此之外不作他用。"],
+          body: ["用于向你展示你自己的提交及其状态，供管理员审核，执行提交额度，并发送你订阅的更新。除此之外不作他用。"],
         },
         {
           heading: "不做什么",
@@ -121,7 +128,7 @@ export const legalCopy: Record<Language, { privacy: Doc; terms: Doc }> = {
         {
           heading: "你的选择",
           body: [
-            "可随时通过“订阅”控件取消订阅。",
+            "可随时通过“订阅”控件取消订阅，也可随时在“接入 AI 助手”页面撤销 API Key。",
             "如需删除你的帐号及与之相关的全部内容，请在 X 上联系 {x}，或通过我们的 {discord} 联系我们；我们会在 30 天内删除。",
           ],
         },
@@ -133,7 +140,7 @@ export const legalCopy: Record<Language, { privacy: Doc; terms: Doc }> = {
     },
     terms: {
       title: "条款",
-      updated: "2026-10-04",
+      updated: "2026-10-26",
       sections: [
         {
           heading: "这是什么",
@@ -148,6 +155,7 @@ export const legalCopy: Record<Language, { privacy: Doc; terms: Doc }> = {
           body: [
             "只提交公开的、发布 AI 相关内容的 X 帐号。不要为骚扰或冒充他人而提交帐号。",
             "提交只是一项请求：我们可能拒绝；通过也不代表该帐号的身份已得到确认。",
+            "研究问题，以及助手用你的 API Key 提交的任何内容，同样如此：用你的 Key 发出的内容由你负责。请妥善保管，泄露后请立即撤销。",
           ],
         },
         {

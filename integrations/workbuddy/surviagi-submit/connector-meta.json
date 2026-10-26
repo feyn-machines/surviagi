@@ -1,0 +1,12 @@
+{
+  "source": "surviagi-submit",
+  "type": "mcp",
+  "auth_mode": "token",
+  "version": "1.0.0",
+  "name": "SurviAGI 搜索与提交",
+  "name_en": "SurviAGI Search & Submit",
+  "description": "在 SurviAGI 搜索已发布的 AI 进展，并用你在 surviagi.com 生成的 API Key 提交研究问题、推荐值得监测的 X 账号（均为待审核申请，不会自动启动研究或采集）。",
+  "description_en": "Search SurviAGI's published AI progress, and with the API key you make on surviagi.com submit research questions and suggest X accounts to monitor (requests for review; nothing is researched or collected automatically).",
+  "examples": ["帮我查一下 AI 法律助手的进展；如果没有相关研究，就把这个问题提交给 SurviAGI", "推荐 @某个账号 给 SurviAGI 监测，理由是……"],
+  "examples_en": ["Look up progress on AI legal assistants; if nothing covers it, submit the question to SurviAGI", "Suggest @someone to SurviAGI for monitoring, because ..."]
+}

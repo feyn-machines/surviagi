@@ -12,6 +12,15 @@ const copy = bilingual({
 });
 
 export function Decide({ handle, ownerKind, language }: { handle: string; ownerKind: OwnerKind; language: Language }) {
+  return <Decision language={language} path="/api/admin/submissions" fields={{ handle, ownerKind }} accept="approve" />;
+}
+
+/** The same two buttons for one submitted question; accepting it means it is taken up for research. */
+export function DecideQuestion({ id, language }: { id: string; language: Language }) {
+  return <Decision language={language} path="/api/admin/questions" fields={{ id }} accept="accept" />;
+}
+
+function Decision({ language, path, fields, accept }: { language: Language; path: string; fields: Record<string, string>; accept: "approve" | "accept" }) {
   const router = useRouter();
   const c = copy[language];
   const reasonId = useId();
@@ -20,14 +29,14 @@ export function Decide({ handle, ownerKind, language }: { handle: string; ownerK
   const [busy, setBusy] = useState(false);
   const [line, setLine] = useState("");
 
-  async function send(decision: "approve" | "reject") {
+  async function send(decision: "approve" | "accept" | "reject") {
     setBusy(true);
     setLine("");
     try {
-      const response = await fetch("/api/admin/submissions", {
+      const response = await fetch(path, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ handle, ownerKind, decision, ...(decision === "reject" ? { reason: reason.trim() } : {}) }),
+        body: JSON.stringify({ ...fields, decision, ...(decision === "reject" ? { reason: reason.trim() } : {}) }),
       });
       if (!response.ok) {
         setLine(c.failed);
@@ -63,7 +72,7 @@ export function Decide({ handle, ownerKind, language }: { handle: string; ownerK
         </form>
       ) : (
         <>
-          <button type="button" className={styles.button} disabled={busy} onClick={() => void send("approve")}>{c.approve}</button>
+          <button type="button" className={styles.button} disabled={busy} onClick={() => void send(accept)}>{c.approve}</button>
           <button type="button" className={styles.button} disabled={busy} onClick={() => setRejecting(true)}>{c.reject}</button>
         </>
       )}

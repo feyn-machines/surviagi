@@ -1,0 +1,14 @@
+{
+  "title": "SurviAGI API Key",
+  "description": "用 Google 登录 https://surviagi.com/zh-CN/agents#keys 生成 Key（以 sag_ 开头）。Key 只保存在你本机的 WorkBuddy 中；提交时随请求发送，可随时在该页面撤销。搜索与读取不需要 Key。",
+  "docs_url": "https://surviagi.com/zh-CN/agents",
+  "fields": [
+    {
+      "key": "SURVIAGI_API_KEY",
+      "label": "API Key",
+      "type": "password",
+      "required": true,
+      "placeholder": "sag_..."
+    }
+  ]
+}

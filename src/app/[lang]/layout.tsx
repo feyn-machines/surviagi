@@ -22,6 +22,7 @@ const copy = bilingual({
     socialLinks: "SurviAGI elsewhere",
     privacy: "Privacy",
     terms: "Terms",
+    agents: "For AI agents",
   },
   "zh-CN": {
     brandLabel: "SurviAGI 首页",
@@ -30,6 +31,7 @@ const copy = bilingual({
     socialLinks: "SurviAGI 的其他地址",
     privacy: "隐私",
     terms: "条款",
+    agents: "接入 AI 助手",
   },
 });
 
@@ -111,6 +113,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           <span>{c.footerNote}</span>
           <Subscribe language={language} enabled={appEnabled()} />
           <div className="footer-links">
+            <Link href={href(language, "/agents")}>{c.agents}</Link>
             <Link href={href(language, "/privacy")}>{c.privacy}</Link>
             <Link href={href(language, "/terms")}>{c.terms}</Link>
             {SOCIAL_LINKS.map((link) => (

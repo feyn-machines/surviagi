@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { request as httpRequest } from "node:http";
 import { createRequire } from "node:module";
@@ -14,7 +14,7 @@ const STANDALONE = join(ROOT, ".next", "standalone");
 const SNAPSHOT_DIR = join(ROOT, "datasets", "published", "latest");
 const HAS_SNAPSHOT = existsSync(join(SNAPSHOT_DIR, "manifest.json"));
 const LEGAL = ["/privacy", "/terms"];
-const FIXED = ["", "/markets", "/occupations", "/topics", "/updates", "/voices", "/articles", "/whitepaper", ...LEGAL];
+const FIXED = ["", "/markets", "/occupations", "/topics", "/updates", "/voices", "/articles", "/whitepaper", "/agents", ...LEGAL];
 
 let site;
 const pages = new Map();
@@ -895,4 +895,205 @@ test("on a phone the updates table is a list of cards, not a frame that cuts tit
   assert.match(phone, /grid-template-areas:\s*"when from"\s*"update update"\s*"landed top"/);
   // Outranks the global .oaw-table minimum whatever order the sheets load in: two classes, not one.
   assert.match(phone, /\.[\w-]*tableWrap[\w-]* \.[\w-]*table[\w-]*\{min-width:0\}/);
+});
+
+// ------------------------------------------------------------ agent access (Issue #5) ----
+
+const rpc = async (path, message, headers = {}) => {
+  const res = await fetch(`${site.base}${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json", accept: "application/json, text/event-stream", ...headers },
+    body: typeof message === "string" ? message : JSON.stringify(message),
+  });
+  const text = await res.text();
+  return { status: res.status, headers: res.headers, body: text ? JSON.parse(text) : null };
+};
+const tool = async (name, args, path = "/api/mcp") =>
+  (await rpc(path, { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: args } })).body.result;
+
+test("MCP: a client initializes with no key, and the public endpoint lists only the read tools", async () => {
+  const init = await rpc("/api/mcp", { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "1" } } });
+  assert.equal(init.status, 200);
+  assert.equal(init.body.result.protocolVersion, "2025-06-18");
+  assert.deepEqual(init.body.result.capabilities, { tools: { listChanged: false } });
+  assert.match(init.body.result.instructions, /machine-proposed/);
+  assert.match(init.headers.get("cache-control") ?? "", /no-store/);
+  // An unknown version asked for is answered with the server's own.
+  const old = await rpc("/api/mcp", { jsonrpc: "2.0", id: 2, method: "initialize", params: { protocolVersion: "1999-01-01" } });
+  assert.equal(old.body.result.protocolVersion, "2025-06-18");
+  assert.equal((await rpc("/api/mcp", { jsonrpc: "2.0", method: "notifications/initialized" })).status, 202);
+  const tools = (await rpc("/api/mcp", { jsonrpc: "2.0", id: 3, method: "tools/list" })).body.result.tools;
+  assert.deepEqual(tools.map((t) => t.name), ["search", "get_record"]);
+  for (const t of tools) {
+    assert.equal(t.annotations.readOnlyHint, true);
+    assert.equal(t.inputSchema.type, "object");
+  }
+  const call = await rpc("/api/mcp", { jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "submit_question", arguments: {} } });
+  assert.equal(call.body.error.code, -32602);
+  assert.match(call.body.error.message, /api\/mcp\/submit/);
+  assert.equal((await rpc("/api/mcp", { jsonrpc: "2.0", id: 5, method: "ping" })).body.result && true, true);
+  assert.equal((await rpc("/api/mcp", { jsonrpc: "2.0", id: 6, method: "resources/list" })).body.error.code, -32601);
+});
+
+test("MCP: the transport's edges: GET is 405; a batch, a bad body and an unknown protocol header are refused; no CORS", async () => {
+  const get = await fetch(`${site.base}/api/mcp`);
+  assert.equal(get.status, 405);
+  assert.equal(get.headers.get("allow"), "POST");
+  assert.equal((await rpc("/api/mcp", [{ jsonrpc: "2.0", id: 1, method: "ping" }])).status, 400);
+  assert.equal((await rpc("/api/mcp", "{not json")).body.error.code, -32700);
+  assert.equal((await rpc("/api/mcp", { id: 1, method: "ping" })).status, 400);
+  // A client's own Origin is no reason to refuse (no cookie is ever used), and no CORS header lets a page read the answer.
+  const foreign = await rpc("/api/mcp", { jsonrpc: "2.0", id: 1, method: "ping" }, { origin: "app://workbuddy" });
+  assert.equal(foreign.status, 200);
+  assert.equal(foreign.headers.get("access-control-allow-origin"), null);
+  assert.equal((await fetch(`${site.base}/api/mcp`, { method: "OPTIONS" })).headers.get("access-control-allow-origin"), null);
+  assert.equal((await rpc("/api/mcp", { jsonrpc: "2.0", id: 1, method: "ping" }, { "mcp-protocol-version": "2099-01-01" })).status, 400);
+  assert.equal((await rpc("/api/mcp", { jsonrpc: "2.0", id: 1, method: "ping" }, { "mcp-protocol-version": "2025-06-18" })).status, 200);
+  assert.equal((await rpc("/api/mcp", "x".repeat(70 * 1024))).status, 400);
+});
+
+test("MCP: search answers with structured, cited records of the loaded release; get_record reads each kind", { skip: !HAS_SNAPSHOT }, async () => {
+  const manifest = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "manifest.json"), "utf8"));
+  const chain = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "chain.json"), "utf8"));
+  const topics = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "topics.json"), "utf8"));
+  const update = chain.events.find((e) => e.org_name && e.title.split(" ").length > 3);
+  const word = update.org_name;
+  const result = await tool("search", { query: word, limit: 5 });
+  assert.equal(result.isError, undefined);
+  const found = result.structuredContent;
+  assert.deepEqual(JSON.parse(result.content[0].text), found, "the text content is the same JSON");
+  assert.ok(found.results.length > 0 && found.results.length <= 5);
+  assert.equal(found.release.generated_at, manifest.generated_at);
+  const ids = new Set([...chain.events.map((e) => e.event_id), ...topics.map((t) => t.topic_id)]);
+  for (const r of found.results) {
+    assert.ok(["update", "question", "evidence"].includes(r.type));
+    assert.equal(r.review, "machine_proposed_unreviewed");
+    assert.ok(Object.keys(found.content_kinds).includes(r.content));
+    assert.ok(r.url.startsWith("https://surviagi.com/"));
+    if (r.type !== "evidence") assert.ok(ids.has(r.id), `${r.id} is a published record`);
+    assert.ok([...r.snippet].length <= 280);
+  }
+  // Each kind of record reads back, and says that the source text is not here.
+  const question = topics.find((t) => t.claims.some((c) => c.quote));
+  const evidenceRow = chain.evidence[0];
+  const slug = evidenceRow.activity_id.replace(/^oaw:market:/, "");
+  for (const id of [update.event_id, question.topic_id, `evidence:${evidenceRow.event_id}:${slug}`]) {
+    const read = await tool("get_record", { id });
+    assert.equal(read.isError, undefined, id);
+    const record = read.structuredContent;
+    assert.equal(record.id, id);
+    assert.equal(record.original_text.available, false);
+    assert.equal(record.release.generated_at, manifest.generated_at);
+    const page = await fetch(`${site.base}${record.url.slice("https://surviagi.com".length)}`);
+    assert.equal(page.status, 200, `${record.url} is a page`);
+  }
+  const q = (await tool("get_record", { id: question.topic_id })).structuredContent;
+  const quoted = q.claims.find((c) => c.quote);
+  assert.equal(quoted.quote_content, "post_quote");
+  assert.equal(quoted.says_content, "machine_summary");
+  // Chinese works too, and points at Chinese pages.
+  const zh = (await tool("search", { query: question.question["zh-CN"], types: ["question"], language: "zh-CN" })).structuredContent;
+  assert.equal(zh.results[0].id, question.topic_id);
+  assert.ok(zh.results[0].url.startsWith("https://surviagi.com/zh-CN/topics/"));
+});
+
+test("MCP: bad arguments and unknown ids are tool errors the agent can read, and a miss starts nothing", async () => {
+  for (const args of [{}, { query: "" }, { query: "x".repeat(201) }, { query: "a", limit: 50 }, { query: "a", types: ["posts"] }, { query: "a", from: "yesterday" }, { query: "a", language: "fr" }]) {
+    const result = await tool("search", args);
+    assert.equal(result.isError, true, JSON.stringify(args));
+    assert.equal(result.structuredContent.error, "invalid");
+  }
+  assert.equal((await tool("get_record", { id: "../../etc/passwd" })).structuredContent.error, "invalid");
+  assert.equal((await tool("get_record", { id: `ev-${"0".repeat(40)}` })).structuredContent.error, "not_found");
+  const none = (await tool("search", { query: "zzqqxxnonexistentterm" })).structuredContent;
+  assert.deepEqual(none.results, []);
+  assert.match(none.note, /starts no research or collection/);
+});
+
+test("MCP submit endpoint without the user database: reading works, submitting is unavailable", async () => {
+  const tools = (await rpc("/api/mcp/submit", { jsonrpc: "2.0", id: 1, method: "tools/list" })).body.result.tools;
+  assert.equal(tools.length, 5);
+  assert.equal((await tool("search", { query: "model" }, "/api/mcp/submit")).isError, undefined);
+  const refused = await tool("submit_question", { question: "x" }, "/api/mcp/submit");
+  assert.equal(refused.isError, true);
+  assert.equal(refused.structuredContent.error, "unavailable");
+});
+
+test("HTTP: search and record are public and cacheable for a minute; submitting without the user database is 503", async () => {
+  const res = await fetch(`${site.base}/api/agent/search?q=model&types=update&types=evidence&limit=3`);
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get("cache-control"), "public, max-age=60");
+  assert.equal(res.headers.get("x-robots-tag"), "noindex");
+  const body = await res.json();
+  assert.ok(body.results.every((r) => r.type === "update" || r.type === "evidence"));
+  assert.equal((await fetch(`${site.base}/api/agent/search?query=a&limit=0`)).status, 400);
+  assert.equal((await fetch(`${site.base}/api/agent/record?id=nope`)).status, 400);
+  const post = await fetch(`${site.base}/api/agent/questions`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+  assert.equal(post.status, 503);
+  assert.match(post.headers.get("cache-control") ?? "", /no-store/);
+});
+
+test("anonymous reading is limited per client address, and one address does not use up another's", async () => {
+  const from = (ip) => fetch(`${site.base}/api/agent/search?query=model&limit=1`, { headers: { "cf-connecting-ip": ip } });
+  let last;
+  for (let n = 0; n < 60; n += 1) last = await from("198.51.100.7");
+  assert.equal(last.status, 200);
+  const over = await from("198.51.100.7");
+  assert.equal(over.status, 429);
+  assert.equal(over.headers.get("retry-after"), "60");
+  assert.equal((await rpc("/api/mcp", { jsonrpc: "2.0", id: 1, method: "ping" }, { "cf-connecting-ip": "198.51.100.7" })).status, 429, "MCP shares the budget");
+  assert.equal((await from("198.51.100.8")).status, 200);
+});
+
+test("the agents page says what is open, what needs a key and the limits the code enforces, in both languages", () => {
+  const en = html("en", "/agents");
+  for (const text of ["https://surviagi.com/api/mcp", "https://surviagi.com/api/mcp/submit", "Authorization: Bearer", "/api/agent/search", "submit_question", "machine", "60 requests a minute", 'id="keys"']) {
+    assert.ok(en.includes(text), text);
+  }
+  assert.ok(html("zh-CN", "/agents").includes("接入 AI 助手"));
+  for (const language of ["en", "zh-CN"]) {
+    const page = html(language, "");
+    assert.ok(page.includes(`href="${language === "en" ? "" : "/zh-CN"}/agents"`), `${language} footer links to the agents page`);
+  }
+  assert.match(body("llms.txt"), /https:\/\/surviagi\.com\/api\/mcp\b/);
+});
+
+test("the HTTP Skill's script reads without a key and refuses to submit without one", { skip: !HAS_SNAPSHOT }, async () => {
+  const script = join(ROOT, "integrations", "workbuddy", "skill-http", "surviagi-http", "scripts", "surviagi.py");
+  const run = (args, env = {}) =>
+    new Promise((resolve) => {
+      const child = spawn("python3", ["-I", script, ...args], { env: { PATH: process.env.PATH, SURVIAGI_BASE_URL: site.base, ...env } });
+      let out = "";
+      child.stdout.on("data", (chunk) => (out += chunk));
+      child.on("exit", (code) => resolve({ code, out }));
+    });
+  const found = await run(["search", "model", "--limit", "2", "--types", "update"]);
+  assert.equal(found.code, 0);
+  const body = JSON.parse(found.out);
+  assert.ok(body.results.length > 0 && body.results.every((r) => r.type === "update"));
+  const read = await run(["record", body.results[0].id]);
+  assert.equal(JSON.parse(read.out).id, body.results[0].id);
+  const refused = await run(["question", "--question", "Will AI replace X soon?", "--why", "w".repeat(20), "--gap", "g".repeat(10)]);
+  assert.equal(refused.code, 1);
+  assert.equal(JSON.parse(refused.out).error, "missing_key");
+});
+
+test("the WorkBuddy packages assemble in the layout WorkBuddy expects, with no key in them", () => {
+  const packed = spawnSync(process.execPath, [join(ROOT, "scripts", "pack-workbuddy.mjs")], { encoding: "utf8" });
+  assert.equal(packed.status, 0, packed.stderr);
+  const out = join(ROOT, "out", "workbuddy");
+  const pub = JSON.parse(readFileSync(join(out, "surviagi", "mcp.json"), "utf8")).mcpServers.surviagi;
+  assert.deepEqual([pub.type, pub.url, pub.headers], ["streamableHttp", "https://surviagi.com/api/mcp", undefined]);
+  const sub = JSON.parse(readFileSync(join(out, "surviagi-submit", "mcp.json"), "utf8")).mcpServers["surviagi-submit"];
+  assert.equal(sub.url, "https://surviagi.com/api/mcp/submit");
+  assert.equal(sub.headers.Authorization, "Bearer ${SURVIAGI_API_KEY}");
+  const schema = JSON.parse(readFileSync(join(out, "surviagi-submit", "token-schema.json"), "utf8"));
+  assert.equal(schema.fields[0].key, "SURVIAGI_API_KEY");
+  assert.equal(JSON.parse(readFileSync(join(out, "surviagi-submit", "connector-meta.json"), "utf8")).auth_mode, "token");
+  for (const [connector, skill] of [["surviagi", "surviagi-search"], ["surviagi-submit", "surviagi-submit"]]) {
+    for (const file of ["connector-meta.json", "icon.svg", `skills/${skill}/SKILL.md`]) assert.ok(existsSync(join(out, connector, file)), `${connector}/${file}`);
+    const skillText = readFileSync(join(out, connector, "skills", skill, "SKILL.md"), "utf8");
+    assert.match(skillText, /^---\nname: /);
+    for (const field of ["display_name", "display_name_en", "description_zh", "description_en", "version", "author"]) assert.match(skillText, new RegExp(`\\n${field}: `), `${skill} ${field}`);
+  }
 });
