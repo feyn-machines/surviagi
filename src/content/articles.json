@@ -1,5 +1,17 @@
 [
   {
+    "slug": "ai-agents-bypass-software-ui",
+    "date": "2026-10-26",
+    "title": {
+      "en": "Oct 26, 2026 | AI is starting to operate software for you. What goes next, the UI or the software?",
+      "zh-CN": "2026 年 10 月 26 日｜AI 开始替你操作软件了：下一个被淘汰的是 UI，还是软件本身？"
+    },
+    "description": {
+      "en": "Agents are operating browsers, changing files and continuing work while users are away. Product announcements and Anthropic’s internal research suggest software value is shifting toward permissions, shared state and reviewing results.",
+      "zh-CN": "AI 开始操作浏览器、修改文件，并在你离线后继续工作。界面会退到哪里，软件还凭什么收费？从产品的一手发布和 Anthropic 内部研究，看权限、协作与结果确认如何成为新的竞争焦点。"
+    }
+  },
+  {
     "slug": "ai-uses-software-for-you",
     "date": "2026-10-19",
     "title": {
