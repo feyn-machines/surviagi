@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "surviagi-submit": {
+      "type": "streamableHttp",
+      "url": "https://surviagi.com/api/mcp/submit",
+      "headers": {
+        "Authorization": "Bearer ${SURVIAGI_API_KEY}"
+      },
+      "timeout": 30000
+    }
+  }
+}

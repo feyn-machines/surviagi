@@ -58,22 +58,26 @@ export async function readJson(request: Request, maxBytes: number): Promise<{ ok
   }
 }
 
-const hits = new Map<string, number[]>();
+const hits = new Map<string, { windowMs: number; times: number[] }>();
 
-/** In-memory, per process. Returns false once `key` has made `limit` calls within `windowMs`. */
+/**
+ * In-memory, per process. Returns false once `key` has made `limit` calls within `windowMs`. Each key keeps
+ * its own window, so pruning the others on the way never cuts an hourly limit down to someone's minute.
+ */
 export function rateLimit(key: string, limit: number, windowMs: number): boolean {
   const now = Date.now();
-  for (const [name, times] of hits) {
-    const recent = times.filter((time) => now - time < windowMs);
+  for (const [name, entry] of hits) {
+    if (name === key) continue;
+    const recent = entry.times.filter((time) => now - time < entry.windowMs);
     if (recent.length === 0) hits.delete(name);
-    else if (name !== key) hits.set(name, recent);
+    else entry.times = recent;
   }
-  const recent = (hits.get(key) ?? []).filter((time) => now - time < windowMs);
+  const recent = (hits.get(key)?.times ?? []).filter((time) => now - time < windowMs);
   if (recent.length >= limit) {
-    hits.set(key, recent);
+    hits.set(key, { windowMs, times: recent });
     return false;
   }
   recent.push(now);
-  hits.set(key, recent);
+  hits.set(key, { windowMs, times: recent });
   return true;
 }

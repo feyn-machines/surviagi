@@ -1,6 +1,6 @@
 import { json, notFound, rateLimit, readJson, sameOrigin } from "@/lib/api";
 import { appEnabled } from "@/lib/app-config";
-import { createSubmission, listSubmissions, PENDING_LIMIT } from "@/lib/app-store";
+import { createSubmission, listSubmissions } from "@/lib/app-store";
 import { appPool, currentUser } from "@/lib/auth";
 import { normalizeHandle, OWNER_KINDS, type OwnerKind } from "@/lib/handles";
 import { sources } from "@/lib/snapshot";
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
   try {
     const created = await createSubmission(appPool(), { userId: user.id, handle: handle.handle, key: handle.key, ownerKind, note });
     if (created.result === "no_user") return json({ error: "signed_out" }, 401);
-    return created.result === "limit" ? json({ result: "limit", limit: PENDING_LIMIT }) : json(created);
+    return json(created);
   } catch (error) {
     console.error(`[submissions] create failed: ${error instanceof Error ? error.message : "unknown error"}`);
     return json({ error: "unavailable" }, 503);

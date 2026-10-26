@@ -4,10 +4,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader, bilingual, dataStyles as d, formatNumber, isoDate } from "@/components/data-page";
 import { appEnabled } from "@/lib/app-config";
-import { adminGroups, subscriberCounts, type AdminGroup } from "@/lib/app-store";
+import { adminGroups, adminQuestions, subscriberCounts, type AdminGroup, type AdminQuestion } from "@/lib/app-store";
 import { adminOrNull, appPool } from "@/lib/auth";
 import { getLocale } from "@/lib/locale";
-import { Decide } from "./decide";
+import { Decide, DecideQuestion } from "./decide";
 import s from "./admin.module.css";
 
 /** The one page that reads the visitor's session, so it is rendered per request and never cached. */
@@ -33,6 +33,13 @@ const copy = bilingual({
     earlierRejected: "Rejected before",
     empty: "Nothing to review",
     tabs: "View",
+    questions: "Questions",
+    accepted: "Accepted",
+    why: "Why it matters",
+    gap: "What is missing",
+    leads: "Leads",
+    related: "Records searched",
+    viaApi: "via API key",
   },
   "zh-CN": {
     title: "后台",
@@ -51,6 +58,13 @@ const copy = bilingual({
     earlierRejected: "此前已拒绝",
     empty: "没有待审核的申请",
     tabs: "视图",
+    questions: "研究问题",
+    accepted: "已纳入",
+    why: "研究意义",
+    gap: "资料缺口",
+    leads: "线索",
+    related: "已检索记录",
+    viaApi: "通过 API Key",
   },
 });
 
@@ -68,9 +82,14 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   if (!appEnabled()) notFound();
   if (!(await adminOrNull(new Request("http://internal/", { headers: await headers() })))) notFound();
 
-  const view = (await searchParams).view === "decided" ? "decided" : "pending";
+  const asked = (await searchParams).view;
+  const view = asked === "decided" || asked === "questions" ? asked : "pending";
   const db = appPool();
-  const [groups, counts] = await Promise.all([adminGroups(db, view), subscriberCounts(db)]);
+  const [groups, questions, counts] = await Promise.all([
+    view === "questions" ? Promise.resolve([]) : adminGroups(db, view),
+    view === "questions" ? Promise.all([adminQuestions(db, "pending"), adminQuestions(db, "decided")]).then((both) => both.flat()) : Promise.resolve([]),
+    subscriberCounts(db),
+  ]);
   const base = language === "zh-CN" ? "/zh-CN/admin" : "/admin";
 
   return (
@@ -80,13 +99,22 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         <nav className={s.tabs} aria-label={c.tabs}>
           <Link className={s.tab} href={{ pathname: base, query: { view: "pending" } }} aria-current={view === "pending" ? "page" : undefined}>{c.pending}</Link>
           <Link className={s.tab} href={{ pathname: base, query: { view: "decided" } }} aria-current={view === "decided" ? "page" : undefined}>{c.decided}</Link>
+          <Link className={s.tab} href={{ pathname: base, query: { view: "questions" } }} aria-current={view === "questions" ? "page" : undefined}>{c.questions}</Link>
         </nav>
         <p className={s.counts}>
           <span>{fill(c.subscribers, { total: formatNumber(counts.total), updates: formatNumber(counts.updates), weekly: formatNumber(counts.weekly) })}</span>
           <a href={CSV_PATH}>{c.download}</a>
         </p>
       </div>
-      {groups.length === 0 ? (
+      {view === "questions" ? (
+        questions.length === 0 ? (
+          <p className={`${d.note} ${s.none}`}>{c.empty}</p>
+        ) : (
+          <ul className={s.list}>
+            {questions.map((question) => <QuestionItem key={question.id} question={question} language={language} />)}
+          </ul>
+        )
+      ) : groups.length === 0 ? (
         <p className={`${d.note} ${s.none}`}>{c.empty}</p>
       ) : (
         <ul className={s.list}>
@@ -137,6 +165,50 @@ function Group({ group, language }: { group: AdminGroup; language: "en" | "zh-CN
         </ul>
       </details>
       {group.status === "pending" ? <Decide handle={group.handle} ownerKind={group.ownerKind} language={language} /> : null}
+    </li>
+  );
+}
+
+function QuestionItem({ question, language }: { question: AdminQuestion; language: "en" | "zh-CN" }) {
+  const c = copy[language];
+  return (
+    <li className={s.group}>
+      <div className={s.head}>
+        <span className={s.handle}>{question.question}</span>
+        <span className={s.meta}>{question.name}</span>
+        <span className={s.meta}>{question.email}</span>
+        <span className={s.meta}>{isoDate(question.createdAt)}</span>
+        {question.via === "api" ? <span className={s.meta}>{c.viaApi}</span> : null}
+        {question.status !== "pending" ? (
+          <>
+            <span className={`${s.meta} ${s.status}`} data-status={question.status === "accepted" ? "approved" : "rejected"}>
+              {question.status === "accepted" ? c.accepted : c.rejected}
+            </span>
+            {question.decidedBy ? <span className={s.meta}>{question.decidedBy}</span> : null}
+            <span className={s.meta}>{isoDate(question.decidedAt)}</span>
+          </>
+        ) : null}
+      </div>
+      {question.reason ? <p className={s.reasonText}>{question.reason}</p> : null}
+      <dl className={s.fields}>
+        <dt>{c.why}</dt>
+        <dd>{question.why}</dd>
+        <dt>{c.gap}</dt>
+        <dd>{question.gap}</dd>
+        {question.leads ? (
+          <>
+            <dt>{c.leads}</dt>
+            <dd>{question.leads}</dd>
+          </>
+        ) : null}
+        {question.related.length > 0 ? (
+          <>
+            <dt>{c.related}</dt>
+            <dd>{question.related.join(" · ")}</dd>
+          </>
+        ) : null}
+      </dl>
+      {question.status === "pending" ? <DecideQuestion id={question.id} language={language} /> : null}
     </li>
   );
 }

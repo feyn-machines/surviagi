@@ -43,3 +43,7 @@ a.item{display:flex;align-items:center;text-decoration:none}
 .check input{width:20px;height:20px;margin:0;accent-color:var(--ink)}
 .note{font-size:13px;color:var(--ah-color-subtle);margin:0 var(--ah-space-3)}
 .root .note{margin:0 var(--ah-space-3) 0 0}
+.keyForm{display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--ah-space-3);margin:0 0 var(--ah-space-4)}
+.keyForm .field{flex:1 1 220px}
+.secret{display:flex;flex-direction:column;align-items:flex-start;gap:var(--ah-space-2);margin:0 0 var(--ah-space-4);padding:var(--ah-space-3);border:1px solid var(--ah-color-signal);border-radius:var(--ah-radius-control)}
+.secretValue{font-family:var(--ah-font-mono);font-size:13px;overflow-wrap:anywhere;user-select:all}

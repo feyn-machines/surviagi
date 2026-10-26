@@ -51,6 +51,13 @@ export function GET() {
       (example ? `, for example ${absoluteUrl("en", `/markets/${marketSlug(example.id)}/raw.md`)}` : "") +
       ". Chinese pages have theirs under /zh-CN.",
     "",
+    "## For AI agents",
+    "",
+    `Search and read the published records over MCP (Streamable HTTP) at ${SITE_URL}/api/mcp, no key needed: tools \`search\` and \`get_record\`. ` +
+      `The same as HTTP: ${SITE_URL}/api/agent/search?query=... and ${SITE_URL}/api/agent/record?id=... ` +
+      `Submitting research questions or accounts to monitor needs a reader's API key and ${SITE_URL}/api/mcp/submit. ` +
+      `Details: [For AI agents](${absoluteUrl("en", "/agents")}).`,
+    "",
     "## Levels",
     "",
     "Each kind of work carries the highest level its evidence supports. " +

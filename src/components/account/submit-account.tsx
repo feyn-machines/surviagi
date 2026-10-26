@@ -26,6 +26,7 @@ const copy = bilingual({
     created: "Submitted",
     monitored: "Already monitored",
     limit: "10 pending. Wait for review.",
+    daily: "Today's limit reached. Try again tomorrow.",
     rate: "Too many attempts",
     invalid: "Not an X account",
     failed: "Try again later",
@@ -41,6 +42,7 @@ const copy = bilingual({
     created: "已提交",
     monitored: "已在监控",
     limit: "已有 10 条待审核",
+    daily: "今日提交已达上限，请明天再试",
     rate: "操作太频繁",
     invalid: "不是有效的 X 帐号",
     failed: "请稍后再试",
@@ -50,7 +52,7 @@ const copy = bilingual({
 type Answer =
   | { result: "created" | "duplicate"; submission: Submission }
   | { result: "monitored"; handle: string }
-  | { result: "limit"; limit: number };
+  | { result: "limit"; scope: "pending" | "daily"; limit: number };
 
 export function SubmitAccount({ language, ownerKind, enabled, anchor }: { language: Language; ownerKind: OwnerKind; enabled: boolean; anchor: "people" | "companies" }) {
   const { state, me } = useMe(enabled);
@@ -116,7 +118,7 @@ export function SubmitAccount({ language, ownerKind, enabled, anchor }: { langua
         } else if (answer.result === "monitored") {
           setLine(c.monitored);
         } else {
-          setLine(c.limit);
+          setLine("scope" in answer && answer.scope === "daily" ? c.daily : c.limit);
         }
       } else if (response.status === 429) {
         setLine(c.rate);
