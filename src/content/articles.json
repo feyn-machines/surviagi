@@ -1,5 +1,17 @@
 [
   {
+    "slug": "ai-agent-computer",
+    "date": "2026-10-26",
+    "title": {
+      "en": "Oct 26, 2026 | Would you give AI a computer of its own?",
+      "zh-CN": "2026 年 10 月 26 日｜你会给 AI 单独配一台电脑吗？"
+    },
+    "description": {
+      "en": "Within ten weeks, xAI, Meta, OpenAI and Anthropic each gave their AI assistant a separate cloud computer. NVIDIA, Perplexity and the startup Ghost brought that computer onto the desk, and some people have moved a Mac mini abroad to keep using Claude. Why does AI need its own computer, and should you give it one?",
+      "zh-CN": "十周之内，xAI、Meta、OpenAI、Anthropic 都给自己的 AI 助理配了一台独立的云电脑；NVIDIA、Perplexity 和创业公司 Ghost 把它搬到桌面上；还有人为了继续用 Claude，把 Mac mini 放到了海外。AI 为什么需要自己的电脑？你该不该给它配一台？"
+    }
+  },
+  {
     "slug": "ai-agents-bypass-software-ui",
     "date": "2026-10-26",
     "title": {
