@@ -10,7 +10,7 @@ import { articleLd, breadcrumbLd, pageMetadata } from "@/lib/seo";
 import { JsonLd } from "@/components/json-ld";
 import { siteNavCopy } from "@/lib/site-nav";
 import { UPDATE_LANGUAGES } from "@/lib/site-pages";
-import { copy } from "./copy";
+import { copy, updateDate } from "./copy";
 import { href, marketHref, workHref } from "@/lib/routes";
 import { activityById, chainEvents, events as allEvents, evidenceForEvent } from "@/lib/snapshot";
 
@@ -63,7 +63,7 @@ export default async function UpdatePage({ params }: Props) {
       headline: update.title,
       description: update.summary,
       path,
-      datePublished: update.occurred_at,
+      datePublished: update.occurred_at ?? update.announced_at,
       basedOn: update.source_urls ?? more?.source_urls ?? [],
     }),
   ];
@@ -72,7 +72,7 @@ export default async function UpdatePage({ params }: Props) {
     <div className={s.page}>
       <JsonLd data={ld} />
       <Link className={s.back} href={href(language, "/updates")}>{c.back}</Link>
-      <div className={s.eyebrow}>{update.org_name} · {update.occurred_at ? update.occurred_at.slice(0, 10) : c.undated}{kind ? ` · ${zh ? kind["zh-CN"] ?? kind.en : kind.en}` : ""}</div>
+      <div className={s.eyebrow}>{update.org_name} · {updateDate(c, update)}{kind ? ` · ${zh ? kind["zh-CN"] ?? kind.en : kind.en}` : ""}</div>
       <h1 className={s.title}>{update.title}{zh && <em>{c.original}</em>}</h1>
       <p className={s.say}>{update.summary}</p>
       <p className={s.say}>{say[0]}<b>{levelText}</b>{say[1]}</p>

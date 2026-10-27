@@ -153,6 +153,8 @@ export type ChainEvent = {
   top_level: number | null;
   best_tier: string | null;
   source_urls: string[];
+  /** Only when `occurred_at` is null: the earliest source post's publication time. Older releases lack it. */
+  announced_at?: string;
 };
 
 export type EventRow = {
@@ -165,6 +167,8 @@ export type EventRow = {
   subject_key: string | null;
   identity_confidence: string | null;
   occurred_at: string | null;
+  /** Only when `occurred_at` is null: the earliest source post's publication time. Older releases lack it. */
+  announced_at?: string;
   confidence: number | null;
   primary_org_id: string | null;
   org_name: string | null;

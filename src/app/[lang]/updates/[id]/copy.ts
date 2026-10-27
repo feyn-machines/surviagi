@@ -16,6 +16,7 @@ export const copy = bilingual({
     source: "Source {i} ↗",
     original: "ORIGINAL",
     undated: "Undated",
+    announced: "Announced {date}",
     all: "All updates",
     home: "Back to the overview",
     meta: "SurviAGI",
@@ -34,8 +35,18 @@ export const copy = bilingual({
     source: "来源 {i} ↗",
     original: "原文",
     undated: "无日期",
+    announced: "{date} 宣布",
     all: "全部更新",
     home: "回到全览",
     meta: "SurviAGI",
   },
 });
+
+/**
+ * The date an update is shown under: when it happened, else when its earliest source post announced it
+ * (said as such, since the two are not the same), else nothing.
+ */
+export function updateDate(c: { undated: string; announced: string }, update: { occurred_at: string | null; announced_at?: string }): string {
+  if (update.occurred_at) return update.occurred_at.slice(0, 10);
+  return update.announced_at ? c.announced.replace("{date}", update.announced_at.slice(0, 10)) : c.undated;
+}

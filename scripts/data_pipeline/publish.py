@@ -382,6 +382,10 @@ def build(conn, ontology_version: str | None = None) -> dict:
         SELECT e.event_id, e.title, e.summary, e.kind, e.kind_vocabulary,
                e.unresolved_reason, e.subject_key, e.identity_confidence,
                e.occurred_at, e.confidence, e.primary_org_id,
+               CASE WHEN e.occurred_at IS NULL THEN coalesce(e.announced_at,
+                    (SELECT min(cs.published_at) FROM public.extracted_event_sources s
+                       JOIN public.collected_sources cs ON cs.source_id = s.source_id
+                      WHERE s.event_id = e.event_id)) END AS announced_at,
                coalesce(o.canonical_name_en, e.primary_org) AS org_name,
                o.canonical_name_zh_cn AS org_name_zh_cn,
                e.subject, e.basis, e.task, e.result, e.quote, e.schema_version,
@@ -409,6 +413,13 @@ def build(conn, ontology_version: str | None = None) -> dict:
     noticed = attention.compute(_rows(conn, attention.CAPTURES_SQL),
                                 _rows(conn, attention.LINKS_SQL, (EVENT_KIND_VOCABULARIES,)))
     series = attention.series_sizes(events)
+    # When extraction found no date for what happened, the earliest source post
+    # still says when it was announced - its own publication time, never when we
+    # collected it. Only those rows carry the field, so every dated update stays
+    # byte for byte what it was, and a site that predates the field reads past it.
+    for event in events:
+        if event.get("announced_at") is None:
+            event.pop("announced_at", None)
     for event in events:
         event["attention"] = noticed.get(event["event_id"])
         event["series_size"] = series.get(event.get("subject_key"))
@@ -811,6 +822,7 @@ def build(conn, ontology_version: str | None = None) -> dict:
 
     market_of = {a["activity_id"]: a["market_id"] for a in activities}
     source_urls = {e["event_id"]: (e.get("source_urls") or []) for e in events}
+    announced = {e["event_id"]: e["announced_at"] for e in events if e.get("announced_at")}
 
     # The events that bore on some activity. The other 325 read as updates that
     # turned out to say nothing about work - they belong on /updates, and
@@ -852,6 +864,7 @@ def build(conn, ontology_version: str | None = None) -> dict:
             "subject_key": head.get("subject_key"),
             "series_size": head.get("series_size"),
             "attention": head.get("attention"),
+            **({"announced_at": announced[event_id]} if event_id in announced else {}),
         })
     chain_events.sort(key=lambda r: (r["occurred_at"] or "", r["event_id"]))
 

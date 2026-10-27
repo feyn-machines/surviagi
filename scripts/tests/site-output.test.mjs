@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { request as httpRequest } from "node:http";
 import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, test } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -372,6 +373,30 @@ test("work, market, occupation and topic pages name a Markdown copy that says wh
   if (article) {
     const res = await fetch(`${site.base}${article}/raw.md`);
     assert.equal(res.headers.get("link"), `<${SITE}${article}>; rel="canonical"`);
+  }
+});
+
+test("an update with no date of its own is shown and marked up under the date its source announced it", { skip: !HAS_SNAPSHOT, timeout: 60000 }, async () => {
+  // A copy of the release in which one update lost the date of what happened and kept its earliest post's.
+  const dir = mkdtempSync(join(tmpdir(), "surviagi-announced-"));
+  cpSync(SNAPSHOT_DIR, dir, { recursive: true });
+  const chain = JSON.parse(readFileSync(join(dir, "chain.json"), "utf8"));
+  const event = chain.events[0];
+  Object.assign(event, { occurred_at: null, announced_at: "2026-08-30T09:00:00+00:00" });
+  writeFileSync(join(dir, "chain.json"), JSON.stringify(chain));
+  const { base, proc } = await startServer({ SNAPSHOT_DIR: dir });
+  try {
+    for (const [prefix, line] of [["", "Announced 2026-08-30"], ["/zh-CN", "2026-08-30 宣布"]]) {
+      const page = await (await fetch(`${base}${prefix}/updates/${event.event_id}`)).text();
+      assert.ok(page.includes(line), `${prefix}: the page does not say when it was announced`);
+      const ld = [...page.matchAll(/<script type="application\/ld\+json"[^>]*>([^<]+)<\/script>/g)].flatMap((m) => [JSON.parse(m[1])].flat());
+      assert.ok(ld.some((d) => d["@type"] === "Article" && d.datePublished === "2026-08-30T09:00:00+00:00"), `${prefix}: no datePublished`);
+      const md = await (await fetch(`${base}${prefix}/updates/${event.event_id}/raw.md`)).text();
+      assert.ok(md.includes(line), `${prefix}/raw.md does not say when it was announced`);
+    }
+  } finally {
+    await stop(proc);
+    rmSync(dir, { recursive: true, force: true });
   }
 });
 
