@@ -35,6 +35,12 @@ function cleanText(value: unknown, max: number, allowEmpty = false): string | nu
   return trimmed;
 }
 
+function rawText(value: unknown, max: number, allowEmpty = false): string | null {
+  if (typeof value !== "string" || value.includes("\u0000") || value.length > max) return null;
+  if (!allowEmpty && !value.trim()) return null;
+  return value;
+}
+
 function articleMarkdown(value: unknown): string | null {
   if (typeof value !== "string" || value.includes("\u0000") || !value.trim() || value.length > MAX_MARKDOWN) return null;
   return value;
@@ -43,9 +49,9 @@ function articleMarkdown(value: unknown): string | null {
 function parseAnnotation(value: unknown): AnnotationInput | null {
   if (!isRecord(value)) return null;
   const paragraphKey = cleanText(value.paragraphKey, 160);
-  const selectedText = cleanText(value.selectedText, 3000, true);
-  const contextBefore = cleanText(value.contextBefore ?? "", 600, true);
-  const contextAfter = cleanText(value.contextAfter ?? "", 600, true);
+  const selectedText = rawText(value.selectedText, 3000, true);
+  const contextBefore = rawText(value.contextBefore ?? "", 600, true);
+  const contextAfter = rawText(value.contextAfter ?? "", 600, true);
   const comment = cleanText(value.comment, 3000);
   if (paragraphKey === null || selectedText === null || contextBefore === null || contextAfter === null || comment === null) return null;
   return { paragraphKey, selectedText, contextBefore, contextAfter, comment };

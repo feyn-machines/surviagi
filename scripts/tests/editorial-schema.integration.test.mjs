@@ -167,7 +167,7 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       const reviewBody = {
         articleId: 'integration-test', version: 2, language: 'en', contentSha256: 'c'.repeat(64),
         reviewScope: 'readability', decision: 'request_revision', note: 'Explain the limitation earlier.',
-        annotations: [{ paragraphKey: 'p:1:example', selectedText: 'Body 2', contextBefore: 'before', contextAfter: 'after', comment: 'Name the comparison group.' }],
+        annotations: [{ paragraphKey: 'p:1:example', selectedText: ' Body 2 ', contextBefore: ' before ', contextAfter: ' after ', comment: 'Name the comparison group.' }],
         edit: { afterMarkdown: 'Revised Body 2' },
       };
       const wrongOrigin = await fetch(`${base}/api/admin/editorial`, { method: 'POST', headers: { ...headers, origin: 'https://attacker.example' }, body: JSON.stringify(reviewBody) });
@@ -181,6 +181,8 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       assert.equal(reviewed.reviews[0].review_scope, 'readability');
       assert.equal(reviewed.reviews[0].decision, 'request_revision');
       assert.equal(reviewed.annotations[0].paragraph_key, 'p:1:example');
+      assert.equal(reviewed.annotations[0].selected_text, ' Body 2 ');
+      assert.equal(reviewed.annotations[0].context_before, ' before ');
       assert.equal(reviewed.edits[0].before_markdown.includes('Body 2'), true);
       assert.equal(reviewed.edits[0].after_markdown, 'Revised Body 2');
 
