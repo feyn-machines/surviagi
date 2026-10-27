@@ -1,0 +1,7 @@
+.publicationState { display: inline-block; color: var(--ah-color-warning); font-family: var(--ah-font-mono); font-size: 11px; letter-spacing: 0.06em; }
+.tableScroll { max-width: 100%; overflow-x: auto; margin: 0 0 var(--ah-space-5); border: 1px solid var(--ah-color-line); }
+.tableScroll table { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.55; }
+.tableScroll th, .tableScroll td { padding: 12px 14px; border-bottom: 1px solid var(--ah-color-line); text-align: left; vertical-align: top; }
+.tableScroll th { color: var(--ah-color-text); background: color-mix(in srgb, var(--ah-color-line) 35%, transparent); font-size: 12px; font-weight: 600; }
+.tableScroll td { color: var(--ah-color-muted); }
+.tableScroll tr:last-child td { border-bottom: 0; }

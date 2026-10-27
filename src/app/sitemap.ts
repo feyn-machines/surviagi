@@ -3,6 +3,7 @@ import { LANGUAGES, type Language } from "@/lib/i18n";
 import { absoluteUrl } from "@/lib/seo";
 import { FIXED_PATHS, UPDATE_LANGUAGES, detailPages, evidenceDates } from "@/lib/site-pages";
 import { manifest } from "@/lib/snapshot";
+import { publicPreviews } from "@/lib/editorial-store";
 import publishedArticles from "@/content/articles.json";
 
 export const dynamic = "force-dynamic";
@@ -28,12 +29,29 @@ type Page = { path: string; lastModified?: string; languages?: readonly Language
  */
 let kept: { key: string; entries: MetadataRoute.Sitemap } | null = null;
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const built = manifest()?.generated_at;
   // The list changes only when another data release is loaded.
   const key = built ?? "";
   if (kept?.key !== key) kept = { key, entries: entries(built) };
-  return kept.entries;
+  const previewEntries = await Promise.all(LANGUAGES.map(async (language) =>
+    (await publicPreviews(language)).map((item) => ({
+      url: absoluteUrl(language, `/articles/previews/${item.articleId}/v${item.version}`),
+      lastModified: toTheSecond(item.createdAt),
+      alternates: {
+        languages: {
+          ...Object.fromEntries(LANGUAGES.map((other) => [other, absoluteUrl(other, `/articles/previews/${item.articleId}/v${item.version}`)])),
+          "x-default": absoluteUrl("en", `/articles/previews/${item.articleId}/v${item.version}`),
+        },
+      },
+    })),
+  ));
+  const hasPreviews = previewEntries.some((items) => items.length > 0);
+  const directory = hasPreviews ? LANGUAGES.map((language) => ({
+    url: absoluteUrl(language, "/articles/previews"),
+    alternates: { languages: { ...Object.fromEntries(LANGUAGES.map((other) => [other, absoluteUrl(other, "/articles/previews")])) , "x-default": absoluteUrl("en", "/articles/previews") } },
+  })) : [];
+  return [...kept.entries, ...directory, ...previewEntries.flat()];
 }
 
 function entries(built: string | undefined): MetadataRoute.Sitemap {
