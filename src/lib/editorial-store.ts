@@ -19,8 +19,10 @@ export type PublicPreview = Pick<EditorialArticle,
 >;
 
 export type ApprovedEditorialSummary = Pick<EditorialArticle,
-  "articleId" | "version" | "language" | "title" | "summary" | "createdAt"
+  "articleId" | "version" | "language" | "title" | "summary" | "sourceCutoff" | "createdAt"
 >;
+
+export type EditorialPublicationPointers = { previewVersion: number | null; approvedVersion: number | null };
 
 export type PublicEditorialAgentArticle = EditorialArticle & {
   revisionId: string;
@@ -274,9 +276,10 @@ export async function approvedEditorialArticles(language: Language): Promise<App
     language: Language;
     title: string;
     summary: string;
+    source_cutoff: Date | string;
     created_at: Date | string;
   }>(
-    `SELECT a.article_id, v.version, l.language, l.title, l.summary, v.created_at
+    `SELECT a.article_id, v.version, l.language, l.title, l.summary, v.source_cutoff, v.created_at
        FROM editorial.articles a
        JOIN editorial.publications p USING (article_id)
        JOIN editorial.versions v ON v.article_id = p.article_id AND v.version = p.approved_version
@@ -291,8 +294,25 @@ export async function approvedEditorialArticles(language: Language): Promise<App
     language: row.language,
     title: row.title,
     summary: row.summary,
+    sourceCutoff: iso(row.source_cutoff),
     createdAt: iso(row.created_at),
   }));
+}
+
+/** Current public pointers for the administrator workflow; withdrawn articles have no public state to act on. */
+export async function publicEditorialPointers(articleId: string): Promise<EditorialPublicationPointers | null> {
+  if (!SLUG.test(articleId)) return null;
+  const db = databasePool();
+  if (!db) return null;
+  const { rows } = await db.query<{ preview_version: number | null; approved_version: number | null }>(
+    `SELECT p.preview_version, p.approved_version
+       FROM editorial.publications p
+       JOIN editorial.articles a USING (article_id)
+      WHERE p.article_id = $1 AND a.withdrawn_at IS NULL`,
+    [articleId],
+  );
+  const row = rows[0];
+  return row ? { previewVersion: row.preview_version, approvedVersion: row.approved_version } : null;
 }
 
 /** Resolve the stable regular article address to the latest approved version only. */

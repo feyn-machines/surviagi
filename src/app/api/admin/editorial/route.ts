@@ -1,7 +1,7 @@
 import { json, notFound, readJson, sameOrigin } from "@/lib/api";
 import { appEnabled } from "@/lib/app-config";
 import { adminOrNull, appPool } from "@/lib/auth";
-import { publicEditorialArticle } from "@/lib/editorial-store";
+import { publicEditorialArticle, publicEditorialPointers } from "@/lib/editorial-store";
 import type { Language } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 const ARTICLE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const HASH = /^[0-9a-f]{64}$/;
 const LANGUAGES = ["en", "zh-CN"] as const;
-const SCOPES = ["readability", "language_quality", "factual_accuracy", "source_quality"] as const;
+const SCOPES = ["readability", "language_quality", "factual_accuracy", "source_quality", "publication"] as const;
 const DECISIONS = ["comment", "request_revision", "hold", "approve", "withdraw"] as const;
 const MAX_BODY = 192 * 1024;
 const MAX_MARKDOWN = 96 * 1024;
@@ -89,6 +89,8 @@ export async function GET(request: Request) {
   try {
     const article = await publicEditorialArticle(selected.articleId, selected.version, selected.language);
     if (!article) return notFound();
+    const currentPointers = await publicEditorialPointers(selected.articleId);
+    if (!currentPointers) return notFound();
     const db = appPool();
     const reviews = await db.query<{
       review_id: string;
@@ -121,7 +123,7 @@ export async function GET(request: Request) {
           ),
         ])
       : [{ rows: [] }, { rows: [] }];
-    return json({ article, reviews: reviews.rows, annotations: annotations.rows, edits: edits.rows });
+    return json({ article, currentPointers, reviews: reviews.rows, annotations: annotations.rows, edits: edits.rows });
   } catch (error) {
     console.error(`[admin editorial] read failed: ${error instanceof Error ? error.message : "unknown error"}`);
     return json({ error: "unavailable" }, 503);
@@ -177,6 +179,11 @@ export async function POST(request: Request) {
         "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
         [`editorial-review:${article.articleId}:v${article.version}`],
       );
+      const stillPublic = await publicEditorialArticle(article.articleId, article.version, article.language);
+      if (!stillPublic || stillPublic.contentSha256 !== article.contentSha256) {
+        await client.query("ROLLBACK");
+        return json({ error: "stale_version" }, 409);
+      }
       const review = await client.query<{ review_id: string }>(
         `INSERT INTO app.editorial_reviews
           (article_id, version, language, content_sha256, review_scope, decision, actor_kind, actor_id, note)

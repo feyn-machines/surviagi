@@ -17,7 +17,9 @@ test('editorial schema enforces immutable bilingual public versions and isolated
     const appCore = await readFile(new URL('../../db/app/001_app.sql', import.meta.url), 'utf8');
     const appAgent = await readFile(new URL('../../db/app/002_agent_access.sql', import.meta.url), 'utf8');
     const editorialReview = await readFile(new URL('../../db/app/003_editorial_review.sql', import.meta.url), 'utf8');
+    const editorialPublicationScope = await readFile(new URL('../../db/app/004_editorial_publication_scope.sql', import.meta.url), 'utf8');
     const editorialApproval = await readFile(new URL('../../db/published/003_editorial_approval.sql', import.meta.url), 'utf8');
+    const editorialWithdrawal = await readFile(new URL('../../db/published/004_editorial_withdrawal.sql', import.meta.url), 'utf8');
     const grants = await readFile(new URL('../../deploy/db/grants.sql', import.meta.url), 'utf8');
     await admin.query("CREATE ROLE oaw_kg_writer LOGIN PASSWORD 'writer-pass'; CREATE ROLE oaw_site LOGIN PASSWORD 'site-pass'; CREATE ROLE oaw_app LOGIN PASSWORD 'app-pass'; ALTER ROLE oaw_app SET search_path = app; CREATE SCHEMA kg AUTHORIZATION oaw_kg_writer; CREATE SCHEMA app AUTHORIZATION oaw_app");
     await admin.query('GRANT CONNECT, CREATE ON DATABASE postgres TO oaw_kg_writer');
@@ -33,10 +35,14 @@ test('editorial schema enforces immutable bilingual public versions and isolated
     await runPsql(appAgent, withCredentials('oaw_app', 'app-pass'));
     await runPsql(editorialReview, withCredentials('oaw_app', 'app-pass'));
     await runPsql(editorialReview, withCredentials('oaw_app', 'app-pass'));
+    await runPsql(editorialPublicationScope, withCredentials('oaw_app', 'app-pass'));
+    await runPsql(editorialPublicationScope, withCredentials('oaw_app', 'app-pass'));
     await runPsql(editorial, withCredentials('oaw_kg_writer', 'writer-pass'));
     await runPsql(grants, withCredentials('oaw_kg_writer', 'writer-pass'));
     await runPsql(editorialApproval);
     await runPsql(editorialApproval);
+    await runPsql(editorialWithdrawal);
+    await runPsql(editorialWithdrawal);
 
     await admin.query("INSERT INTO editorial.articles(article_id) VALUES ('integration-test')");
     await admin.query("INSERT INTO editorial.versions(article_id, version, source_cutoff, created_by) VALUES ('integration-test', 1, now(), 'test')");
@@ -78,6 +84,7 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       assert.equal((await admin.query("SELECT tableowner FROM pg_tables WHERE schemaname = 'editorial' AND tablename = 'localizations'")).rows[0].tableowner, 'oaw_kg_writer');
       assert.equal((await writer.query("SELECT count(*)::int AS count FROM editorial.localizations")).rows[0].count, 4);
       assert.equal((await admin.query("SELECT pg_get_userbyid(proowner) AS owner FROM pg_proc WHERE proname = 'approve_public_preview'")).rows[0].owner, 'oaw_kg_writer');
+      assert.equal((await admin.query("SELECT pg_get_userbyid(proowner) AS owner FROM pg_proc WHERE proname = 'withdraw_public_article'")).rows[0].owner, 'oaw_kg_writer');
       await site.query('SELECT * FROM editorial.publications');
       await assert.rejects(site.query("UPDATE editorial.publications SET preview_version = 1 WHERE article_id = 'integration-test'"), /permission denied/);
       await assert.rejects(app.query('SELECT * FROM editorial.publications'), /permission denied/);
@@ -86,6 +93,7 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       await assert.rejects(site.query('SELECT * FROM editorial.review_approval_evidence'), /permission denied/);
       await assert.rejects(app.query('SELECT * FROM editorial.review_approval_evidence'), /permission denied/);
       await assert.rejects(site.query("SELECT editorial.approve_public_preview('integration-test', 2, repeat('c', 64), repeat('d', 64))"), /permission denied/);
+      await assert.rejects(site.query("SELECT editorial.withdraw_public_article('integration-test', 2, 1, 'This reason is long enough for test')"), /permission denied/);
       await assert.rejects(app.query("UPDATE editorial.publications SET approved_version = 2 WHERE article_id = 'integration-test'"), /permission denied/);
       await assert.rejects(app.query("SELECT editorial.approve_public_preview('integration-test', 2, repeat('c', 64), repeat('d', 64))"), (error) => error.code === '40001');
       assert.equal((await admin.query("SELECT has_schema_privilege('oaw_app', 'editorial', 'CREATE') AS can_create")).rows[0].can_create, false);
@@ -134,6 +142,7 @@ test('editorial schema enforces immutable bilingual public versions and isolated
         /later version/,
       );
       assert.equal((await app.query('SELECT count(*)::int AS count FROM app.editorial_review_annotations')).rows[0].count, 1);
+      assert.equal((await app.query("SELECT review_scope FROM app.editorial_reviews WHERE review_scope = 'publication' ")).rows.length, 0);
       assert.equal((await app.query('SELECT applied_version FROM app.editorial_feedback_applications')).rows[0].applied_version, 2);
       await assert.rejects(app.query("UPDATE app.editorial_reviews SET note = 'rewritten' WHERE review_id = $1", [reviewId]), /append-only/);
       await assert.rejects(app.query('DELETE FROM app.editorial_review_edits WHERE edit_id = $1', [edit.rows[0].edit_id]), /append-only/);
@@ -173,6 +182,7 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       assert.equal((await fetch(reviewUrl, { headers: { cookie: authCookie(readerToken) } })).status, 404);
       const headers = { cookie: authCookie(adminToken), origin: base, 'content-type': 'application/json' };
       const approveUrl = `${base}/api/admin/editorial/approve`;
+      const withdrawalUrl = `${base}/api/admin/editorial/withdraw`;
       const approveBody = { articleId: 'integration-test', version: 2, contentSha256: { en: 'c'.repeat(64), 'zh-CN': 'd'.repeat(64) } };
       assert.equal((await fetch(approveUrl, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(approveBody) })).status, 404);
       assert.equal((await fetch(approveUrl, { method: 'POST', headers: { cookie: authCookie(readerToken), origin: base, 'content-type': 'application/json' }, body: JSON.stringify(approveBody) })).status, 404);
@@ -188,6 +198,7 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       const adminQueueHtml = await adminQueue.text();
       assert.match(adminQueueHtml, /Article review/);
       assert.match(adminQueueHtml, /Integration robotics automation preview/);
+      assert.match(adminQueueHtml, /Integration robotics automation report/, 'the review queue includes the current approved version as well as a preview');
       assert.match(adminQueueHtml, /集成机器人自动化预发布/);
       assert.match(adminQueueHtml, /Review both languages/);
       const selectedReview = await fetch(`${base}/admin/editorial?articleId=integration-test&version=v2`, { headers: { cookie: authCookie(adminToken) } });
@@ -413,7 +424,29 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       assert.equal((await fetch(approveUrl, { method: 'POST', headers, body: JSON.stringify({ articleId: 'integration-test', version: 1, contentSha256: { en: 'a'.repeat(64), 'zh-CN': 'b'.repeat(64) } }) })).status, 409);
       await admin.query("UPDATE editorial.publications SET preview_version = 2 WHERE article_id = 'integration-test'");
       assert.equal((await fetch(`${base}/articles/previews/integration-test/v3`)).status, 404);
-      await admin.query("UPDATE editorial.articles SET withdrawn_at = now(), withdrawal_reason = 'integration test' WHERE article_id = 'integration-test'");
+      await admin.query("UPDATE editorial.publications SET preview_version = 3 WHERE article_id = 'integration-test'");
+      const withdrawalBody = { articleId: 'integration-test', expectedPreviewVersion: 3, expectedApprovedVersion: 2, reason: 'The source was corrected and the public article is misleading.' };
+      assert.equal((await fetch(withdrawalUrl, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(withdrawalBody) })).status, 404);
+      assert.equal((await fetch(withdrawalUrl, { method: 'POST', headers: { cookie: authCookie(readerToken), origin: base, 'content-type': 'application/json' }, body: JSON.stringify(withdrawalBody) })).status, 404);
+      assert.equal((await fetch(withdrawalUrl, { method: 'POST', headers: { ...headers, origin: 'https://attacker.example' }, body: JSON.stringify(withdrawalBody) })).status, 403);
+      assert.equal((await fetch(withdrawalUrl, { method: 'POST', headers, body: JSON.stringify({ ...withdrawalBody, reason: 'short' }) })).status, 400);
+      assert.equal((await fetch(withdrawalUrl, { method: 'POST', headers, body: JSON.stringify({ ...withdrawalBody, expectedPreviewVersion: 2 }) })).status, 409);
+      assert.equal((await fetch(withdrawalUrl, { method: 'POST', headers, body: JSON.stringify(withdrawalBody) })).status, 422);
+      const recordWithdrawal = async (language, hash, note) => fetch(`${base}/api/admin/editorial`, {
+        method: 'POST', headers,
+        body: JSON.stringify({ articleId: 'integration-test', version: 3, language, contentSha256: hash,
+          reviewScope: 'publication', decision: 'withdraw', note }),
+      });
+      assert.equal((await recordWithdrawal('en', 'e'.repeat(64), 'The corrected source invalidates the English claims.')).status, 200);
+      assert.equal((await fetch(withdrawalUrl, { method: 'POST', headers, body: JSON.stringify(withdrawalBody) })).status, 422);
+      assert.equal((await recordWithdrawal('zh-CN', 'f'.repeat(64), '来源更正使中文文章结论不再成立。')).status, 200);
+      const withdrawn = await fetch(withdrawalUrl, { method: 'POST', headers, body: JSON.stringify(withdrawalBody) });
+      assert.equal(withdrawn.status, 200);
+      assert.deepEqual(await withdrawn.json(), { articleId: 'integration-test', publicationChanged: true });
+      const withdrawnAgain = await fetch(withdrawalUrl, { method: 'POST', headers, body: JSON.stringify(withdrawalBody) });
+      assert.deepEqual(await withdrawnAgain.json(), { articleId: 'integration-test', publicationChanged: false });
+      assert.equal((await admin.query("SELECT count(*)::int AS count FROM editorial.publication_history WHERE article_id = 'integration-test' AND version = 3 AND action = 'withdraw'")).rows[0].count, 1);
+      assert.match((await admin.query("SELECT withdrawal_reason FROM editorial.articles WHERE article_id = 'integration-test'")).rows[0].withdrawal_reason, /source was corrected/);
       assert.equal((await fetch(`${base}${previewPath}`)).status, 404);
       assert.equal((await fetch(`${base}${previewPath}/raw.md`)).status, 404);
       assert.equal((await fetch(`${base}/articles/approved/integration-test`)).status, 404);

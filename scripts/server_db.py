@@ -23,8 +23,9 @@ DEPLOY_DB = ROOT / "deploy" / "db"
 SCHEMA_SQL = ROOT / "db" / "published" / "001_kg.sql"
 EDITORIAL_SQL = ROOT / "db" / "published" / "002_editorial.sql"
 EDITORIAL_APPROVAL_SQL = ROOT / "db" / "published" / "003_editorial_approval.sql"
+EDITORIAL_WITHDRAWAL_SQL = ROOT / "db" / "published" / "004_editorial_withdrawal.sql"
 APP_SQL_DIR = ROOT / "db" / "app"
-APP_FILE_NAME = re.compile(r"[0-9]{3}_[a-z_]+\.sql")
+APP_FILE_NAME = re.compile(r"[0-9]{3,4}_[a-z_]+\.sql")
 
 DB_PORT = 5434
 DB_NAME = "openaiwill"
@@ -89,7 +90,8 @@ def app_sql_files() -> dict[str, str]:
 
 
 def setup_script(target: dict, compose_text: str, roles_sql: str, schema_sql: str, grants_sql: str,
-                 app_sql: dict[str, str], editorial_sql: str = "", editorial_approval_sql: str = "") -> str:
+                 app_sql: dict[str, str], editorial_sql: str = "", editorial_approval_sql: str = "",
+                 editorial_withdrawal_sql: str = "") -> str:
     """The one script `pnpm db:setup` runs on the server (sent on stdin). Repeatable.
 
     Passwords are generated here, only when db.env does not exist, written with umask 077, and
@@ -190,13 +192,14 @@ if ! grep -q '^BETTER_AUTH_URL=' {site_env}; then
   echo 'added BETTER_AUTH_URL to site.env'
 fi
 chmod 600 {site_env}
-{put('compose.yml', compose_text, 'OPENAIWILL_COMPOSE_EOF')}{put('roles.sql', roles_sql, 'OPENAIWILL_ROLES_EOF')}{put('001_kg.sql', schema_sql, 'OPENAIWILL_SCHEMA_EOF')}{put('002_editorial.sql', editorial_sql, 'OPENAIWILL_EDITORIAL_EOF')}{put('003_editorial_approval.sql', editorial_approval_sql, 'OPENAIWILL_EDITORIAL_APPROVAL_EOF')}{put('grants.sql', grants_sql, 'OPENAIWILL_GRANTS_EOF')}{app_puts}cd {db}
+{put('compose.yml', compose_text, 'OPENAIWILL_COMPOSE_EOF')}{put('roles.sql', roles_sql, 'OPENAIWILL_ROLES_EOF')}{put('001_kg.sql', schema_sql, 'OPENAIWILL_SCHEMA_EOF')}{put('002_editorial.sql', editorial_sql, 'OPENAIWILL_EDITORIAL_EOF')}{put('003_editorial_approval.sql', editorial_approval_sql, 'OPENAIWILL_EDITORIAL_APPROVAL_EOF')}{put('004_editorial_withdrawal.sql', editorial_withdrawal_sql, 'OPENAIWILL_EDITORIAL_WITHDRAWAL_EOF')}{put('grants.sql', grants_sql, 'OPENAIWILL_GRANTS_EOF')}{app_puts}cd {db}
 sudo docker compose -p openaiwill-db --env-file db.env up -d --wait --wait-timeout 180 </dev/null
 {psql} -U postgres -d postgres < roles.sql
 {psql} -U {WRITER} -d {DB_NAME} < 001_kg.sql
 {psql} -U {WRITER} -d {DB_NAME} < 002_editorial.sql
 {psql} -U {WRITER} -d {DB_NAME} < grants.sql
 {app_apply}{psql} -U postgres -d {DB_NAME} < 003_editorial_approval.sql
+{psql} -U postgres -d {DB_NAME} < 004_editorial_withdrawal.sql
 {check.format(env='db.env', password='$OAW_KG_WRITER_PASSWORD', role=WRITER, db=DB_NAME, sql='SELECT count(*) FROM kg.releases')} >/dev/null
 n=$({check.format(env='db.env', password='$OAW_SITE_PASSWORD', role=SITE_ROLE, db=DB_NAME, sql='SELECT count(*) FROM kg.releases')})
 if {wrong} >/dev/null 2>&1; then echo 'password authentication is not being enforced on the container network' >&2; exit 1; fi
@@ -223,7 +226,7 @@ def setup_db() -> None:
     target = site.load_target()
     script = setup_script(target, (DEPLOY_DB / "compose.yml").read_text(), (DEPLOY_DB / "roles.sql").read_text(),
                           SCHEMA_SQL.read_text(), (DEPLOY_DB / "grants.sql").read_text(), app_sql_files(),
-                          EDITORIAL_SQL.read_text(), EDITORIAL_APPROVAL_SQL.read_text())
+                          EDITORIAL_SQL.read_text(), EDITORIAL_APPROVAL_SQL.read_text(), EDITORIAL_WITHDRAWAL_SQL.read_text())
     remote_stdin(target, script)
     sync_server_admins()
 

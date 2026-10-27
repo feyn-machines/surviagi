@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/data-page";
 import { appEnabled } from "@/lib/app-config";
 import { adminOrNull } from "@/lib/auth";
-import { publicPreviews, type PublicPreview } from "@/lib/editorial-store";
+import { approvedEditorialArticles, publicPreviews, type ApprovedEditorialSummary, type PublicPreview } from "@/lib/editorial-store";
 import { bilingual, localizedPath } from "@/lib/i18n";
 import { getLocale } from "@/lib/locale";
 import { href as siteHref } from "@/lib/routes";
@@ -20,8 +20,8 @@ const copy = bilingual({
     title: "Article review",
     eyebrow: "ADMIN · EDITORIAL",
     back: "← Admin",
-    queue: "Public preprints",
-    empty: "There are no public article previews to review.",
+    queue: "Public article versions",
+    empty: "There are no public article versions to review.",
     open: "Review both languages",
     version: "Version",
     cutoff: "Evidence cutoff",
@@ -31,8 +31,8 @@ const copy = bilingual({
     title: "文章审核",
     eyebrow: "后台 · 编辑",
     back: "← 后台",
-    queue: "公开预发布",
-    empty: "目前没有可审核的公开预发布文章。",
+    queue: "公开文章版本",
+    empty: "目前没有可审核的公开文章版本。",
     open: "审核中英文版本",
     version: "版本",
     cutoff: "证据截止时间",
@@ -59,13 +59,23 @@ export default async function EditorialAdminPage({ searchParams }: Props) {
   const version = /^v[1-9][0-9]{0,8}$/.test(versionValue) ? Number(versionValue.slice(1)) : null;
 
   let previews: PublicPreview[] = [];
+  let approved: ApprovedEditorialSummary[] = [];
   try {
-    previews = await publicPreviews("en");
+    [previews, approved] = await Promise.all([publicPreviews("en"), approvedEditorialArticles("en")]);
   } catch (error) {
     console.error(`[admin editorial] preview queue failed: ${error instanceof Error ? error.message : "unknown error"}`);
   }
-  const chinese = new Map((await publicPreviews("zh-CN").catch(() => [])).map((item) => [`${item.articleId}:v${item.version}`, item]));
-  const selected = articleId && version ? previews.some((item) => item.articleId === articleId && item.version === version) : false;
+  const [chinesePreviews, chineseApproved] = await Promise.all([
+    publicPreviews("zh-CN").catch(() => []),
+    approvedEditorialArticles("zh-CN").catch(() => []),
+  ]);
+  const chinese = new Map([...chineseApproved, ...chinesePreviews].map((item) => [`${item.articleId}:v${item.version}`, item]));
+  const versions = new Map<string, (PublicPreview | ApprovedEditorialSummary)>(
+    approved.map((item) => [`${item.articleId}:v${item.version}`, item]),
+  );
+  for (const preview of previews) versions.set(`${preview.articleId}:v${preview.version}`, preview);
+  const queue = [...versions.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt) || a.articleId.localeCompare(b.articleId));
+  const selected = articleId && version ? queue.some((item) => item.articleId === articleId && item.version === version) : false;
 
   return (
     <div className={s.page}>
@@ -73,9 +83,9 @@ export default async function EditorialAdminPage({ searchParams }: Props) {
       <PageHeader eyebrow={c.eyebrow} title={c.title} />
       <section aria-labelledby="editorial-queue-heading">
         <h2 className={s.sectionTitle} id="editorial-queue-heading">{c.queue}</h2>
-        {previews.length === 0 ? <p className={s.empty}>{c.empty}</p> : (
+        {queue.length === 0 ? <p className={s.empty}>{c.empty}</p> : (
           <ul className={s.queue}>
-            {previews.map((english) => {
+            {queue.map((english) => {
               const key = `${english.articleId}:v${english.version}`;
               const zh = chinese.get(key);
               const active = selected && articleId === english.articleId && version === english.version;

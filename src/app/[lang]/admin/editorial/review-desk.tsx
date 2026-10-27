@@ -4,7 +4,7 @@ import { useCallback, useEffect, useId, useState, type FormEvent } from "react";
 import styles from "./review.module.css";
 
 type Language = "en" | "zh-CN";
-type Scope = "readability" | "language_quality" | "factual_accuracy" | "source_quality";
+type Scope = "readability" | "language_quality" | "factual_accuracy" | "source_quality" | "publication";
 type Decision = "comment" | "request_revision" | "hold" | "approve" | "withdraw";
 type Annotation = { annotation_id: string; review_id: string; paragraph_key: string; selected_text: string; context_before: string; context_after: string; comment: string };
 type Review = { review_id: string; review_scope: Scope; decision: Decision; actor_kind: string; actor_id: string; note: string; created_at: string };
@@ -21,7 +21,7 @@ type Article = {
   createdAt: string;
   status: "preview" | "approved";
 };
-type Detail = { article: Article; reviews: Review[]; annotations: Annotation[]; edits: Edit[] };
+type Detail = { article: Article; currentPointers: { previewVersion: number | null; approvedVersion: number | null }; reviews: Review[]; annotations: Annotation[]; edits: Edit[] };
 
 const copy = {
   en: {
@@ -34,10 +34,10 @@ const copy = {
     cutoff: "Evidence cutoff",
     hash: "Content hash",
     scope: "Review scope",
-    scopes: { readability: "Readability", language_quality: "Language quality", factual_accuracy: "Factual accuracy", source_quality: "Source quality" },
+    scopes: { readability: "Readability", language_quality: "Language quality", factual_accuracy: "Factual accuracy", source_quality: "Source quality", publication: "Publication" },
     decision: "Decision recorded",
     decisions: { comment: "Comment", request_revision: "Request revision", hold: "Hold", approve: "Approve this version", withdraw: "Withdraw this article" },
-    publishBoundary: "Approval and withdrawal are recorded for review history only. This action does not publish or withdraw the public article.",
+    publishBoundary: "Approval switches the approved-version pointer. A withdrawal decision is only a review record; use the bilingual withdrawal action below to remove the article from public access.",
     note: "Review note",
     paragraph: "Paragraph key",
     quote: "Selected text",
@@ -67,6 +67,19 @@ const copy = {
     needBothApprovals: "Record a current human approval for both languages before approving this version.",
     approvalConflict: "The public preview changed during review. Reload the article list and review the current version.",
     approvalFailed: "Could not approve the version. Try again.",
+    withdrawalTitle: "Withdraw the public article",
+    withdrawalHelp: "First record the latest publication-scope withdrawal decision for this exact version in both language panels. The action withdraws all versions and removes the article from public pages and Agent search.",
+    withdrawalReason: "Public withdrawal reason",
+    withdrawalReasonHelp: "20–1000 characters. This reason is stored with the private publication record.",
+    withdraw: "Withdraw from public access",
+    withdrawing: "Withdrawing…",
+    withdrawn: "The article has been withdrawn from public access.",
+    alreadyWithdrawn: "The article was already withdrawn.",
+    needBothWithdrawals: "Record the latest publication-scope withdrawal decision for both languages on the current public version first.",
+    withdrawalConflict: "Public pointers changed during review. Refresh the queue and review the current version.",
+    withdrawalFailed: "Could not withdraw the article. Check the current review decisions and try again.",
+    confirmWithdrawal: "Withdraw every public version of this article? This cannot be undone here.",
+    wrongWithdrawalVersion: "Open the current public version in the queue before recording withdrawal decisions.",
   },
   "zh-CN": {
     language: "中文审核",
@@ -78,10 +91,10 @@ const copy = {
     cutoff: "证据截止时间",
     hash: "内容 hash",
     scope: "审核范围",
-    scopes: { readability: "可读性", language_quality: "语言表达", factual_accuracy: "事实准确性", source_quality: "来源质量" },
+    scopes: { readability: "可读性", language_quality: "语言表达", factual_accuracy: "事实准确性", source_quality: "来源质量", publication: "发布范围" },
     decision: "记录审核决定",
     decisions: { comment: "留下意见", request_revision: "要求修改", hold: "暂缓", approve: "记录批准意见", withdraw: "记录撤回意见" },
-    publishBoundary: "批准或撤回决定只写入审核记录；此操作不会发布或撤回公开文章。",
+    publishBoundary: "批准会切换正式版本指针。撤回决定本身只写审核记录；请在下方通过双语撤回操作将文章从公开访问中移除。",
     note: "审核意见",
     paragraph: "段落标识",
     quote: "选中的原文",
@@ -111,10 +124,23 @@ const copy = {
     needBothApprovals: "请先分别为中英文版本记录最新的人工批准意见。",
     approvalConflict: "审核期间公开预览已变化。请刷新文章列表，重新审核当前版本。",
     approvalFailed: "批准失败，请重试。",
+    withdrawalTitle: "撤回公开文章",
+    withdrawalHelp: "先在中英文审核栏分别为当前这个确切版本记录最新的“发布范围 · 撤回”决定。执行后所有版本都会停止公开，并从文章页面和 Agent 搜索中移除。",
+    withdrawalReason: "公开撤回原因",
+    withdrawalReasonHelp: "20–1000 个字符。原因会与私有发布记录一同保存。",
+    withdraw: "从公开访问中撤回",
+    withdrawing: "正在撤回…",
+    withdrawn: "文章已从公开访问中撤回。",
+    alreadyWithdrawn: "文章此前已撤回。",
+    needBothWithdrawals: "请先在中英文审核栏为当前公开版本分别记录最新的“发布范围 · 撤回”决定。",
+    withdrawalConflict: "审核期间公开指针已变化。请刷新队列并审核当前版本。",
+    withdrawalFailed: "撤回失败。请检查当前审核决定后重试。",
+    confirmWithdrawal: "确认撤回本文的全部公开版本？此处无法撤销。",
+    wrongWithdrawalVersion: "请先在文章队列打开当前公开版本，再记录撤回决定。",
   },
 } as const;
 
-const scopes: Scope[] = ["readability", "language_quality", "factual_accuracy", "source_quality"];
+const scopes: Scope[] = ["readability", "language_quality", "factual_accuracy", "source_quality", "publication"];
 const decisions: Decision[] = ["comment", "request_revision", "hold", "approve", "withdraw"];
 
 export function EditorialReviewDesk({ articleId, version, language }: { articleId: string; version: number; language: Language }) {
@@ -124,9 +150,48 @@ export function EditorialReviewDesk({ articleId, version, language }: { articleI
   const [approvalMessage, setApprovalMessage] = useState("");
   const [approvalError, setApprovalError] = useState(false);
   const [approvedNow, setApprovedNow] = useState(false);
+  const [pointers, setPointers] = useState<{ previewVersion: number | null; approvedVersion: number | null } | null>(null);
+  const [withdrawalReason, setWithdrawalReason] = useState("");
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [withdrawalMessage, setWithdrawalMessage] = useState("");
+  const [withdrawalError, setWithdrawalError] = useState(false);
+  const withdrawalHead = pointers?.previewVersion ?? pointers?.approvedVersion ?? null;
+  const onWithdrawalHead = withdrawalHead === version;
   const onHash = useCallback((itemLanguage: Language, hash: string) => {
     setHashes((previous) => previous[itemLanguage] === hash ? previous : { ...previous, [itemLanguage]: hash });
   }, []);
+
+  const onPointers = useCallback((value: { previewVersion: number | null; approvedVersion: number | null }) => {
+    setPointers((previous) => previous?.previewVersion === value.previewVersion && previous.approvedVersion === value.approvedVersion ? previous : value);
+  }, []);
+
+  async function withdraw() {
+    if (!pointers || withdrawalReason.trim().length < 20 || !window.confirm(c.confirmWithdrawal)) return;
+    setWithdrawing(true);
+    setWithdrawalMessage("");
+    setWithdrawalError(false);
+    try {
+      const response = await fetch("/api/admin/editorial/withdraw", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ articleId, expectedPreviewVersion: pointers.previewVersion, expectedApprovedVersion: pointers.approvedVersion, reason: withdrawalReason }),
+      });
+      const result = await response.json().catch(() => ({})) as { error?: string; publicationChanged?: boolean };
+      if (!response.ok) {
+        setWithdrawalError(true);
+        setWithdrawalMessage(result.error === "bilingual_withdrawal_required" ? c.needBothWithdrawals
+          : result.error === "stale_publication" ? c.withdrawalConflict : c.withdrawalFailed);
+        return;
+      }
+      setWithdrawalMessage(result.publicationChanged ? c.withdrawn : c.alreadyWithdrawn);
+      setPointers(null);
+    } catch {
+      setWithdrawalError(true);
+      setWithdrawalMessage(c.withdrawalFailed);
+    } finally {
+      setWithdrawing(false);
+    }
+  }
 
   async function approve() {
     if (!hashes.en || !hashes["zh-CN"]) return;
@@ -168,14 +233,27 @@ export function EditorialReviewDesk({ articleId, version, language }: { articleI
         {approvalMessage ? <p role={approvalError ? "alert" : "status"}>{approvalMessage}</p> : null}
       </section>
       <div className={styles.panels}>
-        <LanguagePanel articleId={articleId} version={version} language="en" onHash={onHash} approvedNow={approvedNow} />
-        <LanguagePanel articleId={articleId} version={version} language="zh-CN" onHash={onHash} approvedNow={approvedNow} />
+        <LanguagePanel articleId={articleId} version={version} language="en" onHash={onHash} onPointers={onPointers} approvedNow={approvedNow} />
+        <LanguagePanel articleId={articleId} version={version} language="zh-CN" onHash={onHash} onPointers={onPointers} approvedNow={approvedNow} />
       </div>
+      <section className={styles.approval} aria-label={c.withdrawalTitle}>
+        <h3>{c.withdrawalTitle}</h3>
+        <p>{c.withdrawalHelp}</p>
+        <p>{c.cutoff}: {pointers?.previewVersion ? `preview v${pointers.previewVersion}` : "no preview"}; {pointers?.approvedVersion ? `approved v${pointers.approvedVersion}` : "no approved version"}</p>
+        {!onWithdrawalHead ? <p>{c.wrongWithdrawalVersion}</p> : null}
+        <label htmlFor="editorial-withdrawal-reason">{c.withdrawalReason}</label>
+        <p>{c.withdrawalReasonHelp}</p>
+        <textarea id="editorial-withdrawal-reason" value={withdrawalReason} maxLength={1000} minLength={20} rows={3} onChange={(event) => setWithdrawalReason(event.target.value)} />
+        <button type="button" onClick={() => void withdraw()} disabled={withdrawing || !pointers || !onWithdrawalHead || withdrawalReason.trim().length < 20}>
+          {withdrawing ? c.withdrawing : c.withdraw}
+        </button>
+        {withdrawalMessage ? <p role={withdrawalError ? "alert" : "status"}>{withdrawalMessage}</p> : null}
+      </section>
     </div>
   );
 }
 
-function LanguagePanel({ articleId, version, language, onHash, approvedNow }: { articleId: string; version: number; language: Language; onHash: (language: Language, hash: string) => void; approvedNow: boolean }) {
+function LanguagePanel({ articleId, version, language, onHash, onPointers, approvedNow }: { articleId: string; version: number; language: Language; onHash: (language: Language, hash: string) => void; onPointers: (pointers: { previewVersion: number | null; approvedVersion: number | null }) => void; approvedNow: boolean }) {
   const c = copy[language];
   const noteId = useId();
   const scopeId = useId();
@@ -218,6 +296,7 @@ function LanguagePanel({ articleId, version, language, onHash, approvedNow }: { 
         if (active) {
           setDetail(next);
           onHash(language, next.article.contentSha256);
+          onPointers(next.currentPointers);
           setEdit(next.article.markdown);
           setMessage("");
           setConflict(false);
