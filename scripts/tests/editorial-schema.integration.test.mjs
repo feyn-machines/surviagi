@@ -40,25 +40,26 @@ test('editorial schema enforces immutable bilingual public versions and isolated
 
     await admin.query("INSERT INTO editorial.articles(article_id) VALUES ('integration-test')");
     await admin.query("INSERT INTO editorial.versions(article_id, version, source_cutoff, created_by) VALUES ('integration-test', 1, now(), 'test')");
-    await admin.query("INSERT INTO editorial.localizations VALUES ('integration-test', 1, 'en', 'Title', 'Summary', 'Body', repeat('a', 64))");
+    await admin.query("INSERT INTO editorial.localizations VALUES ('integration-test', 1, 'en', 'Integration robotics automation report', 'Public approved article about integration robotics automation.', 'Article body with a source [Official report](https://example.test/source).', repeat('a', 64))");
     await admin.query('BEGIN');
     await admin.query("INSERT INTO editorial.publications(article_id, preview_version) VALUES ('integration-test', 1)");
     await assert.rejects(admin.query('COMMIT'), /must include en and zh-CN/);
     await admin.query('ROLLBACK');
-    await admin.query("INSERT INTO editorial.localizations VALUES ('integration-test', 1, 'zh-CN', '标题', '摘要', '正文', repeat('b', 64))");
+    await admin.query("INSERT INTO editorial.localizations VALUES ('integration-test', 1, 'zh-CN', '集成机器人自动化报告', '关于集成机器人自动化的公开批准文章。', '文章正文及来源 [官方报告](https://example.test/source-zh)。', repeat('b', 64))");
     await admin.query("INSERT INTO editorial.publications(article_id, preview_version, approved_version) VALUES ('integration-test', 1, 1)");
     await admin.query("INSERT INTO editorial.publication_history(article_id, version, action) VALUES ('integration-test', 1, 'approve')");
     await admin.query("INSERT INTO editorial.versions(article_id, version, source_cutoff, created_by) VALUES ('integration-test', 2, now(), 'test')");
     await admin.query(
-      "INSERT INTO editorial.localizations VALUES ('integration-test', 2, 'en', 'Title 2', 'Summary 2', $1, repeat('c', 64))",
-      ['Body 2\n\n| Check | Result |\n| --- | --- |\n| table render | works |'],
+      "INSERT INTO editorial.localizations VALUES ('integration-test', 2, 'en', 'Integration robotics automation preview', 'Public preview about integration robotics automation.', $1, repeat('c', 64))",
+      ['Body 2: Preview full text with a source [Public source](https://example.test/preview-source).\n\n| Check | Result |\n| --- | --- |\n| table render | works |'],
     );
     await admin.query('BEGIN');
     await admin.query("UPDATE editorial.publications SET preview_version = 2 WHERE article_id = 'integration-test'");
     await assert.rejects(admin.query('COMMIT'), /must include en and zh-CN/);
     await admin.query('ROLLBACK');
-    await admin.query("INSERT INTO editorial.localizations VALUES ('integration-test', 2, 'zh-CN', '标题二', '摘要二', '正文二', repeat('d', 64))");
+    await admin.query("INSERT INTO editorial.localizations VALUES ('integration-test', 2, 'zh-CN', '集成机器人自动化预发布', '关于集成机器人自动化的公开预发布文章。', '预发布全文及来源 [公开来源](https://example.test/preview-source-zh)。', repeat('d', 64))");
     await admin.query("UPDATE editorial.publications SET preview_version = 2 WHERE article_id = 'integration-test'");
+    await admin.query("INSERT INTO editorial.publication_history(article_id, version, action) VALUES ('integration-test', 2, 'preview')");
     const pointers = await admin.query("SELECT preview_version, approved_version FROM editorial.publications WHERE article_id = 'integration-test'");
     assert.deepEqual(pointers.rows[0], { preview_version: 2, approved_version: 1 });
     await admin.query("UPDATE editorial.publications SET preview_version = NULL WHERE article_id = 'integration-test'");
@@ -186,8 +187,8 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       assert.equal(adminQueue.status, 200);
       const adminQueueHtml = await adminQueue.text();
       assert.match(adminQueueHtml, /Article review/);
-      assert.match(adminQueueHtml, /Title 2/);
-      assert.match(adminQueueHtml, /标题二/);
+      assert.match(adminQueueHtml, /Integration robotics automation preview/);
+      assert.match(adminQueueHtml, /集成机器人自动化预发布/);
       assert.match(adminQueueHtml, /Review both languages/);
       const selectedReview = await fetch(`${base}/admin/editorial?articleId=integration-test&version=v2`, { headers: { cookie: authCookie(adminToken) } });
       assert.equal(selectedReview.status, 200);
@@ -244,20 +245,20 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       const english = await fetch(`${base}${previewPath}`);
       assert.equal(english.status, 200);
       const englishHtml = await english.text();
-      assert.match(englishHtml, /Title 2/);
+      assert.match(englishHtml, /Integration robotics automation preview/);
       assert.match(englishHtml, /PUBLIC PREPRINT · NOT APPROVED/);
       assert.doesNotMatch(englishHtml, /name="robots" content="noindex/);
       assert.match(englishHtml, /Evidence cutoff/);
-      assert.match(englishHtml, /Body 2/);
+      assert.match(englishHtml, /Preview full text/);
       assert.match(englishHtml, /table render/);
       assert.match(englishHtml, /<th[^>]*>[\s\S]*?Check[\s\S]*?<\/th>/);
 
       const chinese = await fetch(`${base}/zh-CN${previewPath}`);
       assert.equal(chinese.status, 200);
       const chineseHtml = await chinese.text();
-      assert.match(chineseHtml, /标题二/);
+      assert.match(chineseHtml, /集成机器人自动化预发布/);
       assert.match(chineseHtml, /公开预发布 · 尚未批准/);
-      assert.match(chineseHtml, /正文二/);
+      assert.match(chineseHtml, /预发布全文/);
 
       const markdown = await fetch(`${base}${previewPath}/raw.md`);
       assert.equal(markdown.status, 200);
@@ -279,6 +280,63 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       assert.equal(sitemap.status, 200);
       assert.match(await sitemap.text(), /articles\/previews\/integration-test\/v2/);
 
+      const searchParams = new URLSearchParams({ query: 'integration robotics', types: 'article', language: 'en' });
+      const articleSearchResponse = await fetch(`${base}/api/agent/search?${searchParams}`);
+      assert.equal(articleSearchResponse.status, 200);
+      assert.equal(articleSearchResponse.headers.get('cache-control'), 'no-store');
+      const articleSearch = await articleSearchResponse.json();
+      assert.equal(articleSearch.editorial_articles.available, true);
+      assert.equal(articleSearch.results.length, 2);
+      const previewResult = articleSearch.results.find((row) => row.status === 'preview');
+      const approvedResult = articleSearch.results.find((row) => row.status === 'approved');
+      assert.equal(previewResult.id, 'article:integration-test:v2');
+      assert.equal(previewResult.review, 'not_approved_public_preview');
+      assert.equal(previewResult.date_basis, 'publication_history');
+      assert.equal(previewResult.approval_scope.approved_languages, null);
+      assert.match(previewResult.url, /articles\/previews\/integration-test\/v2$/);
+      assert.equal(previewResult.current_pointers.approved_revision_id, 'article:integration-test:v1');
+      assert.equal(previewResult.current_pointers.preview_revision_id, 'article:integration-test:v2');
+      assert.match(previewResult.sources[0], /example\.test\/preview-source/);
+      assert.equal(approvedResult.id, 'article:integration-test:v1');
+      assert.equal(approvedResult.review, 'approved_bilingual');
+      assert.deepEqual(approvedResult.approval_scope.approved_languages, ['en', 'zh-CN']);
+      assert.doesNotMatch(JSON.stringify(articleSearch), /Readable for the intended audience|comparison group/);
+
+      const articleMcpResponse = await fetch(`${base}/api/mcp`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'search', arguments: { query: 'integration robotics', types: ['article'], language: 'en' } } }),
+      });
+      const articleMcp = (await articleMcpResponse.json()).result.structuredContent;
+      assert.deepEqual(articleMcp.results, articleSearch.results, 'HTTP and MCP expose the same article result semantics');
+      const zhSearch = await (await fetch(`${base}/api/agent/search?${new URLSearchParams({ query: '集成机器人自动化', types: 'article', language: 'zh-CN', status: 'preview' })}`)).json();
+      assert.equal(zhSearch.results.length, 1);
+      assert.equal(zhSearch.results[0].id, 'article:integration-test:v2');
+      assert.equal(zhSearch.results[0].language, 'zh-CN');
+      assert.match(zhSearch.results[0].url, /zh-CN\/articles\/previews\/integration-test\/v2$/);
+      const approvedOnly = await (await fetch(`${base}/api/agent/search?${new URLSearchParams({ query: 'integration robotics', types: 'article', language: 'en', status: 'approved' })}`)).json();
+      assert.deepEqual(approvedOnly.results.map((row) => row.id), ['article:integration-test:v1']);
+      const afterPublicationWindow = await (await fetch(`${base}/api/agent/search?${new URLSearchParams({ query: 'integration robotics', types: 'article', from: '2099-01-01', language: 'en' })}`)).json();
+      assert.deepEqual(afterPublicationWindow.results, [], 'article date filters use disclosed public timestamps');
+      const articleOnlyMiss = await (await fetch(`${base}/api/agent/search?${new URLSearchParams({ query: 'model', types: 'article', language: 'en' })}`)).json();
+      assert.deepEqual(articleOnlyMiss.results, [], 'article-only queries must not fall back to static record types');
+      assert.equal((await fetch(`${base}/api/agent/search?query=integration&types=article&status=private`)).status, 400);
+
+      const articleRecordResponse = await fetch(`${base}/api/agent/record?id=article%3Aintegration-test%3Av2&language=en`);
+      assert.equal(articleRecordResponse.status, 200);
+      assert.match(articleRecordResponse.headers.get('cache-control'), /no-store/);
+      const articleRecord = await articleRecordResponse.json();
+      assert.equal(articleRecord.body_markdown.includes('Preview full text'), true);
+      assert.equal(articleRecord.status, 'preview');
+      assert.equal(articleRecord.review, 'not_approved_public_preview');
+      assert.deepEqual(articleRecord.sources[0], { url: 'https://example.test/preview-source', label: 'Public source' });
+      assert.equal(articleRecord.structured_limitations.available, false);
+      assert.doesNotMatch(JSON.stringify(articleRecord), /Readable for the intended audience|comparison group/);
+      const articleMcpRecordResponse = await fetch(`${base}/api/mcp`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'get_record', arguments: { id: 'article:integration-test:v2', language: 'en' } } }),
+      });
+      assert.deepEqual((await articleMcpRecordResponse.json()).result.structuredContent, articleRecord);
+
       const simultaneousApprovals = await Promise.all([
         fetch(approveUrl, { method: 'POST', headers, body: JSON.stringify(approveBody) }),
         fetch(approveUrl, { method: 'POST', headers, body: JSON.stringify(approveBody) }),
@@ -293,19 +351,19 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       assert.equal(regularAfterApproval.status, 200);
       const regularHtml = await regularAfterApproval.text();
       assert.match(regularHtml, /\/articles\/approved\/integration-test/);
-      assert.match(regularHtml, /Title 2/);
+      assert.match(regularHtml, /Integration robotics automation preview/);
       assert.match(regularHtml, /APPROVED/);
       assert.doesNotMatch(regularHtml, /PUBLIC PREPRINT/);
 
       const stableApproved = await fetch(`${base}/articles/approved/integration-test`);
       assert.equal(stableApproved.status, 200);
       const stableHtml = await stableApproved.text();
-      assert.match(stableHtml, /Title 2/);
+      assert.match(stableHtml, /Integration robotics automation preview/);
       assert.match(stableHtml, /APPROVED VERSION/);
       assert.match(stableHtml, /table render/);
       const stableChinese = await fetch(`${base}/zh-CN/articles/approved/integration-test`);
       assert.equal(stableChinese.status, 200);
-      assert.match(await stableChinese.text(), /标题二/);
+      assert.match(await stableChinese.text(), /集成机器人自动化预发布/);
       const stableMarkdown = await fetch(`${base}/articles/approved/integration-test/raw.md`);
       assert.equal(stableMarkdown.status, 200);
       assert.match(stableMarkdown.headers.get('content-type'), /text\/markdown/);
@@ -328,17 +386,25 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       await admin.query("INSERT INTO editorial.localizations VALUES ('integration-test', 3, 'en', 'Title 3', 'Summary 3', 'New preview', repeat('e', 64))");
       await admin.query("INSERT INTO editorial.localizations VALUES ('integration-test', 3, 'zh-CN', '标题三', '摘要三', '新预发布', repeat('f', 64))");
       await admin.query("UPDATE editorial.publications SET preview_version = 3 WHERE article_id = 'integration-test'");
+      await admin.query("INSERT INTO editorial.publication_history(article_id, version, action) VALUES ('integration-test', 3, 'preview')");
       const newPreview = await fetch(`${base}/articles/previews/integration-test/v3`);
       assert.equal(newPreview.status, 200);
       assert.match(await newPreview.text(), /PUBLIC PREPRINT · NOT APPROVED/);
       const stableAfterNewPreview = await fetch(`${base}/articles/approved/integration-test`);
       assert.equal(stableAfterNewPreview.status, 200);
       const stableAfterNewPreviewHtml = await stableAfterNewPreview.text();
-      assert.match(stableAfterNewPreviewHtml, /Title 2/);
+      assert.match(stableAfterNewPreviewHtml, /Integration robotics automation preview/);
       assert.doesNotMatch(stableAfterNewPreviewHtml, /Title 3/);
       const regularAfterNewPreview = await fetch(`${base}/articles`);
       assert.equal(regularAfterNewPreview.status, 200);
-      assert.match(await regularAfterNewPreview.text(), /Title 2/);
+      assert.match(await regularAfterNewPreview.text(), /Integration robotics automation preview/);
+
+      const historicalRecordResponse = await fetch(`${base}/api/agent/record?id=article%3Aintegration-test%3Av1&language=en`);
+      assert.equal(historicalRecordResponse.status, 200);
+      const historicalRecord = await historicalRecordResponse.json();
+      assert.equal(historicalRecord.status, 'approved_historical');
+      assert.match(historicalRecord.url, /articles\/previews\/integration-test\/v1$/);
+      assert.equal(historicalRecord.body_markdown, 'Article body with a source [Official report](https://example.test/source).');
 
       const approved = await fetch(`${base}/articles/previews/integration-test/v1`);
       assert.equal(approved.status, 200);
@@ -356,6 +422,9 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       const withdrawnSitemap = await (await fetch(`${base}/sitemap.xml`)).text();
       assert.doesNotMatch(withdrawnSitemap, /articles\/previews\/integration-test\/v2/);
       assert.doesNotMatch(withdrawnSitemap, /articles\/approved\/integration-test/);
+      const withdrawnSearch = await (await fetch(`${base}/api/agent/search?${new URLSearchParams({ query: 'integration robotics', types: 'article', language: 'en' })}`)).json();
+      assert.deepEqual(withdrawnSearch.results, []);
+      assert.equal((await fetch(`${base}/api/agent/record?id=article%3Aintegration-test%3Av2`)).status, 404);
     } finally {
       await stop(proc);
     }

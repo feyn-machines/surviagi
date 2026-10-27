@@ -22,28 +22,29 @@ import {
   MAX_QUERY,
   MAX_RESULTS,
   publishedQuestion,
+  rankedSearch,
   record,
   RECORD_TYPES,
-  search,
   type RecordType,
 } from "./agent-search";
 import { sources } from "./snapshot";
+import { EDITORIAL_STATUSES, getEditorialArticleRecord, parseEditorialRevisionId, searchEditorialArticles } from "./editorial-agent";
 
 /**
- * The four things an agent can do here (Issue #5), shared by the MCP endpoints and the plain HTTP API so the
- * two cannot drift. Reading is open: no sign-in, no key, and a key that is sent, wrong or revoked is ignored.
+ * The agent tools (Issue #5), shared by the MCP endpoints and the plain HTTP API so the two cannot drift.
+ * Reading is open: no sign-in, no key, and a key that is sent, wrong or revoked is ignored.
  * Submitting needs the reader's API key and only ever registers a request for review: nothing here calls a
  * model, starts a crawl or publishes anything.
  */
 
 export type Outcome =
-  | { ok: true; value: Record<string, unknown> }
+  | { ok: true; value: Record<string, unknown>; cacheable?: boolean }
   | { ok: false; status: number; error: string; message: string; extra?: Record<string, unknown> };
 
 const fail = (status: number, error: string, message: string, extra?: Record<string, unknown>): Outcome => ({
   ok: false, status, error, message, ...(extra ? { extra } : {}),
 });
-const ok = (value: Record<string, unknown>): Outcome => ({ ok: true, value });
+const ok = (value: Record<string, unknown>, cacheable?: boolean): Outcome => ({ ok: true, value, ...(cacheable === undefined ? {} : { cacheable }) });
 
 /** Anonymous reads per client address per minute. Behind Cloudflare the address is cf-connecting-ip. */
 export const READ_LIMIT_PER_MINUTE = 60;
@@ -103,7 +104,7 @@ function requestIdArg(args: Args): { ok: true; value: string | null } | { ok: fa
   return { ok: true, value };
 }
 
-export function runSearch(args: Args): Outcome {
+export async function runSearch(args: Args): Promise<Outcome> {
   const query = text(args, "query", 1, MAX_QUERY, true);
   if (!query.ok) return fail(400, "invalid", query.message);
   let limit = DEFAULT_RESULTS;
@@ -120,7 +121,7 @@ export function runSearch(args: Args): Outcome {
     if (!Array.isArray(list) || list.some((t) => !(RECORD_TYPES as readonly unknown[]).includes(t))) {
       return fail(400, "invalid", `\`types\` must be a list of: ${RECORD_TYPES.join(", ")}.`);
     }
-    types = list as RecordType[];
+    types = list.length ? list as RecordType[] : undefined;
   }
   for (const name of ["from", "to"] as const) {
     const value = args[name];
@@ -130,31 +131,80 @@ export function runSearch(args: Args): Outcome {
   }
   const language = languageArg(args);
   if (language === null) return fail(400, "invalid", "`language` must be en or zh-CN.");
-  const found = search({
+  let status: "approved" | "preview" | undefined;
+  if (args.status !== undefined && args.status !== null) {
+    if (typeof args.status !== "string" || !(EDITORIAL_STATUSES as readonly string[]).includes(args.status)) {
+      return fail(400, "invalid", `\`status\` must be one of: ${EDITORIAL_STATUSES.join(", ")}.`);
+    }
+    status = args.status as "approved" | "preview";
+  }
+  const selectedTypes = types ?? [...RECORD_TYPES];
+  const includeArticles = selectedTypes.includes("article");
+  const found = rankedSearch({
     query: query.value as string,
-    limit,
-    types,
+    limit: MAX_RESULTS,
+    types: selectedTypes.filter((type) => type !== "article"),
     from: (args.from as string | undefined) ?? null,
     to: (args.to as string | undefined) ?? null,
     language,
   });
+  let articles: Awaited<ReturnType<typeof searchEditorialArticles>> | null = null;
+  if (includeArticles) {
+    try {
+      articles = await searchEditorialArticles({
+        query: query.value as string,
+        limit: MAX_RESULTS,
+        language: language ?? "en",
+        from: (args.from as string | undefined) ?? null,
+        to: (args.to as string | undefined) ?? null,
+        status,
+      });
+    } catch (error) {
+      console.error(`[agent] editorial search failed: ${error instanceof Error ? error.message : "unknown error"}`);
+      return fail(503, "unavailable", "Public article search is unavailable right now. Try again later.");
+    }
+  }
+  const combined = [
+    ...found.results,
+    ...(articles?.results ?? []),
+  ].sort((a, b) => b.score - a.score ||
+    Number(b.result.type === "article" && "status" in b.result && (b.result.status === "approved" || b.result.status === "approved_historical")) - Number(a.result.type === "article" && "status" in a.result && (a.result.status === "approved" || a.result.status === "approved_historical")) ||
+    (b.result.date ?? "").localeCompare(a.result.date ?? "") || a.result.id.localeCompare(b.result.id));
+  const results = combined.slice(0, limit).map(({ result }) => result);
+  const available = articles?.available ?? null;
+  const total = found.total + (articles?.total ?? 0);
   return ok({
-    ...found,
-    note:
-      found.results.length === 0
-        ? "Nothing in the published data matches. A search that finds nothing starts no research or collection; if the question matters, a signed-in reader can submit it with submit_question."
-        : "Results are published records. Cite the record's url and the release's generated_at; quote sources, not our summaries.",
-  });
+    query: query.value,
+    total,
+    results,
+    release: found.release,
+    content_kinds: found.content_kinds,
+    editorial_articles: includeArticles ? { available, count: articles?.total ?? 0 } : null,
+    note: results.length === 0
+      ? `Nothing in the published data matches. A search that finds nothing starts no research or collection; if the question matters, a signed-in reader can submit it with submit_question.${includeArticles && !available ? " Editorial articles are also unavailable because the public article store is not configured." : ""}`
+      : `Results are published records. Article results include their exact revision, publication status, sources and evidence cutoff. Cite each result's url; quote sources, not our summaries.${includeArticles && !available ? " Editorial articles are unavailable because the public article store is not configured." : ""}`,
+  }, !includeArticles);
 }
 
-export function runRecord(args: Args): Outcome {
+export async function runRecord(args: Args): Promise<Outcome> {
   const id = typeof args.id === "string" ? args.id.trim() : "";
-  if (!id || !isRecordId(id)) return fail(400, "invalid", "`id` must be an id returned by search (an update, question or evidence id).");
+  if (!id) return fail(400, "invalid", "`id` is required.");
   const language = languageArg(args);
   if (language === null) return fail(400, "invalid", "`language` must be en or zh-CN.");
+  const editorialRevision = parseEditorialRevisionId(id);
+  if (editorialRevision) {
+    try {
+      const found = await getEditorialArticleRecord(editorialRevision.articleId, editorialRevision.version, language ?? "en");
+      return found ? ok(found, false) : fail(404, "not_found", "No public article revision with this id is available. It may have been withdrawn; search again.");
+    } catch (error) {
+      console.error(`[agent] editorial record read failed: ${error instanceof Error ? error.message : "unknown error"}`);
+      return fail(503, "unavailable", "Public article reading is unavailable right now. Try again later.");
+    }
+  }
+  if (!isRecordId(id)) return fail(400, "invalid", "`id` must be an id returned by search (an update, question, evidence or article revision id).");
   const found = record(id, language ?? "en");
   if (!found) return fail(404, "not_found", "The loaded data release holds no record with this id. Ids of earlier releases may be gone; search again.");
-  return ok(found);
+  return ok(found, true);
 }
 
 type Owner = { userId: string; keyId: string };
@@ -350,17 +400,18 @@ export const READ_TOOLS = [
     name: "search",
     title: "Search SurviAGI",
     description:
-      "Search SurviAGI's published records of AI progress: updates from AI companies (what was released or shown), " +
-      "questions (closed questions about whether AI will replace a job or a business), and evidence (one update read as " +
-      "a level, L0-L5, for one kind of work). Returns records with stable ids, our short summary, the site link, the original " +
-      "source links and the data release. Summaries and levels are machine-proposed and unreviewed; quote the sources, cite the url. " +
+      "Search SurviAGI's published records of AI progress: updates, questions, evidence readings, and public bilingual editorial articles. " +
+      "Use types to select article; articles can be filtered by status approved or preview. Results include exact revision IDs, sources, " +
+      "evidence cutoff and the true publication status. A preview is public but not approved. Search returns only public article pointers; " +
+      "private drafts and reviewer identities or notes are never exposed. Summaries and levels are machine-proposed and unreviewed; quote sources, cite the url. " +
       "Read one record in full with get_record. No sign-in or key needed.",
     inputSchema: {
       type: "object",
       properties: {
         query: { type: "string", minLength: 1, maxLength: MAX_QUERY, description: "What to look for, in English or Chinese: a company, model, kind of work, job or question." },
         limit: { type: "integer", minimum: 1, maximum: MAX_RESULTS, default: DEFAULT_RESULTS, description: "How many records to return." },
-        types: { type: "array", items: { type: "string", enum: [...RECORD_TYPES] }, description: "Only these kinds of record. Default all." },
+        types: { type: "array", items: { type: "string", enum: [...RECORD_TYPES] }, description: "Only these kinds of record. Default all, including public articles." },
+        status: { type: "string", enum: [...EDITORIAL_STATUSES], description: "For articles: approved or public preview. Omit to include both; ignored for other record types." },
         from: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "Only records dated on or after this day (YYYY-MM-DD)." },
         to: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "Only records dated on or before this day (YYYY-MM-DD)." },
         language: LANGUAGE_SCHEMA,
@@ -374,14 +425,15 @@ export const READ_TOOLS = [
     name: "get_record",
     title: "Read a SurviAGI record",
     description:
-      "Read one published record by the id search returned: an update with its source posts and every reading of it; " +
+      "Read one published record by the id search returned: a public article revision returns its full Markdown, bilingual link, sources, evidence cutoff, exact version and real approval scope/status; " +
+      "an update with its source posts and every reading of it; " +
       "a question with its answer options, the posts that argued them (with short quotes of the posts' own words) and the " +
       "updates that weigh on them; or one evidence reading with its level, tier, rationale and sources. Each text says whether " +
       "it is our summary or the source's words. The full text of source posts is not published: open the source URLs. No key needed.",
     inputSchema: {
       type: "object",
       properties: {
-        id: { type: "string", minLength: 1, maxLength: 260, description: "An id from search: ev-…, topic:… or evidence:…" },
+        id: { type: "string", minLength: 1, maxLength: 260, description: "An id from search: ev-…, topic:…, evidence:… or article:<slug>:v<version>." },
         language: LANGUAGE_SCHEMA,
       },
       required: ["id"],

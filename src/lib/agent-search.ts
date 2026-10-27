@@ -22,7 +22,7 @@ import {
  * that finds nothing starts nothing.
  */
 
-export const RECORD_TYPES = ["update", "question", "evidence"] as const;
+export const RECORD_TYPES = ["update", "question", "evidence", "article"] as const;
 export type RecordType = (typeof RECORD_TYPES)[number];
 
 export const MAX_QUERY = 200;
@@ -36,6 +36,7 @@ export const CONTENT_KINDS = {
   machine_summary: "Written by our pipeline from the source posts; not the source's own words.",
   post_quote: "Words copied from the original post, possibly shortened.",
   machine_reading: "A level proposed by our judge for one kind of work; not reviewed by a person.",
+  editorial_article: "A public bilingual editorial article. Its status says whether the exact revision is a preview or approved.",
 } as const;
 
 const REVIEW = "machine_proposed_unreviewed";
@@ -198,17 +199,19 @@ export type SearchResult = {
   sources: string[];
 };
 
+export type RankedSearchResult = { result: SearchResult; score: number };
+
 /**
  * Ranks the release's records by how many query terms they contain, weighted by field, with a bonus for the
  * whole query as typed; at least half the terms must match. Ties go to the newer record. Dates filter on the
  * record's own date (an update's `occurred_at`, a question's latest claim), and an undated record passes no
  * date filter. A query of one or two terms needs all of them: "coding agent" is not every record about agents.
  */
-export function search(input: SearchInput) {
+export function rankedSearch(input: SearchInput): { query: string; total: number; results: RankedSearchResult[]; release: ReturnType<typeof releaseInfo>; content_kinds: typeof CONTENT_KINDS } {
   const words = terms(input.query);
   const phrase = lower(input.query).trim();
   const limit = Math.min(MAX_RESULTS, Math.max(1, input.limit ?? DEFAULT_RESULTS));
-  const types = new Set(input.types?.length ? input.types : RECORD_TYPES);
+  const types = new Set(input.types ?? RECORD_TYPES);
   const language = input.language ?? "en";
   const need = words.length <= 2 ? words.length : Math.ceil(words.length / 2);
   const scored: { doc: Doc; score: number }[] = [];
@@ -234,22 +237,30 @@ export function search(input: SearchInput) {
   return {
     query: input.query,
     total: scored.length,
-    results: scored.slice(0, limit).map(({ doc }): SearchResult => ({
-      id: doc.id,
-      type: doc.type,
-      title: doc.title,
-      snippet: doc.snippet,
-      content: doc.content,
-      review: REVIEW,
-      date: doc.date,
-      organization: doc.organization,
-      url: absoluteUrl(language, doc.path),
-      markdown_url: absoluteUrl(language, `${doc.path}/raw.md`),
-      sources: doc.sources,
+    results: scored.slice(0, limit).map(({ doc, score }) => ({
+      score,
+      result: {
+        id: doc.id,
+        type: doc.type,
+        title: doc.title,
+        snippet: doc.snippet,
+        content: doc.content,
+        review: REVIEW,
+        date: doc.date,
+        organization: doc.organization,
+        url: absoluteUrl(language, doc.path),
+        markdown_url: absoluteUrl(language, `${doc.path}/raw.md`),
+        sources: doc.sources,
+      },
     })),
     release: releaseInfo(),
     content_kinds: CONTENT_KINDS,
   };
+}
+
+export function search(input: SearchInput) {
+  const found = rankedSearch({ ...input, types: input.types?.length ? input.types : undefined });
+  return { ...found, results: found.results.map(({ result }) => result) };
 }
 
 const ID_UPDATE = /^ev-[0-9a-f]{40}$/;

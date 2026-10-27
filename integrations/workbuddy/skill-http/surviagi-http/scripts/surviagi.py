@@ -51,6 +51,7 @@ def main(argv=None) -> int:
     search.add_argument("query")
     search.add_argument("--limit", type=int)
     search.add_argument("--types")
+    search.add_argument("--status", choices=("approved", "preview"))
     search.add_argument("--from", dest="date_from")
     search.add_argument("--to", dest="date_to")
     search.add_argument("--language", choices=("en", "zh-CN"))
@@ -76,7 +77,7 @@ def main(argv=None) -> int:
 
     if args.command == "search":
         return call("GET", "/api/agent/search", {"query": args.query, "limit": args.limit, "types": args.types,
-                                                  "from": args.date_from, "to": args.date_to, "language": args.language})
+                                                  "status": args.status, "from": args.date_from, "to": args.date_to, "language": args.language})
     if args.command == "record":
         return call("GET", "/api/agent/record", {"id": args.id, "language": args.language})
     if args.command in ("question", "account") and not args.request_id:

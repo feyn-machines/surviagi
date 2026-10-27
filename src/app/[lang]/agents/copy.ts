@@ -12,15 +12,15 @@ export const agentsCopy: Record<Language, { title: string; description: string; 
   en: {
     title: "Connect an AI agent",
     description:
-      "Let an AI agent search SurviAGI's published updates, questions and evidence over MCP or HTTP without a key, and submit research questions or accounts to monitor with a reader's API key.",
+      "Let an AI agent search SurviAGI's published updates, questions, evidence and bilingual editorial articles over MCP or HTTP without a key, and submit research questions or accounts to monitor with a reader's API key.",
     lead:
       "An agent such as WorkBuddy, Claude or ChatGPT can search what SurviAGI has published and read each record with its sources. Reading needs no account and no key. A signed-in reader can also give an agent a key to submit research questions and accounts worth monitoring, as requests for review.",
     sections: [
       {
         heading: "What an agent can do",
         body: [
-          "search: find published updates from AI companies, closed questions about jobs and businesses, and evidence readings (one update read as a level, L0-L5, for one kind of work). Each result has a stable id, our short summary, the page link, the original source links and the data release it comes from.",
-          "get_record: read one record in full by its id, with every reading of an update, the posts that argued each answer of a question (with short quotes in the posts' own words), and the updates that weigh on it.",
+          "search: find published updates, questions, evidence readings and public bilingual articles. For articles, use types=[article] and optionally status=approved or preview. A preview is public but not approved; each result includes its exact revision, sources, evidence cutoff and language-specific link.",
+          "get_record: read an article revision's complete Markdown and publication status by its article:<slug>:v<version> id, or read an update/question/evidence record in full. Private drafts, reviewer identities and review notes are never returned.",
           "With a key: submit_question registers a research question for review, suggest_account registers an X account to monitor, and my_submissions shows their status and the quota left.",
           "The site finds and registers; it does not answer. The agent does the analysis. No query, empty search or submission starts a model, a research run or a collection here.",
         ],
@@ -36,7 +36,7 @@ export const agentsCopy: Record<Language, { title: string; description: string; 
           "https://surviagi.com/api/mcp/submit          + submit_question, suggest_account, my_submissions",
           "                                             header  Authorization: Bearer sag_…",
           "",
-          "GET  https://surviagi.com/api/agent/search?query=coding+agents&limit=5&types=update,evidence",
+          "GET  https://surviagi.com/api/agent/search?query=coding+agents&limit=5&types=update,evidence,article&status=preview",
           "GET  https://surviagi.com/api/agent/record?id=ev-…",
           "POST https://surviagi.com/api/agent/questions     (key)  {question, why_it_matters, evidence_gap, leads?, related_record_ids?, request_id?}",
           "POST https://surviagi.com/api/agent/accounts      (key)  {account, kind, reason, field?, request_id?}",
@@ -80,15 +80,15 @@ export const agentsCopy: Record<Language, { title: string; description: string; 
   "zh-CN": {
     title: "接入 AI 助手",
     description:
-      "让 WorkBuddy 等 AI 助手通过 MCP 或 HTTP 免 Key 搜索 SurviAGI 已发布的更新、问题与证据；读者可用自己的 API Key 提交研究问题或建议监测的账号。",
+      "让 WorkBuddy 等 AI 助手通过 MCP 或 HTTP 免 Key 搜索 SurviAGI 已发布的更新、问题、证据与双语文章；读者可用自己的 API Key 提交研究问题或建议监测的账号。",
     lead:
       "WorkBuddy、Claude、ChatGPT 等 AI 助手可以搜索 SurviAGI 已发布的内容，并连同来源读取每条记录。读取无需账号、无需 Key。登录的读者还可以给助手一个 Key，用来提交研究问题和值得监测的账号；提交只是待审核的申请。",
     sections: [
       {
         heading: "助手能做什么",
         body: [
-          "search：搜索已发布的 AI 公司更新、关于职业和行业的封闭问题，以及证据读数（一条更新对某类工作给出的 L0–L5 等级）。每条结果带稳定 ID、我们的简短摘要、站内链接、原始来源链接和所属数据版本。",
-          "get_record：按 ID 读取一条记录的完整内容：一条更新的全部读数；一个问题的各个选项、支持各选项的帖子（附帖子原话的简短摘录）以及对其有影响的更新。",
+          "search：搜索已发布的更新、问题、证据读数和公开双语文章。检索文章时传 types=[article]，可用 status=approved 或 preview 筛选。预发布稿公开可读但尚未批准；每条结果都带精确版本、来源、证据截止时间和对应语言的链接。",
+          "get_record：传 article:<文章 ID>:v<版本> 可读取该版文章全文和真实发布状态；也可读取更新、问题或证据详情。私有草稿、审核人身份和审核意见不会返回。",
           "有 Key 时：submit_question 登记待审核的研究问题，suggest_account 登记建议监测的 X 账号，my_submissions 查看审核状态和剩余额度。",
           "本站只负责检索和登记，不负责回答，分析由助手完成。任何查询、无结果的搜索或提交都不会在本站启动模型、研究或采集。",
         ],
@@ -104,7 +104,7 @@ export const agentsCopy: Record<Language, { title: string; description: string; 
           "https://surviagi.com/api/mcp/submit          + submit_question, suggest_account, my_submissions",
           "                                             请求头  Authorization: Bearer sag_…",
           "",
-          "GET  https://surviagi.com/api/agent/search?query=coding+agents&limit=5&types=update,evidence",
+          "GET  https://surviagi.com/api/agent/search?query=coding+agents&limit=5&types=update,evidence,article&status=preview",
           "GET  https://surviagi.com/api/agent/record?id=ev-…",
           "POST https://surviagi.com/api/agent/questions     (Key)  {question, why_it_matters, evidence_gap, leads?, related_record_ids?, request_id?}",
           "POST https://surviagi.com/api/agent/accounts      (Key)  {account, kind, reason, field?, request_id?}",
@@ -123,7 +123,7 @@ export const agentsCopy: Record<Language, { title: string; description: string; 
       {
         heading: "能读到什么",
         body: [
-          "只有本站已发布的内容：与页面展示相同的更新、问题和读数，每次回答都注明所属数据版本。读不到任何人的提交、原始采集数据或内部状态。",
+          "只有本站已公开的内容：与页面展示相同的更新、问题、读数以及文章的当前公开批准版或预发布版。文章批准状态按中英两个版本的发布范围如实提供。读不到任何人的提交、原始采集数据或内部审核状态。",
           "所有摘要和等级都由机器提出、未经人工审核；每段文字都标明是我们的摘要、读数，还是来源原话的摘录。来源帖子的全文未发布，请打开来源链接查看；X Article、外链文章和 PDF 未采集。",
           "引用时请写记录的页面地址和数据版本的生成时间。",
         ],

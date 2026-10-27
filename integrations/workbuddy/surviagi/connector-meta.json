@@ -5,7 +5,7 @@
   "name": "SurviAGI 搜索",
   "name_en": "SurviAGI Search",
   "description": "搜索 SurviAGI 已发布的 AI 进展：AI 公司更新、关于职业和行业的问题、证据读数（L0–L5），返回稳定 ID、站内链接、原始来源和数据版本。免登录、免 API Key，只读。",
-  "description_en": "Search SurviAGI's published AI progress records: AI company updates, questions about jobs and businesses, and evidence readings (L0-L5), with stable ids, page links, original sources and the data release. No sign-in, no API key, read-only.",
+  "description_en": "Search SurviAGI's published AI progress records and bilingual editorial articles, with stable revision ids, publication status, full text, sources and evidence cutoff. Public previews are not approved. No sign-in, no API key, read-only.",
   "examples": ["AI 编程助手最近有哪些官方更新？", "AI 会取代会计吗？SurviAGI 有哪些证据？"],
-  "examples_en": ["What have AI companies shipped for coding agents recently?", "Will AI replace accountants? What evidence does SurviAGI have?"]
+  "examples_en": ["What have AI companies shipped for coding agents recently?", "Find SurviAGI articles about AI agents, including public previews.", "Will AI replace accountants? What evidence does SurviAGI have?"]
 }

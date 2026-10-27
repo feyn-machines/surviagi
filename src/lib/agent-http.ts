@@ -9,7 +9,7 @@ import { RATE_MESSAGE, readAllowed, type Outcome } from "./agent-api";
 const PUBLIC_HEADERS = { "Cache-Control": "public, max-age=60", "X-Robots-Tag": "noindex" } as const;
 
 export function outcomeResponse(outcome: Outcome, cacheable: boolean): Response {
-  if (outcome.ok) return Response.json(outcome.value, { headers: cacheable ? PUBLIC_HEADERS : NO_STORE_HEADERS });
+  if (outcome.ok) return Response.json(outcome.value, { headers: cacheable && outcome.cacheable !== false ? PUBLIC_HEADERS : NO_STORE_HEADERS });
   return Response.json({ error: outcome.error, message: outcome.message, ...(outcome.extra ?? {}) }, { status: outcome.status, headers: NO_STORE_HEADERS });
 }
 

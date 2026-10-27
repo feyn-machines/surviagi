@@ -950,6 +950,8 @@ test("MCP: a client initializes with no key, and the public endpoint lists only 
   assert.equal((await rpc("/api/mcp", { jsonrpc: "2.0", method: "notifications/initialized" })).status, 202);
   const tools = (await rpc("/api/mcp", { jsonrpc: "2.0", id: 3, method: "tools/list" })).body.result.tools;
   assert.deepEqual(tools.map((t) => t.name), ["search", "get_record"]);
+  assert.deepEqual(tools[0].inputSchema.properties.types.items.enum, ["update", "question", "evidence", "article"]);
+  assert.deepEqual(tools[0].inputSchema.properties.status.enum, ["approved", "preview"]);
   for (const t of tools) {
     assert.equal(t.annotations.readOnlyHint, true);
     assert.equal(t.inputSchema.type, "object");
@@ -1073,7 +1075,7 @@ test("anonymous reading is limited per client address, and one address does not 
 
 test("the agents page says what is open, what needs a key and the limits the code enforces, in both languages", () => {
   const en = html("en", "/agents");
-  for (const text of ["https://surviagi.com/api/mcp", "https://surviagi.com/api/mcp/submit", "Authorization: Bearer", "/api/agent/search", "submit_question", "machine", "60 requests a minute", 'id="keys"']) {
+  for (const text of ["https://surviagi.com/api/mcp", "https://surviagi.com/api/mcp/submit", "Authorization: Bearer", "/api/agent/search", "submit_question", "A preview is public", "article:", "60 requests a minute", 'id="keys"']) {
     assert.ok(en.includes(text), text);
   }
   assert.ok(html("zh-CN", "/agents").includes("接入 AI 助手"));
