@@ -257,7 +257,7 @@ openaiwill 的三样独有资产：
 1. 定位是否按上面改。
 2. 独立尝试先只展示、不计入等级（建议），还是计入等级。后者要先定哪些账号算数，其中不少是搜索找到、身份未确认的账号。
 
-## 2026-10-27 元宝搜索（腾讯云 wsa）用于中文侧可见度检查（已实现工具，未接入密钥）
+## 2026-10-27 元宝搜索（腾讯云 wsa）用于中文侧可见度检查（已实现工具，已首测）
 
 用户 2026-10-27 提供了腾讯云元宝搜索的开通资料，说明它是 SEO 和 GEO 的一部分。元宝搜索是腾讯元宝助手背后的联网搜索，以 API 形式对开发者开放（产品页 `https://cloud.tencent.com/product/wsa`，接口 `SearchPro`，版本 `2025-05-08`，按调用次数计费）。能在这里被搜到，是被元宝回答引用的前提。
 
@@ -265,10 +265,19 @@ openaiwill 的三样独有资产：
 
 - `search` 看一个查询的结果，`--site surviagi.com` 只看本站被收录的页面。
 - `rank` 对一批查询列出 surviagi.com 排第几、前几名是谁；加 `--save` 把报告写到不进 Git 的 `data/seo/yuanbao/` 下，方便前后对比。
-- 密钥从环境变量或本地 `.env` / `.env.local` 读取，变量名 `TENCENTCLOUD_SECRET_ID`、`TENCENTCLOUD_SECRET_KEY`；建议用只允许调用元宝搜索的子账号密钥。
-- 签名按腾讯云 TC3-HMAC-SHA256，测试用官方 Python SDK 算出的签名做对照；测试全部离线。
+- 密钥从环境变量或本地 `.env` / `.env.local` 读取，两种方式任选：元宝搜索控制台的服务 API Key（`TENCENT_WSA_API_KEY`，`sk-` 开头；腾讯示例里的 `TENCENTCLOUD_WSA_APIKEY` 也认），以 `Authorization: Bearer` 发到 `https://api.wsa.cloud.tencent.com/SearchPro`；或腾讯云 API 密钥对 `TENCENTCLOUD_SECRET_ID`、`TENCENTCLOUD_SECRET_KEY`，按 TC3-HMAC-SHA256 签名发到 `wsa.tencentcloudapi.com`（建议用只允许调用元宝搜索的子账号）。两者都有时用服务 API Key。
+- TC3 签名的测试用官方 Python SDK 算出的签名做对照；测试全部离线。
 
-**待定：** 用哪一组查询做固定检查、多久查一次（每次查询都计费；不新增定时任务），以及账号开通的是极速版、标准版还是旗舰版（极速版不支持 `Mode`、`Cnt` 等参数）。
+**首次实测（2026-10-27，服务 API Key，账号为旗舰版）：** 查询清单在本地 `data/seo/yuanbao/queries.txt`（17 个：品牌词 4、概念 2、职业问题 7、具体能力和更新 3、文章 1），报告存于 `data/seo/yuanbao/`。
+
+- 17 个查询取前 20 条，surviagi.com 一次都没出现。
+- 品牌词 `SurviAGI`、`surviagi.com` 的前几名是拼写相近的 survi.ai、suroi.wiki 等。品牌词在元宝里还没有识别度。
+- 限定 `Site=surviagi.com` 后，`SurviAGI`、`The AGI Survival Guide`、`OpenAI`、`Claude`、`Qwen`、`agent`、`model`、`AI 更新`、`职业 AI 任务 等级` 等都返回 0 条；只有 `AI` 找到 1 页，是英文更新页（2026-10-13 的 Staple AI / QwenWork）。对照组 `Site=cloud.tencent.com` 正常返回，说明过滤本身有效。按此判断，元宝的索引里本站只有零星几页。
+- 不是被挡住：`robots.txt` 对所有爬虫放行；用 Sogou web spider、Baiduspider、YisouSpider、Bytespider 的 User-Agent 请求首页、`/zh-CN`、`/zh-CN/occupations` 均为 200。但这是从境外请求的，Cloudflare 对境内真实爬虫 IP 的处理没有验证。
+- 原因应是“没被发现”：IndexNow 只通知 Bing、Yandex 等，不覆盖搜狗和腾讯；本站没有在搜狗站长平台提交过站点地图；也几乎没有中文站点链向本站。
+- 能补的：一是在搜狗站长平台（`zhanzhang.sogou.com`）验证站点并提交站点地图，元宝的网页结果主要来自搜狗索引，这一步需负责人操作；二是在中文社区（知乎、公众号、掘金等）发文时链回对应页面；三是继续用这份清单复查。这些都与 2026-10-03 定的“受众全球优先、不为大陆访问做专门安排”有关，是否投入由负责人决定。
+
+**待定：** 固定查询清单是否就用这一份、多久查一次（每次查询都计费；不新增定时任务）；是否在搜狗站长平台登记。
 
 ## 需要守住的规则
 

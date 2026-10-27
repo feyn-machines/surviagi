@@ -59,11 +59,27 @@ class YuanbaoSearchCliTest(unittest.TestCase):
 
     def test_credentials_prefer_environment_and_name_the_missing_key(self):
         env = {"TENCENTCLOUD_SECRET_ID": "id-from-env", "TENCENTCLOUD_SECRET_KEY": "key-from-env"}
-        with patch.dict(os.environ, env), patch.object(yb, "read_env_value", return_value="from-file"):
+        with patch.dict(os.environ, env, clear=True), patch.object(yb, "read_env_value", return_value=None):
             self.assertEqual(yb.credentials(), ("id-from-env", "key-from-env"))
         with patch.dict(os.environ, {}, clear=True), patch.object(yb, "read_env_value", return_value=None):
-            with self.assertRaisesRegex(yb.YuanbaoError, "TENCENTCLOUD_SECRET_ID is not set"):
+            with self.assertRaisesRegex(yb.YuanbaoError, "TENCENT_WSA_API_KEY nor TENCENTCLOUD_SECRET_ID is set"):
                 yb.credentials()
+
+    def test_service_api_key_wins_over_the_secret_pair(self):
+        files = {"TENCENT_WSA_API_KEY": "sk-from-file", "TENCENTCLOUD_SECRET_ID": "i", "TENCENTCLOUD_SECRET_KEY": "k"}
+        with patch.dict(os.environ, {}, clear=True), patch.object(yb, "read_env_value", side_effect=files.get):
+            self.assertEqual(yb.credentials(), "sk-from-file")
+        with patch.dict(os.environ, {"TENCENTCLOUD_WSA_APIKEY": "sk-from-env"}, clear=True), \
+                patch.object(yb, "read_env_value", side_effect=files.get):
+            self.assertEqual(yb.credentials(), "sk-from-env")
+
+    def test_api_key_is_sent_as_bearer_to_its_own_endpoint(self):
+        url, headers = yb.endpoint("sk-test", '{"Query":"q"}', 1761500000)
+        self.assertEqual(url, "https://api.wsa.cloud.tencent.com/SearchPro")
+        self.assertEqual(headers, {"Authorization": "Bearer sk-test", "Content-Type": "application/json"})
+        url, headers = yb.endpoint(("AKIDtest", "test-secret-key"), '{"Query":"q"}', 1761500000)
+        self.assertEqual(url, "https://wsa.tencentcloudapi.com/")
+        self.assertTrue(headers["Authorization"].startswith("TC3-HMAC-SHA256 Credential=AKIDtest/"))
 
     def test_rank_command_reports_and_saves(self):
         replies = {"AI 会计": {"Pages": [page("https://zhihu.com/q"), page("https://surviagi.com/zh-CN/x")]},
