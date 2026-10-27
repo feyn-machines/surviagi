@@ -9,6 +9,9 @@ type Decision = "comment" | "request_revision" | "hold" | "approve" | "withdraw"
 type Annotation = { annotation_id: string; review_id: string; paragraph_key: string; selected_text: string; context_before: string; context_after: string; comment: string };
 type Review = { review_id: string; review_scope: Scope; decision: Decision; actor_kind: string; actor_id: string; note: string; created_at: string };
 type Edit = { edit_id: string; review_id: string; before_markdown: string; after_markdown: string; unified_diff: string; created_at: string };
+type FeedbackScope = "single_article" | "reusable_preference";
+type FeedbackIssue = "evidence_boundary" | "structure" | "clarity" | "specificity" | "tone" | "redundancy" | "headline" | "natural_language" | "other";
+type ArticleGenre = "event_thread" | "product_comparison" | "capability_explainer" | "workflow" | "other";
 type Article = {
   articleId: string;
   version: number;
@@ -60,7 +63,7 @@ const copy = {
     original: "Before",
     revised: "Suggested text",
     approveBoth: "Approve this bilingual version",
-    approveHelp: "The latest human decision for both English and Chinese must be “Approve this version”. This switches the approved-version pointer; the regular Articles listing is not connected yet.",
+    approveHelp: "The latest human decision for both English and Chinese must be “Approve this version”. This switches the approved-version pointer used by the regular Articles listing and feeds.",
     approving: "Approving…",
     approved: "Both language reviews passed. This version is now the approved version.",
     alreadyApproved: "This version was already approved.",
@@ -80,6 +83,24 @@ const copy = {
     withdrawalFailed: "Could not withdraw the article. Check the current review decisions and try again.",
     confirmWithdrawal: "Withdraw every public version of this article? This cannot be undone here.",
     wrongWithdrawalVersion: "Open the current public version in the queue before recording withdrawal decisions.",
+    feedbackSample: "Curate as a private writing example",
+    feedbackScope: "Reuse scope",
+    singleArticle: "This article only",
+    reusablePreference: "Reusable preference (explicitly stated)",
+    feedbackIssue: "Problem type",
+    feedbackIssues: { evidence_boundary: "Evidence boundary", structure: "Structure", clarity: "Clarity", specificity: "Specificity", tone: "Tone", redundancy: "Redundancy", headline: "Headline", natural_language: "Natural language", other: "Other" },
+    articleGenre: "Article genre",
+    articleGenres: { event_thread: "Event thread", product_comparison: "Product comparison", capability_explainer: "Capability explainer", workflow: "Workflow", other: "Other" },
+    feedbackProblem: "What was wrong",
+    feedbackBeforeExcerpt: "Original excerpt (exact text)",
+    feedbackAfterExcerpt: "Suggested excerpt (exact text)",
+    feedbackApplicability: "When this example applies",
+    preferenceEvidence: "Exact preference quote from the review note",
+    preferenceHelp: "A reusable preference must quote explicit wording from the source review. A one-off correction is never promoted automatically.",
+    saveSample: "Save private example",
+    sampleSaved: "Private example saved.",
+    sampleFailed: "Could not save this example. Check the source edit and explicit applicability.",
+    sampleDuplicate: "An example with this source, problem type and scope already exists.",
   },
   "zh-CN": {
     language: "中文审核",
@@ -117,7 +138,7 @@ const copy = {
     original: "修改前",
     revised: "修改建议",
     approveBoth: "批准此双语版本",
-    approveHelp: "中英文两种语言都必须分别有最新的人工作出“批准此版本”的决定。此操作会切换正式版本指针；常规文章栏目尚未接入该指针。",
+    approveHelp: "中英文两种语言都必须分别有最新的人工作出“批准此版本”的决定。此操作会切换常规文章栏目和 feed 使用的正式版本指针。",
     approving: "正在批准…",
     approved: "中英文审核均已通过，此版本现为正式批准版本。",
     alreadyApproved: "此版本已经批准。",
@@ -137,11 +158,31 @@ const copy = {
     withdrawalFailed: "撤回失败。请检查当前审核决定后重试。",
     confirmWithdrawal: "确认撤回本文的全部公开版本？此处无法撤销。",
     wrongWithdrawalVersion: "请先在文章队列打开当前公开版本，再记录撤回决定。",
+    feedbackSample: "整理为私有写作样例",
+    feedbackScope: "适用范围",
+    singleArticle: "仅本文",
+    reusablePreference: "可复用偏好（需明确表达）",
+    feedbackIssue: "问题类型",
+    feedbackIssues: { evidence_boundary: "证据边界", structure: "结构", clarity: "清晰度", specificity: "具体性", tone: "语气", redundancy: "重复", headline: "标题", natural_language: "语言自然度", other: "其他" },
+    articleGenre: "文章体裁",
+    articleGenres: { event_thread: "事件脉络", product_comparison: "产品比较", capability_explainer: "能力说明", workflow: "工作流程", other: "其他" },
+    feedbackProblem: "原文问题",
+    feedbackBeforeExcerpt: "原文摘录（需与审核文本一致）",
+    feedbackAfterExcerpt: "修改摘录（需与审核文本一致）",
+    feedbackApplicability: "此样例适用的情况",
+    preferenceEvidence: "审核意见中的明确偏好原话",
+    preferenceHelp: "可复用偏好必须引用原审核意见中的明确表述。单篇修正不会自动变成长期规则。",
+    saveSample: "保存私有样例",
+    sampleSaved: "私有样例已保存。",
+    sampleFailed: "样例保存失败。请检查来源修改和适用条件。",
+    sampleDuplicate: "此来源、问题类型与范围的样例已存在。",
   },
 } as const;
 
 const scopes: Scope[] = ["readability", "language_quality", "factual_accuracy", "source_quality", "publication"];
 const decisions: Decision[] = ["comment", "request_revision", "hold", "approve", "withdraw"];
+const feedbackIssues: FeedbackIssue[] = ["evidence_boundary", "structure", "clarity", "specificity", "tone", "redundancy", "headline", "natural_language", "other"];
+const articleGenres: ArticleGenre[] = ["event_thread", "product_comparison", "capability_explainer", "workflow", "other"];
 
 export function EditorialReviewDesk({ articleId, version, language }: { articleId: string; version: number; language: Language }) {
   const c = copy[language];
@@ -274,6 +315,19 @@ function LanguagePanel({ articleId, version, language, onHash, onPointers, appro
   const [annotation, setAnnotation] = useState("");
   const [scope, setScope] = useState<Scope>("readability");
   const [decision, setDecision] = useState<Decision>("comment");
+  const [curatingEdit, setCuratingEdit] = useState<Edit | null>(null);
+  const [feedbackScope, setFeedbackScope] = useState<FeedbackScope>("single_article");
+  const [feedbackIssue, setFeedbackIssue] = useState<FeedbackIssue>("clarity");
+  const [articleGenre, setArticleGenre] = useState<ArticleGenre>("event_thread");
+  const [feedbackProblem, setFeedbackProblem] = useState("");
+  const [feedbackBeforeExcerpt, setFeedbackBeforeExcerpt] = useState("");
+  const [feedbackAfterExcerpt, setFeedbackAfterExcerpt] = useState("");
+  const [feedbackApplicability, setFeedbackApplicability] = useState("");
+  const [preferenceEvidence, setPreferenceEvidence] = useState("");
+  const [curating, setCurating] = useState(false);
+  const [curationMessage, setCurationMessage] = useState("");
+  const [curationError, setCurationError] = useState(false);
+  const [savedSampleEditId, setSavedSampleEditId] = useState<string | null>(null);
   const [loadedKey, setLoadedKey] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -367,6 +421,46 @@ function LanguagePanel({ articleId, version, language, onHash, onPointers, appro
     }
   }
 
+  async function saveFeedbackSample(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!curatingEdit) return;
+    setCurating(true);
+    setCurationMessage("");
+    setCurationError(false);
+    try {
+      const response = await fetch("/api/admin/editorial/feedback-samples", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          sourceReviewId: curatingEdit.review_id,
+          sourceEditId: curatingEdit.edit_id,
+          language,
+          feedbackScope,
+          issueType: feedbackIssue,
+          articleGenre,
+          problem: feedbackProblem,
+          beforeExcerpt: feedbackBeforeExcerpt,
+          afterExcerpt: feedbackAfterExcerpt,
+          applicability: feedbackApplicability,
+          preferenceEvidence: feedbackScope === "reusable_preference" ? preferenceEvidence : null,
+        }),
+      });
+      const result = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) {
+        setCurationError(true);
+        setCurationMessage(result.error === "duplicate_sample" ? c.sampleDuplicate : c.sampleFailed);
+        return;
+      }
+      setCurationMessage(c.sampleSaved);
+      setSavedSampleEditId(curatingEdit.edit_id);
+    } catch {
+      setCurationError(true);
+      setCurationMessage(c.sampleFailed);
+    } finally {
+      setCurating(false);
+    }
+  }
+
   if (loading) return <section className={styles.panel} aria-live="polite">{c.loading}</section>;
   if (!detail) return <section className={styles.panel} role="alert">{message || c.loadFailed}</section>;
 
@@ -446,9 +540,59 @@ function LanguagePanel({ articleId, version, language, onHash, onPointers, appro
               <details key={item.edit_id}>
                 <summary>{c.edits}</summary>
                 <div className={styles.editHistory}>
-                  <div><h5>{c.original}</h5><pre>{item.before_markdown}</pre></div>
-                  <div><h5>{c.revised}</h5><pre>{item.after_markdown}</pre></div>
+                    <div><h5>{c.original}</h5><pre>{item.before_markdown}</pre></div>
+                    <div><h5>{c.revised}</h5><pre>{item.after_markdown}</pre></div>
                 </div>
+                <button type="button" onClick={() => {
+                  setCuratingEdit(item);
+                  setCurationMessage("");
+                  setCurationError(false);
+                  setFeedbackScope("single_article");
+                  setFeedbackIssue("clarity");
+                  setArticleGenre("event_thread");
+                  setFeedbackProblem("");
+                  setFeedbackBeforeExcerpt("");
+                  setFeedbackAfterExcerpt("");
+                  setFeedbackApplicability("");
+                  setPreferenceEvidence("");
+                }}>
+                  {savedSampleEditId === item.edit_id ? c.sampleSaved : c.feedbackSample}
+                </button>
+                {curatingEdit?.edit_id === item.edit_id && savedSampleEditId !== item.edit_id ? (
+                  <form className={styles.form} onSubmit={(event) => void saveFeedbackSample(event)}>
+                    <label htmlFor={`feedback-scope-${noteId}-${item.edit_id}`}>{c.feedbackScope}</label>
+                    <select id={`feedback-scope-${noteId}-${item.edit_id}`} value={feedbackScope} onChange={(event) => setFeedbackScope(event.target.value as FeedbackScope)}>
+                      <option value="single_article">{c.singleArticle}</option>
+                      <option value="reusable_preference">{c.reusablePreference}</option>
+                    </select>
+                    <label htmlFor={`feedback-issue-${noteId}-${item.edit_id}`}>{c.feedbackIssue}</label>
+                    <select id={`feedback-issue-${noteId}-${item.edit_id}`} value={feedbackIssue} onChange={(event) => setFeedbackIssue(event.target.value as FeedbackIssue)}>
+                      {feedbackIssues.map((value) => <option key={value} value={value}>{c.feedbackIssues[value]}</option>)}
+                    </select>
+                    <label htmlFor={`feedback-genre-${noteId}-${item.edit_id}`}>{c.articleGenre}</label>
+                    <select id={`feedback-genre-${noteId}-${item.edit_id}`} value={articleGenre} onChange={(event) => setArticleGenre(event.target.value as ArticleGenre)}>
+                      {articleGenres.map((value) => <option key={value} value={value}>{c.articleGenres[value]}</option>)}
+                    </select>
+                    <label htmlFor={`feedback-problem-${noteId}-${item.edit_id}`}>{c.feedbackProblem}</label>
+                    <textarea id={`feedback-problem-${noteId}-${item.edit_id}`} value={feedbackProblem} required minLength={10} maxLength={1200} rows={2} onChange={(event) => setFeedbackProblem(event.target.value)} />
+                    <label htmlFor={`feedback-before-${noteId}-${item.edit_id}`}>{c.feedbackBeforeExcerpt}</label>
+                    <textarea id={`feedback-before-${noteId}-${item.edit_id}`} value={feedbackBeforeExcerpt} required maxLength={3000} rows={2} onChange={(event) => setFeedbackBeforeExcerpt(event.target.value)} />
+                    <label htmlFor={`feedback-after-${noteId}-${item.edit_id}`}>{c.feedbackAfterExcerpt}</label>
+                    <textarea id={`feedback-after-${noteId}-${item.edit_id}`} value={feedbackAfterExcerpt} required maxLength={3000} rows={2} onChange={(event) => setFeedbackAfterExcerpt(event.target.value)} />
+                    <label htmlFor={`feedback-applicability-${noteId}-${item.edit_id}`}>{c.feedbackApplicability}</label>
+                    <textarea id={`feedback-applicability-${noteId}-${item.edit_id}`} value={feedbackApplicability} required minLength={10} maxLength={1200} rows={2} onChange={(event) => setFeedbackApplicability(event.target.value)} />
+                    {feedbackScope === "reusable_preference" ? (
+                      <>
+                        <label htmlFor={`feedback-preference-${noteId}-${item.edit_id}`}>{c.preferenceEvidence}</label>
+                        <p>{c.preferenceHelp}</p>
+                        <textarea id={`feedback-preference-${noteId}-${item.edit_id}`} value={preferenceEvidence} required minLength={10} maxLength={1200} rows={2} onChange={(event) => setPreferenceEvidence(event.target.value)} />
+                      </>
+                    ) : null}
+                    <button type="submit" disabled={curating}>{curating ? c.saving : c.saveSample}</button>
+                    {curationMessage ? <p role={curationError ? "alert" : "status"}>{curationMessage}</p> : null}
+                  </form>
+                ) : null}
+                {savedSampleEditId === item.edit_id ? <p role="status">{c.sampleSaved}</p> : null}
               </details>
             ))}
           </article>

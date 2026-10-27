@@ -18,6 +18,7 @@ test('editorial schema enforces immutable bilingual public versions and isolated
     const appAgent = await readFile(new URL('../../db/app/002_agent_access.sql', import.meta.url), 'utf8');
     const editorialReview = await readFile(new URL('../../db/app/003_editorial_review.sql', import.meta.url), 'utf8');
     const editorialPublicationScope = await readFile(new URL('../../db/app/004_editorial_publication_scope.sql', import.meta.url), 'utf8');
+    const editorialFeedbackSamples = await readFile(new URL('../../db/app/005_editorial_feedback_samples.sql', import.meta.url), 'utf8');
     const editorialApproval = await readFile(new URL('../../db/published/003_editorial_approval.sql', import.meta.url), 'utf8');
     const editorialWithdrawal = await readFile(new URL('../../db/published/004_editorial_withdrawal.sql', import.meta.url), 'utf8');
     const grants = await readFile(new URL('../../deploy/db/grants.sql', import.meta.url), 'utf8');
@@ -37,6 +38,8 @@ test('editorial schema enforces immutable bilingual public versions and isolated
     await runPsql(editorialReview, withCredentials('oaw_app', 'app-pass'));
     await runPsql(editorialPublicationScope, withCredentials('oaw_app', 'app-pass'));
     await runPsql(editorialPublicationScope, withCredentials('oaw_app', 'app-pass'));
+    await runPsql(editorialFeedbackSamples, withCredentials('oaw_app', 'app-pass'));
+    await runPsql(editorialFeedbackSamples, withCredentials('oaw_app', 'app-pass'));
     await runPsql(editorial, withCredentials('oaw_kg_writer', 'writer-pass'));
     await runPsql(grants, withCredentials('oaw_kg_writer', 'writer-pass'));
     await runPsql(editorialApproval);
@@ -89,6 +92,7 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       await assert.rejects(site.query("UPDATE editorial.publications SET preview_version = 1 WHERE article_id = 'integration-test'"), /permission denied/);
       await assert.rejects(app.query('SELECT * FROM editorial.publications'), /permission denied/);
       await assert.rejects(site.query('SELECT * FROM app.editorial_reviews'), /permission denied/);
+      await assert.rejects(site.query('SELECT * FROM app.editorial_feedback_samples'), /permission denied/);
       await assert.rejects(writer.query('SELECT * FROM app.editorial_reviews'), /permission denied/);
       await assert.rejects(site.query('SELECT * FROM editorial.review_approval_evidence'), /permission denied/);
       await assert.rejects(app.query('SELECT * FROM editorial.review_approval_evidence'), /permission denied/);
@@ -238,6 +242,90 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       assert.equal(reviewed.annotations[0].context_before, ' before ');
       assert.equal(reviewed.edits[0].before_markdown.includes('Body 2'), true);
       assert.equal(reviewed.edits[0].after_markdown, 'Revised Body 2');
+
+      const samplesUrl = `${base}/api/admin/editorial/feedback-samples`;
+      assert.equal((await fetch(`${samplesUrl}?language=en`)).status, 404);
+      assert.equal((await fetch(`${samplesUrl}?language=en`, { headers: { cookie: authCookie(readerToken) } })).status, 404);
+      const emptySamples = await fetch(`${samplesUrl}?language=en`, { headers });
+      assert.equal(emptySamples.status, 200);
+      assert.deepEqual((await emptySamples.json()).samples, []);
+      const sample = {
+        sourceReviewId: reviewed.reviews[0].review_id,
+        sourceEditId: reviewed.edits[0].edit_id,
+        language: 'en', feedbackScope: 'single_article', issueType: 'clarity', articleGenre: 'event_thread',
+        problem: 'The opening delays the key caveat.',
+        beforeExcerpt: 'Body 2', afterExcerpt: 'Revised Body 2',
+        applicability: 'When technical context is needed before interpreting the main claim.',
+        preferenceEvidence: null,
+      };
+      assert.equal((await fetch(samplesUrl, { method: 'POST', headers: { ...headers, origin: 'https://attacker.example' }, body: JSON.stringify(sample) })).status, 403);
+      const curatedOneOff = await fetch(samplesUrl, { method: 'POST', headers, body: JSON.stringify(sample) });
+      assert.equal(curatedOneOff.status, 201);
+      const curatedId = (await curatedOneOff.json()).sampleId;
+      assert.equal((await fetch(samplesUrl, { method: 'POST', headers, body: JSON.stringify({ ...sample, issueType: 'specificity', beforeExcerpt: 'fabricated excerpt' }) })).status, 400,
+        'curated excerpts must be present in the exact source edit');
+      assert.equal((await fetch(samplesUrl, { method: 'POST', headers, body: JSON.stringify(sample) })).status, 409,
+        'the same source edit cannot be duplicated for a scope and issue type');
+      const articleSamples = await fetch(`${samplesUrl}?language=en&issueType=clarity&articleGenre=event_thread&articleId=integration-test`, { headers });
+      assert.equal(articleSamples.headers.get('cache-control'), 'no-store');
+      assert.equal(articleSamples.headers.get('x-robots-tag'), 'noindex');
+      const articleSampleRows = (await articleSamples.json()).samples;
+      assert.equal(articleSampleRows.length, 1);
+      assert.equal(articleSampleRows[0].sample_id, curatedId);
+      assert.equal(articleSampleRows[0].before_excerpt, 'Body 2');
+      assert.equal(articleSampleRows[0].after_excerpt, 'Revised Body 2');
+      assert.equal(articleSampleRows[0].source_content_sha256, 'c'.repeat(64));
+      assert.deepEqual((await (await fetch(`${samplesUrl}?language=en`, { headers })).json()).samples, [], 'one-off examples are excluded from general writing retrieval');
+      assert.deepEqual((await (await fetch(`${samplesUrl}?language=zh-CN&articleId=integration-test`, { headers })).json()).samples, [], 'examples are language-specific');
+      assert.deepEqual((await (await fetch(`${samplesUrl}?language=en&articleId=another-article`, { headers })).json()).samples, [], 'one-off examples do not transfer to another article');
+      assert.equal((await fetch(samplesUrl, { method: 'POST', headers, body: JSON.stringify({ ...sample, language: 'zh-CN' }) })).status, 404, 'a sample cannot relabel its source language');
+
+      const reusableNote = 'For all event threads, state the practical change before the evidence details.';
+      const reusableReviewResponse = await fetch(`${base}/api/admin/editorial`, {
+        method: 'POST', headers,
+        body: JSON.stringify({ articleId: 'integration-test', version: 2, language: 'en', contentSha256: 'c'.repeat(64),
+          reviewScope: 'readability', decision: 'comment', note: reusableNote, edit: { afterMarkdown: 'Start with the practical change, then explain the evidence.' } }),
+      });
+      assert.equal(reusableReviewResponse.status, 200);
+      const reusableDetail = await (await fetch(reviewUrl, { headers })).json();
+      const reusableReview = reusableDetail.reviews.find((row) => row.note === reusableNote);
+      const reusableEdit = reusableDetail.edits.find((row) => row.review_id === reusableReview.review_id);
+      const reusableSample = {
+        sourceReviewId: reusableReview.review_id, sourceEditId: reusableEdit.edit_id,
+        language: 'en', feedbackScope: 'reusable_preference', issueType: 'structure', articleGenre: 'event_thread',
+        problem: 'The reader cannot see the practical change soon enough.',
+        beforeExcerpt: 'Body 2', afterExcerpt: 'Start with the practical change, then explain the evidence.',
+        applicability: 'When an event thread explains several linked changes before stating their effect.',
+        preferenceEvidence: reusableNote,
+      };
+      assert.equal((await fetch(samplesUrl, { method: 'POST', headers, body: JSON.stringify({ ...reusableSample, preferenceEvidence: 'An invented preference not present in the review.' }) })).status, 400);
+      assert.equal((await fetch(samplesUrl, { method: 'POST', headers, body: JSON.stringify(reusableSample) })).status, 201);
+      const crossArticleSamples = await (await fetch(`${samplesUrl}?language=en&issueType=structure&articleGenre=event_thread&articleId=next-event`, { headers })).json();
+      assert.equal(crossArticleSamples.samples.length, 1, 'only explicitly quoted reusable preferences can be retrieved for another article');
+      assert.equal(crossArticleSamples.samples[0].preference_evidence, reusableNote);
+      for (const issueType of ['clarity', 'specificity', 'tone']) {
+        await admin.query(
+          `INSERT INTO app.editorial_feedback_samples
+            (source_review_id, source_edit_id, feedback_scope, issue_type, article_genre, problem, before_excerpt, after_excerpt, applicability, preference_evidence, curator_id)
+           VALUES ($1, $2, 'reusable_preference', $3, 'event_thread', 'A reader-facing change should appear early.', 'Body 2', 'Start with the practical change, then explain the evidence.', 'When an event thread explains several linked changes before stating their effect.', $4, 'review-admin')`,
+          [reusableReview.review_id, reusableEdit.edit_id, issueType, reusableNote],
+        );
+      }
+      const cappedSamples = await (await fetch(`${samplesUrl}?language=en&articleGenre=event_thread&articleId=another-article`, { headers })).json();
+      assert.equal(cappedSamples.samples.length, 3, 'retrieval returns no more than three small examples');
+      await assert.rejects(
+        admin.query(
+          `INSERT INTO app.editorial_feedback_samples
+            (source_review_id, source_edit_id, feedback_scope, issue_type, article_genre, problem, before_excerpt, after_excerpt, applicability, preference_evidence, curator_id)
+           VALUES ($1, $2, 'reusable_preference', 'other', 'event_thread', 'A broad preference without proof.', 'Body 2', 'Start with the practical change, then explain the evidence.', 'When an event thread explains several linked changes before stating their effect.', NULL, 'review-admin')`,
+          [reusableReview.review_id, reusableEdit.edit_id],
+        ),
+        /check constraint/,
+        'a reusable preference must have explicit evidence',
+      );
+      const searchAfterCuration = await (await fetch(`${base}/api/agent/search?${new URLSearchParams({ query: 'integration robotics', types: 'article', language: 'en' })}`)).json();
+      assert.doesNotMatch(JSON.stringify(searchAfterCuration), /The opening delays the key caveat|The reader cannot see the practical change|state the practical change before the evidence details/);
+      await assert.rejects(admin.query('UPDATE app.editorial_feedback_samples SET problem = \'rewritten sample\' WHERE sample_id = $1', [curatedId]), /append-only/);
 
       const saveDecision = async (language, decision, note) => fetch(`${base}/api/admin/editorial`, {
         method: 'POST', headers,
