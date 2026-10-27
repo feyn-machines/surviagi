@@ -18,6 +18,12 @@
 .open:focus-visible, .back a:focus-visible { outline: 3px solid var(--ah-color-focus); outline-offset: 3px; }
 
 .desk { margin-top: var(--ah-space-7); }
+.approval { display: grid; justify-items: start; gap: var(--ah-space-2); margin-bottom: var(--ah-space-4); padding: var(--ah-space-4); border: 1px solid var(--ah-color-line); background: var(--ah-color-surface); }
+.approval p { margin: 0; color: var(--ah-color-muted); font-size: 13px; line-height: 1.6; }
+.approval button { min-height: var(--ah-control-height); padding: 0 var(--ah-space-3); border: 1px solid var(--ah-color-line); border-radius: var(--ah-radius-control); color: var(--ah-color-text); background: transparent; font-family: var(--ah-font-mono); font-size: var(--ah-text-label); cursor: pointer; }
+.approval button:hover:not(:disabled) { background: var(--ah-color-line); }
+.approval button:disabled { opacity: .55; cursor: default; }
+.approval button:focus-visible { outline: 3px solid var(--ah-color-focus); outline-offset: 3px; }
 .panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: var(--ah-space-4); }
 .panel { min-width: 0; padding: var(--ah-space-4); border: 1px solid var(--ah-color-line); background: var(--ah-color-surface); }
 .panelHeader { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: var(--ah-space-2) var(--ah-space-4); }

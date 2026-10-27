@@ -20,9 +20,10 @@ GOOD = "a" * 48
 
 
 def build(target=TARGET, compose="services: {}\n", roles="SELECT 1;\n", schema="SELECT 2;\n", grants="SELECT 3;\n",
-          app=None, editorial_sql=None):
+          app=None, editorial_sql=None, editorial_approval_sql=None):
     return server_db.setup_script(target, compose, roles, schema, grants, {"001_app.sql": "SELECT 4;\n"} if app is None else app,
-                                 server_db.EDITORIAL_SQL.read_text() if editorial_sql is None else editorial_sql)
+                                 server_db.EDITORIAL_SQL.read_text() if editorial_sql is None else editorial_sql,
+                                 server_db.EDITORIAL_APPROVAL_SQL.read_text() if editorial_approval_sql is None else editorial_approval_sql)
 
 
 class DatabaseForwardTest(unittest.TestCase):
@@ -179,7 +180,7 @@ class SetupScriptTest(unittest.TestCase):
         self.assertNotRegex(script, r"PGPASSWORD=[^\"]")
         self.assertNotIn("set -x", script)
         self.assertNotIn(" -e PGPASSWORD", script)
-        self.assertEqual(script.count("--env-file"), 12)  # 4 schema/app psql steps + 4 checks + privilege check + restart + up
+        self.assertEqual(script.count("--env-file"), 13)  # adds the isolated approval bridge migration
 
     def test_every_remote_value_is_quoted_from_the_deploy_root(self):
         script = build({**TARGET, "DEPLOY_ROOT": "/opt/my site"})
@@ -196,11 +197,13 @@ class SetupScriptTest(unittest.TestCase):
         steps = re.findall(r"-U (\w+) -d (\w+) < (\S+)", tail)
         self.assertEqual(steps, [("postgres", "postgres", "roles.sql"), ("oaw_kg_writer", "openaiwill", "001_kg.sql"),
                                  ("oaw_kg_writer", "openaiwill", "002_editorial.sql"),
-                                 ("oaw_kg_writer", "openaiwill", "grants.sql"), ("oaw_app", "openaiwill", "001_app.sql")])
+                                 ("oaw_kg_writer", "openaiwill", "grants.sql"), ("oaw_app", "openaiwill", "001_app.sql"),
+                                 ("postgres", "openaiwill", "003_editorial_approval.sql")])
 
-    def test_the_four_files_are_uploaded_before_the_database_starts(self):
+    def test_database_and_application_files_are_uploaded_before_the_database_starts(self):
         script = build()
-        for name in ("compose.yml", "roles.sql", "001_kg.sql", "002_editorial.sql", "grants.sql", "001_app.sql"):
+        for name in ("compose.yml", "roles.sql", "001_kg.sql", "002_editorial.sql", "grants.sql", "001_app.sql",
+                     "003_editorial_approval.sql"):
             self.assertLess(script.index(f"cat > /opt/openaiwill/db/{name} <<"), script.index("up -d --wait"))
 
     def test_the_password_checks_connect_over_the_container_address_where_scram_applies(self):

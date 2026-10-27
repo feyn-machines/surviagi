@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useId, useState, type FormEvent } from "react";
 import styles from "./review.module.css";
 
 type Language = "en" | "zh-CN";
@@ -59,6 +59,14 @@ const copy = {
     edits: "Suggested edits",
     original: "Before",
     revised: "Suggested text",
+    approveBoth: "Approve this bilingual version",
+    approveHelp: "The latest human decision for both English and Chinese must be “Approve this version”. This switches the approved-version pointer; the regular Articles listing is not connected yet.",
+    approving: "Approving…",
+    approved: "Both language reviews passed. This version is now the approved version.",
+    alreadyApproved: "This version was already approved.",
+    needBothApprovals: "Record a current human approval for both languages before approving this version.",
+    approvalConflict: "The public preview changed during review. Reload the article list and review the current version.",
+    approvalFailed: "Could not approve the version. Try again.",
   },
   "zh-CN": {
     language: "中文审核",
@@ -95,24 +103,79 @@ const copy = {
     edits: "建议修改",
     original: "修改前",
     revised: "修改建议",
+    approveBoth: "批准此双语版本",
+    approveHelp: "中英文两种语言都必须分别有最新的人工作出“批准此版本”的决定。此操作会切换正式版本指针；常规文章栏目尚未接入该指针。",
+    approving: "正在批准…",
+    approved: "中英文审核均已通过，此版本现为正式批准版本。",
+    alreadyApproved: "此版本已经批准。",
+    needBothApprovals: "请先分别为中英文版本记录最新的人工批准意见。",
+    approvalConflict: "审核期间公开预览已变化。请刷新文章列表，重新审核当前版本。",
+    approvalFailed: "批准失败，请重试。",
   },
 } as const;
 
 const scopes: Scope[] = ["readability", "language_quality", "factual_accuracy", "source_quality"];
 const decisions: Decision[] = ["comment", "request_revision", "hold", "approve", "withdraw"];
 
-export function EditorialReviewDesk({ articleId, version }: { articleId: string; version: number }) {
+export function EditorialReviewDesk({ articleId, version, language }: { articleId: string; version: number; language: Language }) {
+  const c = copy[language];
+  const [hashes, setHashes] = useState<Partial<Record<Language, string>>>({});
+  const [approving, setApproving] = useState(false);
+  const [approvalMessage, setApprovalMessage] = useState("");
+  const [approvalError, setApprovalError] = useState(false);
+  const [approvedNow, setApprovedNow] = useState(false);
+  const onHash = useCallback((itemLanguage: Language, hash: string) => {
+    setHashes((previous) => previous[itemLanguage] === hash ? previous : { ...previous, [itemLanguage]: hash });
+  }, []);
+
+  async function approve() {
+    if (!hashes.en || !hashes["zh-CN"]) return;
+    setApproving(true);
+    setApprovalMessage("");
+    setApprovalError(false);
+    try {
+      const response = await fetch("/api/admin/editorial/approve", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ articleId, version, contentSha256: hashes }),
+      });
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({})) as { error?: string };
+        setApprovalError(true);
+        setApprovalMessage(result.error === "bilingual_approval_required"
+          ? c.needBothApprovals
+          : result.error === "stale_preview" ? c.approvalConflict : c.approvalFailed);
+        return;
+      }
+      const result = await response.json() as { publicationChanged?: boolean };
+      setApprovedNow(true);
+      setApprovalMessage(result.publicationChanged ? c.approved : c.alreadyApproved);
+    } catch {
+      setApprovalError(true);
+      setApprovalMessage(c.approvalFailed);
+    } finally {
+      setApproving(false);
+    }
+  }
+
   return (
     <div className={styles.desk}>
+      <section className={styles.approval} aria-label={c.approveBoth}>
+        <p>{c.approveHelp}</p>
+        <button type="button" onClick={() => void approve()} disabled={approving || !hashes.en || !hashes["zh-CN"]}>
+          {approving ? c.approving : c.approveBoth}
+        </button>
+        {approvalMessage ? <p role={approvalError ? "alert" : "status"}>{approvalMessage}</p> : null}
+      </section>
       <div className={styles.panels}>
-        <LanguagePanel articleId={articleId} version={version} language="en" />
-        <LanguagePanel articleId={articleId} version={version} language="zh-CN" />
+        <LanguagePanel articleId={articleId} version={version} language="en" onHash={onHash} approvedNow={approvedNow} />
+        <LanguagePanel articleId={articleId} version={version} language="zh-CN" onHash={onHash} approvedNow={approvedNow} />
       </div>
     </div>
   );
 }
 
-function LanguagePanel({ articleId, version, language }: { articleId: string; version: number; language: Language }) {
+function LanguagePanel({ articleId, version, language, onHash, approvedNow }: { articleId: string; version: number; language: Language; onHash: (language: Language, hash: string) => void; approvedNow: boolean }) {
   const c = copy[language];
   const noteId = useId();
   const scopeId = useId();
@@ -154,6 +217,7 @@ function LanguagePanel({ articleId, version, language }: { articleId: string; ve
         const next = await fetchDetail();
         if (active) {
           setDetail(next);
+          onHash(language, next.article.contentSha256);
           setEdit(next.article.markdown);
           setMessage("");
           setConflict(false);
@@ -171,7 +235,7 @@ function LanguagePanel({ articleId, version, language }: { articleId: string; ve
     return () => { active = false; };
     // The request key names all inputs used by fetchDetail and avoids a render-time state reset.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
+  }, [key, onHash]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -228,6 +292,7 @@ function LanguagePanel({ articleId, version, language }: { articleId: string; ve
   if (!detail) return <section className={styles.panel} role="alert">{message || c.loadFailed}</section>;
 
   const article = detail.article;
+  const status = approvedNow ? "approved" : article.status;
   const previewPath = `${language === "zh-CN" ? "/zh-CN" : ""}/articles/previews/${articleId}/v${version}`;
 
   return (
@@ -238,8 +303,8 @@ function LanguagePanel({ articleId, version, language }: { articleId: string; ve
           <h3 id={`review-${language}`}>{article.title}</h3>
           <p className={styles.summary}>{article.summary}</p>
         </div>
-        <span className={styles.state} data-state={article.status}>
-          {article.status === "approved" ? c.approvedState : c.previewState}
+        <span className={styles.state} data-state={status}>
+          {status === "approved" ? c.approvedState : c.previewState}
         </span>
       </header>
       <dl className={styles.metadata}>

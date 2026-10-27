@@ -110,7 +110,7 @@ export default async function EditorialAdminPage({ searchParams }: Props) {
       {selected && articleId && version ? (
         <>
           <h2 className={s.sectionTitle}>Review version {version}</h2>
-          <EditorialReviewDesk articleId={articleId} version={version} />
+          <EditorialReviewDesk key={`${articleId}:v${version}`} articleId={articleId} version={version} language={language} />
         </>
       ) : null}
     </div>

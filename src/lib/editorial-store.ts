@@ -66,12 +66,18 @@ export async function publicEditorialArticle(
   }>(
     `SELECT a.article_id, v.version, l.language, l.title, l.summary, l.body_markdown,
             l.content_sha256, v.source_cutoff, v.created_at,
-            CASE WHEN p.approved_version = v.version THEN 'approved' ELSE 'preview' END AS status
+            CASE WHEN p.approved_version = v.version OR EXISTS (
+              SELECT 1 FROM editorial.publication_history h
+               WHERE h.article_id = p.article_id AND h.version = v.version AND h.action = 'approve'
+            ) THEN 'approved' ELSE 'preview' END AS status
        FROM editorial.articles a
        JOIN editorial.publications p USING (article_id)
        JOIN editorial.versions v ON v.article_id = p.article_id
         AND v.version = $2
-        AND (p.preview_version = v.version OR p.approved_version = v.version)
+        AND (p.preview_version = v.version OR p.approved_version = v.version OR EXISTS (
+          SELECT 1 FROM editorial.publication_history h
+           WHERE h.article_id = p.article_id AND h.version = v.version AND h.action = 'approve'
+        ))
        JOIN editorial.localizations l ON l.article_id = v.article_id AND l.version = v.version
       WHERE a.article_id = $1 AND a.withdrawn_at IS NULL AND l.language = $3`,
     [articleId, version, language],

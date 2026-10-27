@@ -172,6 +172,11 @@ export async function POST(request: Request) {
     const client = await db.connect();
     try {
       await client.query("BEGIN");
+      // Serialize new review decisions with the approval transaction for this article version.
+      await client.query(
+        "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
+        [`editorial-review:${article.articleId}:v${article.version}`],
+      );
       const review = await client.query<{ review_id: string }>(
         `INSERT INTO app.editorial_reviews
           (article_id, version, language, content_sha256, review_scope, decision, actor_kind, actor_id, note)

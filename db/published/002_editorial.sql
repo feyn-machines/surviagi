@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS editorial.publication_history (
 );
 
 CREATE OR REPLACE FUNCTION editorial.require_bilingual_version()
-RETURNS trigger LANGUAGE plpgsql AS $$
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, editorial AS $$
 DECLARE
     candidate text := NEW.article_id;
     candidate_preview integer := NEW.preview_version;
