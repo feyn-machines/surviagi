@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
+import { createHmac } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { Client } from 'pg';
 import test from 'node:test';
-import { startServer, stop } from './site-server.mjs';
+import { freePort, startServer, stop } from './site-server.mjs';
 
 const databaseUrl = process.env.EDITORIAL_TEST_DATABASE_URL;
 
@@ -13,9 +14,11 @@ test('editorial schema enforces immutable bilingual public versions and isolated
   await admin.connect();
   try {
     const editorial = await readFile(new URL('../../db/published/002_editorial.sql', import.meta.url), 'utf8');
+    const appCore = await readFile(new URL('../../db/app/001_app.sql', import.meta.url), 'utf8');
+    const appAgent = await readFile(new URL('../../db/app/002_agent_access.sql', import.meta.url), 'utf8');
     const editorialReview = await readFile(new URL('../../db/app/003_editorial_review.sql', import.meta.url), 'utf8');
     const grants = await readFile(new URL('../../deploy/db/grants.sql', import.meta.url), 'utf8');
-    await admin.query("CREATE ROLE oaw_kg_writer LOGIN PASSWORD 'writer-pass'; CREATE ROLE oaw_site LOGIN PASSWORD 'site-pass'; CREATE ROLE oaw_app LOGIN PASSWORD 'app-pass'; CREATE SCHEMA kg AUTHORIZATION oaw_kg_writer; CREATE SCHEMA app AUTHORIZATION oaw_app");
+    await admin.query("CREATE ROLE oaw_kg_writer LOGIN PASSWORD 'writer-pass'; CREATE ROLE oaw_site LOGIN PASSWORD 'site-pass'; CREATE ROLE oaw_app LOGIN PASSWORD 'app-pass'; ALTER ROLE oaw_app SET search_path = app; CREATE SCHEMA kg AUTHORIZATION oaw_kg_writer; CREATE SCHEMA app AUTHORIZATION oaw_app");
     const withCredentials = (role, password) => databaseUrl.replace(/(postgres(?:ql)?:\/\/)[^@]+@/, `$1${role}:${password}@`);
     const runPsql = async (text, connectionString = databaseUrl) => {
       const { spawnSync } = await import('node:child_process');
@@ -24,6 +27,8 @@ test('editorial schema enforces immutable bilingual public versions and isolated
     };
     await runPsql(editorial);
     await runPsql(grants);
+    await runPsql(appCore, withCredentials('oaw_app', 'app-pass'));
+    await runPsql(appAgent, withCredentials('oaw_app', 'app-pass'));
     await runPsql(editorialReview, withCredentials('oaw_app', 'app-pass'));
     await runPsql(editorialReview, withCredentials('oaw_app', 'app-pass'));
     await runPsql(editorial);
@@ -123,8 +128,62 @@ test('editorial schema enforces immutable bilingual public versions and isolated
     await admin.query("CREATE TABLE kg.active(seq bigint, release_id text, manifest jsonb)");
     await admin.query("GRANT USAGE ON SCHEMA kg TO oaw_site; GRANT SELECT ON kg.active TO oaw_site");
     await admin.query("UPDATE editorial.publications SET preview_version = 2 WHERE article_id = 'integration-test'");
-    const { base, proc } = await startServer({ DATABASE_URL: withCredentials('oaw_site', 'site-pass') });
+    const appSecret = 'editorial-review-integration-secret';
+    const adminToken = 'review-admin-token';
+    const readerToken = 'review-reader-token';
+    const appDb = new Client({ connectionString: withCredentials('oaw_app', 'app-pass') });
+    await appDb.connect();
     try {
+      await appDb.query('INSERT INTO app."user" (id, name, email, "emailVerified") VALUES ($1, $2, $3, true), ($4, $5, $6, true)', ['review-admin', 'Review Admin', 'review-admin@example.test', 'review-reader', 'Review Reader', 'review-reader@example.test']);
+      await appDb.query('INSERT INTO app.admins (email) VALUES ($1)', ['review-admin@example.test']);
+      await appDb.query('INSERT INTO app.session (id, "expiresAt", token, "updatedAt", "userId") VALUES ($1, now() + interval \'1 day\', $2, now(), $3), ($4, now() + interval \'1 day\', $5, now(), $6)', ['s-review-admin', adminToken, 'review-admin', 's-review-reader', readerToken, 'review-reader']);
+    } finally {
+      await appDb.end();
+    }
+    const authCookie = (token) => `better-auth.session_token=${encodeURIComponent(`${token}.${createHmac('sha256', appSecret).update(token).digest('base64')}`)}`;
+    const port = await freePort();
+    const baseURL = `http://127.0.0.1:${port}`;
+    const { base, proc } = await startServer({
+      DATABASE_URL: withCredentials('oaw_site', 'site-pass'),
+      APP_DATABASE_URL: withCredentials('oaw_app', 'app-pass'),
+      BETTER_AUTH_SECRET: appSecret,
+      BETTER_AUTH_URL: baseURL,
+      GOOGLE_CLIENT_ID: 'dummy-id',
+      GOOGLE_CLIENT_SECRET: 'dummy-secret',
+    }, port);
+    try {
+      const reviewUrl = `${base}/api/admin/editorial?articleId=integration-test&version=2&language=en`;
+      assert.equal((await fetch(reviewUrl)).status, 404);
+      assert.equal((await fetch(reviewUrl, { headers: { cookie: authCookie(readerToken) } })).status, 404);
+      const headers = { cookie: authCookie(adminToken), origin: base, 'content-type': 'application/json' };
+      const initialReview = await fetch(reviewUrl, { headers });
+      assert.equal(initialReview.status, 200);
+      assert.equal(initialReview.headers.get('cache-control'), 'no-store');
+      assert.equal(initialReview.headers.get('x-robots-tag'), 'noindex');
+      const initial = await initialReview.json();
+      assert.equal(initial.article.contentSha256, 'c'.repeat(64));
+      assert.deepEqual(initial.reviews, []);
+
+      const reviewBody = {
+        articleId: 'integration-test', version: 2, language: 'en', contentSha256: 'c'.repeat(64),
+        reviewScope: 'readability', decision: 'request_revision', note: 'Explain the limitation earlier.',
+        annotations: [{ paragraphKey: 'p:1:example', selectedText: 'Body 2', contextBefore: 'before', contextAfter: 'after', comment: 'Name the comparison group.' }],
+        edit: { afterMarkdown: 'Revised Body 2' },
+      };
+      const wrongOrigin = await fetch(`${base}/api/admin/editorial`, { method: 'POST', headers: { ...headers, origin: 'https://attacker.example' }, body: JSON.stringify(reviewBody) });
+      assert.equal(wrongOrigin.status, 403);
+      const staleHash = await fetch(`${base}/api/admin/editorial`, { method: 'POST', headers, body: JSON.stringify({ ...reviewBody, contentSha256: '0'.repeat(64) }) });
+      assert.equal(staleHash.status, 409);
+      const recorded = await fetch(`${base}/api/admin/editorial`, { method: 'POST', headers, body: JSON.stringify(reviewBody) });
+      assert.equal(recorded.status, 200);
+      assert.equal((await recorded.json()).publicationChanged, false);
+      const reviewed = await (await fetch(reviewUrl, { headers: { cookie: authCookie(adminToken) } })).json();
+      assert.equal(reviewed.reviews[0].review_scope, 'readability');
+      assert.equal(reviewed.reviews[0].decision, 'request_revision');
+      assert.equal(reviewed.annotations[0].paragraph_key, 'p:1:example');
+      assert.equal(reviewed.edits[0].before_markdown.includes('Body 2'), true);
+      assert.equal(reviewed.edits[0].after_markdown, 'Revised Body 2');
+
       const previewPath = '/articles/previews/integration-test/v2';
       const english = await fetch(`${base}${previewPath}`);
       assert.equal(english.status, 200);
