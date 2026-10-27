@@ -12,7 +12,7 @@
     "security:check": "python3 scripts/check-public-files.py",
     "security:staged": "python3 scripts/check-public-files.py --staged",
     "security:test": "python3 -m unittest discover -s scripts/tests -p 'test_public_files.py'",
-    "check": "pnpm security:check && pnpm security:test && pnpm metadata:check && pnpm platform:test && pnpm platform:check && pnpm ontology:test && pnpm ontology:check && pnpm data:test:unit && pnpm site:test:unit && pnpm crawl:test:unit && pnpm i18n:test && pnpm design:check && pnpm lint && pnpm typecheck && pnpm build && pnpm site:test",
+    "check": "pnpm security:check && pnpm security:test && pnpm metadata:check && pnpm platform:test && pnpm platform:check && pnpm ontology:test && pnpm ontology:check && pnpm data:test:unit && pnpm site:test:unit && pnpm crawl:test:unit && pnpm i18n:test && pnpm design:check && pnpm lint && pnpm typecheck && pnpm build && pnpm site:test && node --test scripts/tests/editorial-schema.integration.test.mjs",
     "check:full": "pnpm check && pnpm data:test",
     "metadata:check": "node scripts/check-metadata.mjs",
     "design:build": "node scripts/build-design-system.mjs",

@@ -4,3 +4,9 @@
 GRANT USAGE ON SCHEMA kg TO oaw_site;
 GRANT SELECT ON ALL TABLES IN SCHEMA kg TO oaw_site;
 ALTER DEFAULT PRIVILEGES FOR ROLE oaw_kg_writer IN SCHEMA kg GRANT SELECT ON TABLES TO oaw_site;
+
+-- Public article versions contain no private review data. The site can read these records;
+-- only the writer can create versions or move the publication pointers.
+GRANT USAGE ON SCHEMA editorial TO oaw_site;
+GRANT SELECT ON ALL TABLES IN SCHEMA editorial TO oaw_site;
+ALTER DEFAULT PRIVILEGES FOR ROLE oaw_kg_writer IN SCHEMA editorial GRANT SELECT ON TABLES TO oaw_site;

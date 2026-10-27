@@ -20,8 +20,9 @@ GOOD = "a" * 48
 
 
 def build(target=TARGET, compose="services: {}\n", roles="SELECT 1;\n", schema="SELECT 2;\n", grants="SELECT 3;\n",
-          app=None):
-    return server_db.setup_script(target, compose, roles, schema, grants, {"001_app.sql": "SELECT 4;\n"} if app is None else app)
+          app=None, editorial_sql=None):
+    return server_db.setup_script(target, compose, roles, schema, grants, {"001_app.sql": "SELECT 4;\n"} if app is None else app,
+                                 server_db.EDITORIAL_SQL.read_text() if editorial_sql is None else editorial_sql)
 
 
 class DatabaseForwardTest(unittest.TestCase):
@@ -137,7 +138,8 @@ class SetupScriptTest(unittest.TestCase):
                                                            compose=(server_db.DEPLOY_DB / "compose.yml").read_text(),
                                                            roles=(server_db.DEPLOY_DB / "roles.sql").read_text(),
                                                            grants=(server_db.DEPLOY_DB / "grants.sql").read_text(),
-                                                           app=server_db.app_sql_files()),
+                                                           app=server_db.app_sql_files(),
+                                                           editorial_sql=server_db.EDITORIAL_SQL.read_text()),
                               text=True, capture_output=True)
         self.assertEqual((done.returncode, done.stderr), (0, ""))
 
@@ -177,7 +179,7 @@ class SetupScriptTest(unittest.TestCase):
         self.assertNotRegex(script, r"PGPASSWORD=[^\"]")
         self.assertNotIn("set -x", script)
         self.assertNotIn(" -e PGPASSWORD", script)
-        self.assertEqual(script.count("--env-file"), 11)  # 3 psql steps + app psql + 4 checks + superuser privilege check + restart + up
+        self.assertEqual(script.count("--env-file"), 12)  # 4 schema/app psql steps + 4 checks + privilege check + restart + up
 
     def test_every_remote_value_is_quoted_from_the_deploy_root(self):
         script = build({**TARGET, "DEPLOY_ROOT": "/opt/my site"})
@@ -193,11 +195,12 @@ class SetupScriptTest(unittest.TestCase):
         tail = script[script.index("up -d --wait"):]
         steps = re.findall(r"-U (\w+) -d (\w+) < (\S+)", tail)
         self.assertEqual(steps, [("postgres", "postgres", "roles.sql"), ("oaw_kg_writer", "openaiwill", "001_kg.sql"),
+                                 ("oaw_kg_writer", "openaiwill", "002_editorial.sql"),
                                  ("oaw_kg_writer", "openaiwill", "grants.sql"), ("oaw_app", "openaiwill", "001_app.sql")])
 
     def test_the_four_files_are_uploaded_before_the_database_starts(self):
         script = build()
-        for name in ("compose.yml", "roles.sql", "001_kg.sql", "grants.sql", "001_app.sql"):
+        for name in ("compose.yml", "roles.sql", "001_kg.sql", "002_editorial.sql", "grants.sql", "001_app.sql"):
             self.assertLess(script.index(f"cat > /opt/openaiwill/db/{name} <<"), script.index("up -d --wait"))
 
     def test_the_password_checks_connect_over_the_container_address_where_scram_applies(self):
@@ -430,8 +433,16 @@ class DeployFilesTest(unittest.TestCase):
         self.assertIn("GRANT SELECT ON ALL TABLES IN SCHEMA kg TO oaw_site", self.grants)
         self.assertIn("ALTER DEFAULT PRIVILEGES FOR ROLE oaw_kg_writer IN SCHEMA kg GRANT SELECT ON TABLES TO oaw_site",
                       self.grants)
+
         for verb in ("INSERT", "UPDATE", "DELETE", "ALL PRIVILEGES"):
             self.assertNotIn(verb, self.grants)
+
+    def test_site_role_may_only_read_public_editorial_now_and_later(self):
+        self.assertIn("GRANT USAGE ON SCHEMA editorial TO oaw_site", self.grants)
+        self.assertIn("GRANT SELECT ON ALL TABLES IN SCHEMA editorial TO oaw_site", self.grants)
+        self.assertIn("ALTER DEFAULT PRIVILEGES FOR ROLE oaw_kg_writer IN SCHEMA editorial GRANT SELECT ON TABLES TO oaw_site",
+                      self.grants)
+        self.assertNotIn("GRANT INSERT ON ALL TABLES IN SCHEMA editorial", self.grants)
 
     def test_the_site_compose_requires_the_database_and_the_network(self):
         compose = (site_release.ROOT / "deploy" / "compose.yml").read_text()
