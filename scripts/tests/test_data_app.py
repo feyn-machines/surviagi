@@ -69,7 +69,8 @@ class Schema(AppBase):
         before = self.tables()
         app_db.apply_schema(self.conn)
         self.assertEqual(self.tables(), before)
-        self.assertEqual(before, ["account", "admins", "session", "submissions", "subscriptions", "topic_votes", "user", "verification"])
+        self.assertEqual(before, ["account", "admins", "api_keys", "questions", "session", "submissions", "subscriptions",
+                                  "topic_votes", "user", "verification"])
 
     def test_tables_are_owned_by_the_app_role(self):
         owners = {r["tableowner"] for r in self.conn.execute("SELECT tableowner FROM pg_tables WHERE schemaname = 'app'")}
