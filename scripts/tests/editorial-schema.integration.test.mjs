@@ -13,15 +13,19 @@ test('editorial schema enforces immutable bilingual public versions and isolated
   await admin.connect();
   try {
     const editorial = await readFile(new URL('../../db/published/002_editorial.sql', import.meta.url), 'utf8');
+    const editorialReview = await readFile(new URL('../../db/app/003_editorial_review.sql', import.meta.url), 'utf8');
     const grants = await readFile(new URL('../../deploy/db/grants.sql', import.meta.url), 'utf8');
-    await admin.query("CREATE ROLE oaw_kg_writer LOGIN PASSWORD 'writer-pass'; CREATE ROLE oaw_site LOGIN PASSWORD 'site-pass'; CREATE ROLE oaw_app LOGIN PASSWORD 'app-pass'; CREATE SCHEMA kg AUTHORIZATION oaw_kg_writer");
-    const runPsql = async (text) => {
+    await admin.query("CREATE ROLE oaw_kg_writer LOGIN PASSWORD 'writer-pass'; CREATE ROLE oaw_site LOGIN PASSWORD 'site-pass'; CREATE ROLE oaw_app LOGIN PASSWORD 'app-pass'; CREATE SCHEMA kg AUTHORIZATION oaw_kg_writer; CREATE SCHEMA app AUTHORIZATION oaw_app");
+    const withCredentials = (role, password) => databaseUrl.replace(/(postgres(?:ql)?:\/\/)[^@]+@/, `$1${role}:${password}@`);
+    const runPsql = async (text, connectionString = databaseUrl) => {
       const { spawnSync } = await import('node:child_process');
-      const result = spawnSync('psql', ['-X', '-v', 'ON_ERROR_STOP=1', '-d', databaseUrl], { input: text, encoding: 'utf8' });
+      const result = spawnSync('psql', ['-X', '-v', 'ON_ERROR_STOP=1', '-d', connectionString], { input: text, encoding: 'utf8' });
       assert.equal(result.status, 0, result.stderr);
     };
     await runPsql(editorial);
     await runPsql(grants);
+    await runPsql(editorialReview, withCredentials('oaw_app', 'app-pass'));
+    await runPsql(editorialReview, withCredentials('oaw_app', 'app-pass'));
     await runPsql(editorial);
     await runPsql(grants);
 
@@ -55,16 +59,65 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       /immutable/,
     );
 
-    const withCredentials = (role, password) => databaseUrl.replace(/(postgres(?:ql)?:\/\/)[^@]+@/, `$1${role}:${password}@`);
     const site = new Client({ connectionString: withCredentials('oaw_site', 'site-pass') });
     const app = new Client({ connectionString: withCredentials('oaw_app', 'app-pass') });
-    await Promise.all([site.connect(), app.connect()]);
+    const writer = new Client({ connectionString: withCredentials('oaw_kg_writer', 'writer-pass') });
+    await Promise.all([site.connect(), app.connect(), writer.connect()]);
     try {
       await site.query('SELECT * FROM editorial.publications');
       await assert.rejects(site.query("UPDATE editorial.publications SET preview_version = 1 WHERE article_id = 'integration-test'"), /permission denied/);
       await assert.rejects(app.query('SELECT * FROM editorial.publications'), /permission denied/);
+      await assert.rejects(site.query('SELECT * FROM app.editorial_reviews'), /permission denied/);
+      await assert.rejects(writer.query('SELECT * FROM app.editorial_reviews'), /permission denied/);
+
+      const review = await app.query(
+        `INSERT INTO app.editorial_reviews
+          (article_id, version, language, content_sha256, review_scope, decision, actor_kind, actor_id, note)
+         VALUES ('integration-test', 1, 'en', repeat('a', 64), 'readability', 'approve', 'human', 'user:test', 'Readable for the intended audience')
+         RETURNING review_id`,
+      );
+      const reviewId = review.rows[0].review_id;
+      assert.equal((await app.query('SELECT review_scope, decision, actor_kind FROM app.editorial_reviews WHERE review_id = $1', [reviewId])).rows[0].review_scope, 'readability');
+      await app.query(
+        `INSERT INTO app.editorial_review_annotations (review_id, paragraph_key, selected_text, context_before, context_after, comment)
+         VALUES ($1, 'p:3:abc', 'Selected sentence', 'Before', 'After', 'Clarify the comparison')`,
+        [reviewId],
+      );
+      const edit = await app.query(
+        `INSERT INTO app.editorial_review_edits (review_id, before_markdown, after_markdown, unified_diff)
+         VALUES ($1, 'Old sentence.', 'Revised sentence.', '-Old sentence.\n+Revised sentence.') RETURNING edit_id`,
+        [reviewId],
+      );
+      await app.query(
+        `INSERT INTO app.editorial_feedback_applications
+          (source_review_id, source_edit_id, article_id, applied_version, language, applied_content_sha256, application_note, actor_id)
+         VALUES ($1, $2, 'integration-test', 2, 'en', repeat('c', 64), 'Applied the requested readability change', 'user:test')`,
+        [reviewId, edit.rows[0].edit_id],
+      );
+      await assert.rejects(
+        app.query(
+          `INSERT INTO app.editorial_feedback_applications
+            (source_review_id, source_edit_id, article_id, applied_version, language, applied_content_sha256, application_note, actor_id)
+           VALUES ($1, $2, 'integration-test', 1, 'en', repeat('a', 64), 'Cannot apply to the same version', 'user:test')`,
+          [reviewId, edit.rows[0].edit_id],
+        ),
+        /later version/,
+      );
+      await assert.rejects(
+        app.query(
+          `INSERT INTO app.editorial_feedback_applications
+            (source_review_id, source_edit_id, article_id, applied_version, language, applied_content_sha256, application_note, actor_id)
+           VALUES ($1, $2, 'integration-test', 2, 'zh-CN', repeat('d', 64), 'Cannot apply English feedback to Chinese', 'user:test')`,
+          [reviewId, edit.rows[0].edit_id],
+        ),
+        /later version/,
+      );
+      assert.equal((await app.query('SELECT count(*)::int AS count FROM app.editorial_review_annotations')).rows[0].count, 1);
+      assert.equal((await app.query('SELECT applied_version FROM app.editorial_feedback_applications')).rows[0].applied_version, 2);
+      await assert.rejects(app.query("UPDATE app.editorial_reviews SET note = 'rewritten' WHERE review_id = $1", [reviewId]), /append-only/);
+      await assert.rejects(app.query('DELETE FROM app.editorial_review_edits WHERE edit_id = $1', [edit.rows[0].edit_id]), /append-only/);
     } finally {
-      await Promise.all([site.end(), app.end()]);
+      await Promise.all([site.end(), app.end(), writer.end()]);
     }
 
     await admin.query("CREATE TABLE kg.active(seq bigint, release_id text, manifest jsonb)");
