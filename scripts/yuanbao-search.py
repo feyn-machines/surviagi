@@ -5,11 +5,16 @@ Yuanbao Search is the web search behind Tencent's Yuanbao assistant and is sold 
 API. We use it to see whether surviagi.com is found for the questions we want to answer, and what
 ranks instead: a Chinese-side view next to Google Search Console. It never touches the site.
 
-Setup: activate the service at https://console.cloud.tencent.com/wsapi/index, create an API key
-(preferably for a sub-user that may only call wsa), and put it in the ignored .env or .env.local:
+Setup: activate the service at https://console.cloud.tencent.com/wsapi/index and put one kind of
+credential in the ignored .env or .env.local. Either a service API key from the Yuanbao Search console
+(sent as a Bearer token to api.wsa.cloud.tencent.com):
+  TENCENT_WSA_API_KEY=sk-...        (TENCENTCLOUD_WSA_APIKEY, the name in Tencent's samples, also works)
+or a Tencent Cloud API key pair (TC3-signed calls to wsa.tencentcloudapi.com), preferably of a
+sub-user that may only call wsa:
   TENCENTCLOUD_SECRET_ID=...
   TENCENTCLOUD_SECRET_KEY=...
-Environment variables of the same names take precedence. Every query is one billed call.
+The service API key wins when both are set. Environment variables of the same names take precedence
+over the files. Every query is one billed call.
 
 Examples:
   python3 scripts/yuanbao-search.py search "AI 会计 能做什么"
@@ -35,6 +40,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from app_db import ROOT, read_env_value  # noqa: E402
 
 HOST = "wsa.tencentcloudapi.com"
+API_KEY_URL = "https://api.wsa.cloud.tencent.com/SearchPro"
+API_KEY_NAMES = ("TENCENTCLOUD_WSA_APIKEY", "TENCENT_WSA_API_KEY")
 SERVICE = "wsa"
 ACTION = "SearchPro"
 VERSION = "2025-05-08"
@@ -48,13 +55,23 @@ class YuanbaoError(Exception):
     """A safe-to-display error: never carries a secret."""
 
 
+def env_value(key):
+    return os.environ.get(key) or read_env_value(key)
+
+
 def credentials():
-    """(secret_id, secret_key) from the environment, else from .env / .env.local."""
+    """A service API key (a str) if one is set, else the (secret_id, secret_key) pair;
+    each from the environment, else from .env / .env.local."""
+    for key in API_KEY_NAMES:
+        value = env_value(key)
+        if value:
+            return value
     pair = []
     for key in ("TENCENTCLOUD_SECRET_ID", "TENCENTCLOUD_SECRET_KEY"):
-        value = os.environ.get(key) or read_env_value(key)
+        value = env_value(key)
         if not value:
-            raise YuanbaoError(f"{key} is not set; put it in .env or .env.local (see the header of this script)")
+            raise YuanbaoError(f"neither TENCENT_WSA_API_KEY nor {key} is set; "
+                               "put one in .env or .env.local (see the header of this script)")
         pair.append(value)
     return tuple(pair)
 
@@ -104,11 +121,18 @@ def request_body(query, site=None, freshness=None, cnt=None, mode=None):
     return body
 
 
+def endpoint(creds, payload, timestamp):
+    """(url, headers) for one POST: Bearer to the API-key endpoint for a str, TC3 signed otherwise."""
+    if isinstance(creds, str):
+        return API_KEY_URL, {"Authorization": f"Bearer {creds}", "Content-Type": CONTENT_TYPE}
+    return f"https://{HOST}/", sign(*creds, payload, timestamp)
+
+
 def call(body, creds, timeout=30):
     """POST one SearchPro request and return its `Response` object."""
     payload = json.dumps(body, ensure_ascii=False, separators=(",", ":"))
-    headers = sign(*creds, payload, int(time.time()))
-    request = urllib.request.Request(f"https://{HOST}/", data=payload.encode("utf-8"), headers=headers, method="POST")
+    url, headers = endpoint(creds, payload, int(time.time()))
+    request = urllib.request.Request(url, data=payload.encode("utf-8"), headers=headers, method="POST")
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             answer = json.loads(response.read().decode("utf-8"))
