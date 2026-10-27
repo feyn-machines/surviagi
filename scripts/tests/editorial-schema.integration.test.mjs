@@ -156,6 +156,23 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       assert.equal((await fetch(reviewUrl)).status, 404);
       assert.equal((await fetch(reviewUrl, { headers: { cookie: authCookie(readerToken) } })).status, 404);
       const headers = { cookie: authCookie(adminToken), origin: base, 'content-type': 'application/json' };
+      assert.equal((await fetch(`${base}/admin/editorial`)).status, 404);
+      assert.equal((await fetch(`${base}/admin/editorial`, { headers: { cookie: authCookie(readerToken) } })).status, 404);
+      const adminQueue = await fetch(`${base}/admin/editorial`, { headers: { cookie: authCookie(adminToken) } });
+      assert.equal(adminQueue.status, 200);
+      const adminQueueHtml = await adminQueue.text();
+      assert.match(adminQueueHtml, /Article review/);
+      assert.match(adminQueueHtml, /Title 2/);
+      assert.match(adminQueueHtml, /标题二/);
+      assert.match(adminQueueHtml, /Review both languages/);
+      const selectedReview = await fetch(`${base}/admin/editorial?articleId=integration-test&version=v2`, { headers: { cookie: authCookie(adminToken) } });
+      assert.equal(selectedReview.status, 200);
+      const selectedHtml = await selectedReview.text();
+      assert.match(selectedHtml, /Review version(?:\s|<!-- -->)*2/);
+      const chineseQueue = await fetch(`${base}/zh-CN/admin/editorial`, { headers: { cookie: authCookie(adminToken) } });
+      assert.equal(chineseQueue.status, 200);
+      assert.match(await chineseQueue.text(), /文章审核/);
+
       const initialReview = await fetch(reviewUrl, { headers });
       assert.equal(initialReview.status, 200);
       assert.equal(initialReview.headers.get('cache-control'), 'no-store');

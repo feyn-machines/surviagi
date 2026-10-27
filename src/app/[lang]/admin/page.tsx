@@ -6,6 +6,7 @@ import { PageHeader, bilingual, dataStyles as d, formatNumber, isoDate } from "@
 import { appEnabled } from "@/lib/app-config";
 import { adminGroups, adminQuestions, subscriberCounts, type AdminGroup, type AdminQuestion } from "@/lib/app-store";
 import { adminOrNull, appPool } from "@/lib/auth";
+import { href as siteHref } from "@/lib/routes";
 import { getLocale } from "@/lib/locale";
 import { Decide, DecideQuestion } from "./decide";
 import s from "./admin.module.css";
@@ -34,6 +35,7 @@ const copy = bilingual({
     empty: "Nothing to review",
     tabs: "View",
     questions: "Questions",
+    articles: "Articles",
     accepted: "Accepted",
     why: "Why it matters",
     gap: "What is missing",
@@ -59,6 +61,7 @@ const copy = bilingual({
     empty: "没有待审核的申请",
     tabs: "视图",
     questions: "研究问题",
+    articles: "文章审核",
     accepted: "已纳入",
     why: "研究意义",
     gap: "资料缺口",
@@ -100,6 +103,9 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           <Link className={s.tab} href={{ pathname: base, query: { view: "pending" } }} aria-current={view === "pending" ? "page" : undefined}>{c.pending}</Link>
           <Link className={s.tab} href={{ pathname: base, query: { view: "decided" } }} aria-current={view === "decided" ? "page" : undefined}>{c.decided}</Link>
           <Link className={s.tab} href={{ pathname: base, query: { view: "questions" } }} aria-current={view === "questions" ? "page" : undefined}>{c.questions}</Link>
+          <Link className={s.tab} href={siteHref(language, "/admin/editorial")}>
+            {c.articles}
+          </Link>
         </nav>
         <p className={s.counts}>
           <span>{fill(c.subscribers, { total: formatNumber(counts.total), updates: formatNumber(counts.updates), weekly: formatNumber(counts.weekly) })}</span>
