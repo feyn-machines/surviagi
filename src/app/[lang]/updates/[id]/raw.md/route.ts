@@ -5,7 +5,7 @@ import { DEFAULT_LANGUAGE, normalizeLanguage } from "@/lib/i18n";
 import { colon, link, markdownResponse } from "@/lib/markdown-copy";
 import { workSlug } from "@/lib/routes";
 import { activityById, chainEvents, events as allEvents, evidenceForEvent } from "@/lib/snapshot";
-import { copy } from "../copy";
+import { copy, updateDate } from "../copy";
 
 /** Rendered per request from the loaded data release, like the page. */
 export const dynamic = "force-dynamic";
@@ -33,7 +33,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
     .replace("{level}", `L${top} ${levels[top]}`);
 
   const body = [
-    `${update.org_name ?? ""} · ${update.occurred_at ? update.occurred_at.slice(0, 10) : c.undated}` +
+    `${update.org_name ?? ""} · ${updateDate(c, update)}` +
       (kind ? ` · ${zh ? kind["zh-CN"] ?? kind.en : kind.en}` : ""),
     "",
     ...(update.summary ? [`> ${update.summary.replace(/\s+/g, " ")}`, ""] : []),

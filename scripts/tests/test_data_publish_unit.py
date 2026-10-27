@@ -874,6 +874,20 @@ class WorkProgressTests(unittest.TestCase):
         self.assertEqual(event["attention"]["snapshot_age_hours"], 168)
         self.assertFalse(event["attention"]["provisional"])
 
+    def test_an_undated_update_carries_when_it_was_announced_and_a_dated_one_does_not(self):
+        conn, snapshot = build()
+        self.assertNotIn("announced_at", snapshot["events"][0])
+        self.assertNotIn("announced_at", snapshot["chain"]["events"][0])
+        # The earliest source post's own publication time, not when it was collected.
+        self.assertIn("CASE WHEN e.occurred_at IS NULL THEN coalesce(e.announced_at", conn.sql["events"])
+        self.assertIn("min(cs.published_at)", conn.sql["events"])
+        data = dataset()
+        data["events"] = [{**data["events"][0], "occurred_at": None,
+                           "announced_at": datetime(2026, 8, 30, 9, tzinfo=timezone.utc)}]
+        _, snapshot = build(data)
+        self.assertEqual(snapshot["events"][0]["announced_at"], "2026-08-30T09:00:00+00:00")
+        self.assertEqual(snapshot["chain"]["events"][0]["announced_at"], "2026-08-30T09:00:00+00:00")
+
     def test_attention_never_enters_a_level_query(self):
         conn = FakeConn(dataset())
         publish.build(conn, "1.0.0")
