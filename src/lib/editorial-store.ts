@@ -18,6 +18,10 @@ export type PublicPreview = Pick<EditorialArticle,
   "articleId" | "version" | "language" | "title" | "summary" | "sourceCutoff" | "createdAt"
 >;
 
+export type ApprovedEditorialSummary = Pick<EditorialArticle,
+  "articleId" | "version" | "language" | "title" | "summary" | "createdAt"
+>;
+
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const pools = new Map<string, Pool>();
 
@@ -129,4 +133,77 @@ export async function publicPreviews(language: Language): Promise<PublicPreview[
     sourceCutoff: iso(row.source_cutoff),
     createdAt: iso(row.created_at),
   }));
+}
+
+/** Only the current approved pointer belongs in the regular article index and feed. */
+export async function approvedEditorialArticles(language: Language): Promise<ApprovedEditorialSummary[]> {
+  const db = databasePool();
+  if (!db) return [];
+  const { rows } = await db.query<{
+    article_id: string;
+    version: number;
+    language: Language;
+    title: string;
+    summary: string;
+    created_at: Date | string;
+  }>(
+    `SELECT a.article_id, v.version, l.language, l.title, l.summary, v.created_at
+       FROM editorial.articles a
+       JOIN editorial.publications p USING (article_id)
+       JOIN editorial.versions v ON v.article_id = p.article_id AND v.version = p.approved_version
+       JOIN editorial.localizations l ON l.article_id = v.article_id AND l.version = v.version
+      WHERE a.withdrawn_at IS NULL AND p.approved_version IS NOT NULL AND l.language = $1
+      ORDER BY v.created_at DESC, a.article_id`,
+    [language],
+  );
+  return rows.map((row) => ({
+    articleId: row.article_id,
+    version: row.version,
+    language: row.language,
+    title: row.title,
+    summary: row.summary,
+    createdAt: iso(row.created_at),
+  }));
+}
+
+/** Resolve the stable regular article address to the latest approved version only. */
+export async function approvedEditorialArticle(articleId: string, language: Language): Promise<EditorialArticle | null> {
+  if (!SLUG.test(articleId)) return null;
+  const db = databasePool();
+  if (!db) return null;
+  const { rows } = await db.query<{
+    article_id: string;
+    version: number;
+    language: Language;
+    title: string;
+    summary: string;
+    body_markdown: string;
+    content_sha256: string;
+    source_cutoff: Date | string;
+    created_at: Date | string;
+  }>(
+    `SELECT a.article_id, v.version, l.language, l.title, l.summary, l.body_markdown,
+            l.content_sha256, v.source_cutoff, v.created_at
+       FROM editorial.articles a
+       JOIN editorial.publications p USING (article_id)
+       JOIN editorial.versions v ON v.article_id = p.article_id AND v.version = p.approved_version
+       JOIN editorial.localizations l ON l.article_id = v.article_id AND l.version = v.version
+      WHERE a.article_id = $1 AND a.withdrawn_at IS NULL
+        AND p.approved_version IS NOT NULL AND l.language = $2`,
+    [articleId, language],
+  );
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    articleId: row.article_id,
+    version: row.version,
+    language: row.language,
+    title: row.title,
+    summary: row.summary,
+    markdown: row.body_markdown,
+    contentSha256: row.content_sha256,
+    sourceCutoff: iso(row.source_cutoff),
+    createdAt: iso(row.created_at),
+    status: "approved",
+  };
 }

@@ -493,16 +493,16 @@ test("a work page says when its level was first reached, and its history ends wh
   }
 });
 
-test("every data page asks to be rendered per request, so none is baked into the build", () => {
+test("document-backed pages stay static while live editorial pages render per request", () => {
   const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
     entry.isDirectory() ? walk(join(dir, entry.name)) : entry.name === "page.tsx" ? [join(dir, entry.name)] : []);
   for (const file of walk(join(ROOT, "src", "app", "[lang]"))) {
     const text = readFileSync(file, "utf8");
-    // The whitepaper and approved Articles section are built from documents the server does not carry.
-    // Public editorial previews read the live editorial schema and are rendered per request.
+    // The whitepaper and existing Markdown article details are built from source documents.
+    // The article listing and editorial preview/approved routes read live database pointers.
     // The legal pages read nothing, but the layout's sign-in menu depends on the server's settings, so they
     // render per request too.
-    if (/[\\/]whitepaper[\\/]/.test(file) || (/[\\/]articles[\\/]/.test(file) && !/[\\/]articles[\\/]previews[\\/]/.test(file))) assert.match(text, /export const dynamic = "force-static"/, file);
+    if (/[\\/]whitepaper[\\/]/.test(file) || /[\\/]articles[\\/]\[slug\][\\/]page\.tsx$/.test(file)) assert.match(text, /export const dynamic = "force-static"/, file);
     else assert.match(text, /export const dynamic = "force-dynamic"/, file);
   }
 });

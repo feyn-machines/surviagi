@@ -5,6 +5,7 @@ import { buildHomeData } from "@/lib/home-data";
 import { workSlug } from "@/lib/routes";
 import { manifest as dataManifest, markets, marketSlug } from "@/lib/snapshot";
 import publishedArticles from "@/content/articles.json";
+import { approvedEditorialArticles } from "@/lib/editorial-store";
 
 export const dynamic = "force-dynamic";
 
@@ -13,8 +14,26 @@ export const dynamic = "force-dynamic";
  * level names and the loaded release's manifest the pages use, so it cannot drift from
  * them. English, with the Chinese entry point named.
  */
-export function GET() {
+export async function GET() {
   const manifest = dataManifest();
+  const approvedArticles = await approvedEditorialArticles("en");
+  const approvedSlugs = new Set(approvedArticles.map((item) => item.articleId));
+  const articleEntries = [
+    ...publishedArticles.filter((item) => !approvedSlugs.has(item.slug)).map((item) => ({
+      slug: item.slug,
+      path: `/articles/${item.slug}`,
+      title: item.title.en,
+      description: item.description.en,
+      date: item.date,
+    })),
+    ...approvedArticles.map((item) => ({
+      slug: item.articleId,
+      path: `/articles/approved/${item.articleId}`,
+      title: item.title,
+      description: item.summary,
+      date: item.createdAt.slice(0, 10),
+    })),
+  ].sort((a, b) => b.date.localeCompare(a.date) || a.slug.localeCompare(b.slug));
   const example = markets()[0];
   const nav = siteNavCopy.en;
   const home = buildHomeData();
@@ -33,13 +52,13 @@ export function GET() {
     `- [${SITE_NAME} on Discord](${DISCORD_URL})`,
     `- [Source on GitHub](${GITHUB_URL})`,
     "",
-    ...(publishedArticles.length
+    ...(articleEntries.length
       ? [
           "## Articles",
           "",
-          ...publishedArticles.map((item) =>
-            `- [${item.title.en}](${absoluteUrl("en", `/articles/${item.slug}`)}) (${item.date}): ${item.description.en} ` +
-            `[Markdown](${absoluteUrl("en", `/articles/${item.slug}/raw.md`)})`),
+          ...articleEntries.map((item) =>
+            `- [${item.title}](${absoluteUrl("en", item.path)}) (${item.date}): ${item.description} ` +
+            `[Markdown](${absoluteUrl("en", `${item.path}/raw.md`)})`),
           `- [Feed](${absoluteUrl("en", "/articles/feed.xml")})`,
           "",
         ]

@@ -3,7 +3,7 @@ import { LANGUAGES, type Language } from "@/lib/i18n";
 import { absoluteUrl } from "@/lib/seo";
 import { FIXED_PATHS, UPDATE_LANGUAGES, detailPages, evidenceDates } from "@/lib/site-pages";
 import { manifest } from "@/lib/snapshot";
-import { publicPreviews } from "@/lib/editorial-store";
+import { approvedEditorialArticles, publicPreviews } from "@/lib/editorial-store";
 import publishedArticles from "@/content/articles.json";
 
 export const dynamic = "force-dynamic";
@@ -31,9 +31,22 @@ let kept: { key: string; entries: MetadataRoute.Sitemap } | null = null;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const built = manifest()?.generated_at;
-  // The list changes only when another data release is loaded.
-  const key = built ?? "";
-  if (kept?.key !== key) kept = { key, entries: entries(built) };
+  const approvedByLanguage = await Promise.all(LANGUAGES.map((language) => approvedEditorialArticles(language)));
+  const approvedSlugs = new Set(approvedByLanguage.flatMap((items) => items.map((item) => item.articleId)));
+  // Static article data follows the build; the editorial list changes with its database pointer.
+  const approvedState = approvedByLanguage.flatMap((items) => items.map((item) => `${item.articleId}:v${item.version}:${item.createdAt}`)).sort().join(",");
+  const key = `${built ?? ""}|${approvedState}`;
+  if (kept?.key !== key) kept = { key, entries: entries(built, approvedSlugs) };
+  const approvedEntries = approvedByLanguage.flatMap((items, index) => items.map((item) => ({
+    url: absoluteUrl(LANGUAGES[index], `/articles/approved/${item.articleId}`),
+    lastModified: toTheSecond(item.createdAt),
+    alternates: {
+      languages: {
+        ...Object.fromEntries(LANGUAGES.map((other) => [other, absoluteUrl(other, `/articles/approved/${item.articleId}`)])),
+        "x-default": absoluteUrl("en", `/articles/approved/${item.articleId}`),
+      },
+    },
+  })));
   const previewEntries = await Promise.all(LANGUAGES.map(async (language) =>
     (await publicPreviews(language)).map((item) => ({
       url: absoluteUrl(language, `/articles/previews/${item.articleId}/v${item.version}`),
@@ -51,10 +64,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     url: absoluteUrl(language, "/articles/previews"),
     alternates: { languages: { ...Object.fromEntries(LANGUAGES.map((other) => [other, absoluteUrl(other, "/articles/previews")])) , "x-default": absoluteUrl("en", "/articles/previews") } },
   })) : [];
-  return [...kept.entries, ...directory, ...previewEntries.flat()];
+  return [...kept.entries, ...approvedEntries, ...directory, ...previewEntries.flat()];
 }
 
-function entries(built: string | undefined): MetadataRoute.Sitemap {
+function entries(built: string | undefined, approvedSlugs: Set<string>): MetadataRoute.Sitemap {
   const dated = evidenceDates();
   const pages: Page[] = [
     ...FIXED_PATHS.map((path) => ({ path, lastModified: built })),
@@ -72,7 +85,7 @@ function entries(built: string | undefined): MetadataRoute.Sitemap {
     ...detailPages.updates().map(({ id, occurredAt }) => ({ path: `/updates/${id}`, lastModified: occurredAt ?? undefined, languages: UPDATE_LANGUAGES })),
     // The article pages are built ahead from documents the server does not carry,
     // so the list comes from the index written beside the build.
-    ...publishedArticles.map((item) => ({ path: `/articles/${item.slug}`, lastModified: item.date })),
+    ...publishedArticles.filter((item) => !approvedSlugs.has(item.slug)).map((item) => ({ path: `/articles/${item.slug}`, lastModified: item.date })),
   ];
   return pages.flatMap(({ path, lastModified, languages = LANGUAGES }) =>
     languages.map((language) => ({

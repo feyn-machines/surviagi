@@ -271,7 +271,10 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       assert.match(await directory.text(), /integration-test\/v2/);
       const regular = await fetch(`${base}/articles`);
       assert.equal(regular.status, 200);
-      assert.doesNotMatch(await regular.text(), /integration-test|PUBLIC PREPRINT/);
+      const regularBeforeApproval = await regular.text();
+      assert.match(regularBeforeApproval, /href="\/articles\/approved\/integration-test/);
+      assert.doesNotMatch(regularBeforeApproval, /Title 2/);
+      assert.doesNotMatch(regularBeforeApproval, /PUBLIC PREPRINT/);
       const sitemap = await fetch(`${base}/sitemap.xml`);
       assert.equal(sitemap.status, 200);
       assert.match(await sitemap.text(), /articles\/previews\/integration-test\/v2/);
@@ -285,9 +288,57 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       assert.deepEqual(approvalResults.map((result) => result.publicationChanged).sort(), [false, true]);
       assert.deepEqual((await admin.query("SELECT preview_version, approved_version FROM editorial.publications WHERE article_id = 'integration-test'")).rows[0], { preview_version: 2, approved_version: 2 });
       assert.equal((await admin.query("SELECT count(*)::int AS count FROM editorial.publication_history WHERE article_id = 'integration-test' AND version = 2 AND action = 'approve'")).rows[0].count, 1);
+
+      const regularAfterApproval = await fetch(`${base}/articles`);
+      assert.equal(regularAfterApproval.status, 200);
+      const regularHtml = await regularAfterApproval.text();
+      assert.match(regularHtml, /\/articles\/approved\/integration-test/);
+      assert.match(regularHtml, /Title 2/);
+      assert.match(regularHtml, /APPROVED/);
+      assert.doesNotMatch(regularHtml, /PUBLIC PREPRINT/);
+
+      const stableApproved = await fetch(`${base}/articles/approved/integration-test`);
+      assert.equal(stableApproved.status, 200);
+      const stableHtml = await stableApproved.text();
+      assert.match(stableHtml, /Title 2/);
+      assert.match(stableHtml, /APPROVED VERSION/);
+      assert.match(stableHtml, /table render/);
+      const stableChinese = await fetch(`${base}/zh-CN/articles/approved/integration-test`);
+      assert.equal(stableChinese.status, 200);
+      assert.match(await stableChinese.text(), /标题二/);
+      const stableMarkdown = await fetch(`${base}/articles/approved/integration-test/raw.md`);
+      assert.equal(stableMarkdown.status, 200);
+      assert.match(stableMarkdown.headers.get('content-type'), /text\/markdown/);
+      assert.equal(stableMarkdown.headers.get('cache-control'), 'no-store');
+      assert.match(stableMarkdown.headers.get('link'), /articles\/approved\/integration-test.*rel="canonical"/);
+      assert.match(await stableMarkdown.text(), /Approved version 2/);
+
+      const feed = await (await fetch(`${base}/articles/feed.xml`)).text();
+      assert.match(feed, /articles\/approved\/integration-test/);
+      const llms = await (await fetch(`${base}/llms.txt`)).text();
+      assert.match(llms, /articles\/approved\/integration-test/);
+      const approvedSitemap = await (await fetch(`${base}/sitemap.xml`)).text();
+      assert.match(approvedSitemap, /articles\/approved\/integration-test/);
+
       const newlyApproved = await fetch(`${base}${previewPath}`);
       assert.equal(newlyApproved.status, 200);
       assert.match(await newlyApproved.text(), /APPROVED VERSION/);
+
+      await admin.query("INSERT INTO editorial.versions(article_id, version, source_cutoff, created_by) VALUES ('integration-test', 3, now(), 'test')");
+      await admin.query("INSERT INTO editorial.localizations VALUES ('integration-test', 3, 'en', 'Title 3', 'Summary 3', 'New preview', repeat('e', 64))");
+      await admin.query("INSERT INTO editorial.localizations VALUES ('integration-test', 3, 'zh-CN', '标题三', '摘要三', '新预发布', repeat('f', 64))");
+      await admin.query("UPDATE editorial.publications SET preview_version = 3 WHERE article_id = 'integration-test'");
+      const newPreview = await fetch(`${base}/articles/previews/integration-test/v3`);
+      assert.equal(newPreview.status, 200);
+      assert.match(await newPreview.text(), /PUBLIC PREPRINT · NOT APPROVED/);
+      const stableAfterNewPreview = await fetch(`${base}/articles/approved/integration-test`);
+      assert.equal(stableAfterNewPreview.status, 200);
+      const stableAfterNewPreviewHtml = await stableAfterNewPreview.text();
+      assert.match(stableAfterNewPreviewHtml, /Title 2/);
+      assert.doesNotMatch(stableAfterNewPreviewHtml, /Title 3/);
+      const regularAfterNewPreview = await fetch(`${base}/articles`);
+      assert.equal(regularAfterNewPreview.status, 200);
+      assert.match(await regularAfterNewPreview.text(), /Title 2/);
 
       const approved = await fetch(`${base}/articles/previews/integration-test/v1`);
       assert.equal(approved.status, 200);
@@ -299,8 +350,12 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       await admin.query("UPDATE editorial.articles SET withdrawn_at = now(), withdrawal_reason = 'integration test' WHERE article_id = 'integration-test'");
       assert.equal((await fetch(`${base}${previewPath}`)).status, 404);
       assert.equal((await fetch(`${base}${previewPath}/raw.md`)).status, 404);
+      assert.equal((await fetch(`${base}/articles/approved/integration-test`)).status, 404);
+      assert.equal((await fetch(`${base}/articles/approved/integration-test/raw.md`)).status, 404);
+      assert.doesNotMatch(await (await fetch(`${base}/articles`)).text(), /articles\/approved\/integration-test/);
       const withdrawnSitemap = await (await fetch(`${base}/sitemap.xml`)).text();
       assert.doesNotMatch(withdrawnSitemap, /articles\/previews\/integration-test\/v2/);
+      assert.doesNotMatch(withdrawnSitemap, /articles\/approved\/integration-test/);
     } finally {
       await stop(proc);
     }
