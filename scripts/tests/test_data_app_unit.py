@@ -117,5 +117,57 @@ class ReadAdminEmails(unittest.TestCase):
         self.assertEqual(app_db.read_admin_emails((self.one,)), ["a@example.com", "b@example.com"])
 
 
+class EditorialFeedbackHelpers(unittest.TestCase):
+    class Connection:
+        def __init__(self, responses):
+            self.responses = iter(responses)
+            self.calls = []
+
+        def execute(self, query, params):
+            self.calls.append((query, params))
+            rows = self.responses.__next__()
+            return type("Result", (), {"fetchall": lambda _self: rows,
+                                        "fetchone": lambda _self: rows[0] if rows else None})()
+
+    def test_retrieval_scopes_language_context_and_limit(self):
+        conn = self.Connection([[{"sample_id": "7"}]])
+        rows = app_db.retrieve_feedback_samples(conn, "en", "clarity", "event_thread", "some-article")
+        self.assertEqual(rows, [{"sample_id": "7"}])
+        query, params = conn.calls[0]
+        self.assertIn("LIMIT 3", query)
+        self.assertIn("s.feedback_scope = 'reusable_preference'", query)
+        self.assertEqual(params[:7], ("en", "clarity", "clarity", "event_thread", "event_thread", "some-article", "some-article"))
+
+    def test_retrieval_rejects_invalid_scope_before_query(self):
+        conn = self.Connection([])
+        for values in (("fr", None, None, None), ("en", "not-an-issue", None, None),
+                       ("en", None, None, "../secret")):
+            with self.subTest(values=values), self.assertRaises(app_db.AppError):
+                app_db.retrieve_feedback_samples(conn, *values)
+        self.assertEqual(conn.calls, [])
+
+    def test_application_insert_is_idempotent(self):
+        existing = {"application_id": "12", "applied_content_sha256": "a" * 64,
+                    "application_note": "Used the concise wording", "actor_id": "editorial-skill"}
+        conn = self.Connection([[{"application_id": "12"}], [None], [existing]])
+        args = (5, "some-article", 3, "zh-CN", "a" * 64, "Used the concise wording", "editorial-skill")
+        self.assertEqual(app_db.apply_feedback_sample(conn, *args), ("12", True))
+        self.assertEqual(app_db.apply_feedback_sample(conn, *args), ("12", False))
+        self.assertIn("ON CONFLICT", conn.calls[0][0])
+
+    def test_duplicate_application_with_different_details_is_not_silently_accepted(self):
+        existing = {"application_id": "12", "applied_content_sha256": "b" * 64,
+                    "application_note": "Different use", "actor_id": "other"}
+        conn = self.Connection([[None], [existing]])
+        with self.assertRaisesRegex(app_db.AppError, "different details"):
+            app_db.apply_feedback_sample(conn, 5, "some-article", 3, "en", "a" * 64, "Used the concise wording")
+
+    def test_application_rejects_invalid_hash_before_query(self):
+        conn = self.Connection([])
+        with self.assertRaises(app_db.AppError):
+            app_db.apply_feedback_sample(conn, 1, "article", 2, "en", "not-a-hash", "Used it")
+        self.assertEqual(conn.calls, [])
+
+
 if __name__ == "__main__":
     unittest.main()

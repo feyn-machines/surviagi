@@ -23,6 +23,11 @@ ENV_FILES = (ROOT / ".env", ROOT / ".env.local")
 LOCAL_DATABASE = "openaiwill_local"
 SUBMISSIONS_DIR = ROOT / "data/submissions"
 VOTES_DIR = ROOT / "data/votes"
+ARTICLE_ID_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+FEEDBACK_ISSUES = {"evidence_boundary", "structure", "clarity", "specificity", "tone", "redundancy", "headline", "natural_language", "other"}
+FEEDBACK_GENRES = {"event_thread", "product_comparison", "capability_explainer", "workflow", "other"}
+FEEDBACK_LANGUAGES = {"en", "zh-CN"}
 
 
 class AppError(Exception):
@@ -223,6 +228,78 @@ def setup_local() -> None:
         values["BETTER_AUTH_SECRET"] = secrets.token_hex(32)
     write_env_local(values)
     print("app schema ready in the local database; .env.local updated (values not shown)")
+
+
+def retrieve_feedback_samples(conn, language: str, issue_type: str | None = None,
+                              article_genre: str | None = None,
+                              article_id: str | None = None) -> list[dict]:
+    """Return up to three private curated examples with source provenance."""
+    if language not in FEEDBACK_LANGUAGES:
+        raise AppError("language must be en or zh-CN")
+    if issue_type is not None and issue_type not in FEEDBACK_ISSUES:
+        raise AppError("unknown feedback issue type")
+    if article_genre is not None and article_genre not in FEEDBACK_GENRES:
+        raise AppError("unknown article genre")
+    if article_id is not None and not ARTICLE_ID_RE.fullmatch(article_id):
+        raise AppError("invalid article id")
+    return conn.execute(
+        "SELECT s.sample_id::text AS sample_id, s.feedback_scope, s.issue_type, s.article_genre, "
+        "s.problem, s.before_excerpt, s.after_excerpt, s.applicability, s.preference_evidence, "
+        "r.article_id AS source_article_id, r.version AS source_version, r.language AS source_language, "
+        "r.content_sha256 AS source_content_sha256, r.review_id::text AS source_review_id, "
+        "e.edit_id::text AS source_edit_id, s.created_at "
+        "FROM app.editorial_feedback_samples s "
+        "JOIN app.editorial_reviews r ON r.review_id = s.source_review_id "
+        "JOIN app.editorial_review_edits e ON e.edit_id = s.source_edit_id AND e.review_id = r.review_id "
+        "WHERE r.language = %s AND (%s::text IS NULL OR s.issue_type = %s) "
+        "AND (%s::text IS NULL OR s.article_genre = %s) "
+        "AND (s.feedback_scope = 'reusable_preference' OR (%s::text IS NOT NULL AND r.article_id = %s)) "
+        "ORDER BY (s.issue_type = %s) DESC NULLS LAST, (s.article_genre = %s) DESC NULLS LAST, "
+        "(s.feedback_scope = 'reusable_preference') DESC, s.created_at DESC, s.sample_id DESC LIMIT 3",
+        (language, issue_type, issue_type, article_genre, article_genre, article_id, article_id,
+         issue_type, article_genre),
+    ).fetchall()
+
+
+def apply_feedback_sample(conn, sample_id: int, article_id: str, applied_version: int,
+                          language: str, content_sha256: str, note: str,
+                          actor_id: str = "local-editorial-skill") -> tuple[str, bool]:
+    """Append an immutable sample-to-version application record; return (id, created)."""
+    if not isinstance(sample_id, int) or sample_id < 1:
+        raise AppError("sample id must be a positive integer")
+    if not ARTICLE_ID_RE.fullmatch(article_id or ""):
+        raise AppError("invalid article id")
+    if not isinstance(applied_version, int) or applied_version < 1:
+        raise AppError("applied version must be a positive integer")
+    if language not in FEEDBACK_LANGUAGES:
+        raise AppError("language must be en or zh-CN")
+    if not SHA256_RE.fullmatch(content_sha256 or ""):
+        raise AppError("content hash must be 64 lowercase hexadecimal characters")
+    if not note or not note.strip() or "\x00" in note or len(note) > 1200:
+        raise AppError("application note must contain 1 to 1200 characters")
+    if not actor_id or not actor_id.strip() or "\x00" in actor_id:
+        raise AppError("actor id must not be empty")
+    row = conn.execute(
+        "INSERT INTO app.editorial_feedback_sample_applications "
+        "(sample_id, article_id, applied_version, language, applied_content_sha256, application_note, actor_id) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT (sample_id, article_id, applied_version, language) "
+        "DO NOTHING RETURNING application_id::text",
+        (sample_id, article_id, applied_version, language, content_sha256, note.strip(), actor_id.strip()),
+    ).fetchone()
+    if row:
+        return row["application_id"], True
+    row = conn.execute(
+        "SELECT application_id::text, applied_content_sha256, application_note, actor_id "
+        "FROM app.editorial_feedback_sample_applications "
+        "WHERE sample_id = %s AND article_id = %s AND applied_version = %s AND language = %s",
+        (sample_id, article_id, applied_version, language),
+    ).fetchone()
+    if not row:
+        raise AppError("application record was not found after duplicate insert")
+    if (row["applied_content_sha256"] != content_sha256 or row["application_note"] != note.strip()
+            or row["actor_id"] != actor_id.strip()):
+        raise AppError("an application already exists for this sample and version with different details")
+    return row["application_id"], False
 
 
 def _pull_accounts(rows) -> list[dict]:

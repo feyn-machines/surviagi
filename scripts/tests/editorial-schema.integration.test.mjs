@@ -19,6 +19,7 @@ test('editorial schema enforces immutable bilingual public versions and isolated
     const editorialReview = await readFile(new URL('../../db/app/003_editorial_review.sql', import.meta.url), 'utf8');
     const editorialPublicationScope = await readFile(new URL('../../db/app/004_editorial_publication_scope.sql', import.meta.url), 'utf8');
     const editorialFeedbackSamples = await readFile(new URL('../../db/app/005_editorial_feedback_samples.sql', import.meta.url), 'utf8');
+    const editorialFeedbackApplications = await readFile(new URL('../../db/app/006_editorial_feedback_sample_applications.sql', import.meta.url), 'utf8');
     const editorialApproval = await readFile(new URL('../../db/published/003_editorial_approval.sql', import.meta.url), 'utf8');
     const editorialWithdrawal = await readFile(new URL('../../db/published/004_editorial_withdrawal.sql', import.meta.url), 'utf8');
     const grants = await readFile(new URL('../../deploy/db/grants.sql', import.meta.url), 'utf8');
@@ -40,6 +41,8 @@ test('editorial schema enforces immutable bilingual public versions and isolated
     await runPsql(editorialPublicationScope, withCredentials('oaw_app', 'app-pass'));
     await runPsql(editorialFeedbackSamples, withCredentials('oaw_app', 'app-pass'));
     await runPsql(editorialFeedbackSamples, withCredentials('oaw_app', 'app-pass'));
+    await runPsql(editorialFeedbackApplications, withCredentials('oaw_app', 'app-pass'));
+    await runPsql(editorialFeedbackApplications, withCredentials('oaw_app', 'app-pass'));
     await runPsql(editorial, withCredentials('oaw_kg_writer', 'writer-pass'));
     await runPsql(grants, withCredentials('oaw_kg_writer', 'writer-pass'));
     await runPsql(editorialApproval);
@@ -93,6 +96,7 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       await assert.rejects(app.query('SELECT * FROM editorial.publications'), /permission denied/);
       await assert.rejects(site.query('SELECT * FROM app.editorial_reviews'), /permission denied/);
       await assert.rejects(site.query('SELECT * FROM app.editorial_feedback_samples'), /permission denied/);
+      await assert.rejects(site.query('SELECT * FROM app.editorial_feedback_sample_applications'), /permission denied/);
       await assert.rejects(writer.query('SELECT * FROM app.editorial_reviews'), /permission denied/);
       await assert.rejects(site.query('SELECT * FROM editorial.review_approval_evidence'), /permission denied/);
       await assert.rejects(app.query('SELECT * FROM editorial.review_approval_evidence'), /permission denied/);
@@ -299,7 +303,22 @@ test('editorial schema enforces immutable bilingual public versions and isolated
         preferenceEvidence: reusableNote,
       };
       assert.equal((await fetch(samplesUrl, { method: 'POST', headers, body: JSON.stringify({ ...reusableSample, preferenceEvidence: 'An invented preference not present in the review.' }) })).status, 400);
-      assert.equal((await fetch(samplesUrl, { method: 'POST', headers, body: JSON.stringify(reusableSample) })).status, 201);
+      const reusableCreated = await fetch(samplesUrl, { method: 'POST', headers, body: JSON.stringify(reusableSample) });
+      assert.equal(reusableCreated.status, 201);
+      const reusableSampleId = (await reusableCreated.json()).sampleId;
+      const sampleApplicationSql = `INSERT INTO app.editorial_feedback_sample_applications
+        (sample_id, article_id, applied_version, language, applied_content_sha256, application_note, actor_id)
+        VALUES ($1, $2, $3, $4, repeat('e', 64), 'Used as a style example while drafting', 'editorial-skill')
+        ON CONFLICT (sample_id, article_id, applied_version, language) DO NOTHING RETURNING application_id`;
+      const oneOffApplication = await admin.query(sampleApplicationSql, [curatedId, 'integration-test', 3, 'en']);
+      assert.equal(oneOffApplication.rowCount, 1);
+      assert.equal((await admin.query(sampleApplicationSql, [curatedId, 'integration-test', 3, 'en'])).rowCount, 0,
+        'the same sample/version use is idempotent');
+      await assert.rejects(admin.query(sampleApplicationSql, [curatedId, 'next-article', 1, 'en']), /single-article/);
+      await assert.rejects(admin.query(sampleApplicationSql, [curatedId, 'integration-test', 4, 'zh-CN']), /source language/);
+      assert.equal((await admin.query(sampleApplicationSql, [reusableSampleId, 'next-article', 1, 'en'])).rowCount, 1,
+        'a quoted reusable preference may inform another article');
+      await assert.rejects(admin.query(sampleApplicationSql, [reusableSampleId, 'integration-test', 1, 'en']), /later version/);
       const crossArticleSamples = await (await fetch(`${samplesUrl}?language=en&issueType=structure&articleGenre=event_thread&articleId=next-event`, { headers })).json();
       assert.equal(crossArticleSamples.samples.length, 1, 'only explicitly quoted reusable preferences can be retrieved for another article');
       assert.equal(crossArticleSamples.samples[0].preference_evidence, reusableNote);
