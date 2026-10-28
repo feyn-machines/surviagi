@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { makeApprovalBatch } from "@/lib/editorial-batch";
+import { approvalSelectionKey, makeApprovalBatch, selectedApprovalItems } from "@/lib/editorial-batch";
 import type { Language } from "@/lib/i18n";
 import s from "./review.module.css";
 
@@ -66,10 +66,6 @@ const labels = {
   },
 } as const;
 
-function selectionKey(article: QueueItem, language: Language) {
-  return `${article.articleId}:v${article.version}:${language}`;
-}
-
 export function EditorialBatchQueue({ articles, language, label }: { articles: QueueItem[]; language: Language; label: string }) {
   const c = labels[language];
   const [queue, setQueue] = useState(articles);
@@ -81,13 +77,7 @@ export function EditorialBatchQueue({ articles, language, label }: { articles: Q
   const [batchId, setBatchId] = useState("");
 
   async function submit() {
-    const items = selected.flatMap((key) => {
-      const [articleId, versionText, itemLanguage] = key.split(":");
-      const article = queue.find((item) => item.articleId === articleId && item.version === Number(versionText));
-      if (!article || (itemLanguage !== "en" && itemLanguage !== "zh-CN")) return [];
-      return [{ articleId, version: Number(versionText), language: itemLanguage as Language,
-        contentSha256: { en: article.contentSha256, "zh-CN": article.chineseHash } }];
-    });
+    const items = selectedApprovalItems(selected, queue);
     if (!items.length) { setMessage(c.noSelection); return; }
     setPending(true);
     setMessage("");
@@ -141,7 +131,7 @@ export function EditorialBatchQueue({ articles, language, label }: { articles: Q
               {(["en", "zh-CN"] as const).map((itemLanguage) => {
                 const isEnglish = itemLanguage === "en";
                 const approved = isEnglish ? article.enApproved : article.chineseApproved;
-                const key = selectionKey(article, itemLanguage);
+                const key = approvalSelectionKey(article, itemLanguage);
                 return <label className={s.languageApproval} key={itemLanguage}>
                   <input type="checkbox" checked={selected.includes(key)} disabled={pending || approved}
                     onChange={(event) => setSelected((current) => event.target.checked

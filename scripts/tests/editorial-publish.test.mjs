@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { loadEditorialPackage, publishEditorialPreview, EditorialPublishError } from "../editorial-publish.mjs";
-import { parseApprovalBatch } from "../../src/lib/editorial-batch.ts";
+import { approvalSelectionKey, parseApprovalBatch, selectedApprovalItems } from "../../src/lib/editorial-batch.ts";
 
 const hash = (text) => createHash("sha256").update(text, "utf8").digest("hex");
 
@@ -99,4 +99,15 @@ test("approval batches require unique language actions bound to exact bilingual 
   assert.equal(parseApprovalBatch({ ...batch, items: [{ ...item, language: "fr" }] }), null);
   assert.equal(parseApprovalBatch({ ...batch, items: [item, { ...item, language: "zh-CN" }] })?.items.length, 2);
   assert.equal(parseApprovalBatch({ ...batch, items: Array(51).fill(item) }), null);
+});
+
+test("checked review languages become approval items", () => {
+  const article = { articleId: "agent-cost", version: 1, contentSha256: "a".repeat(64), chineseHash: "b".repeat(64) };
+  const other = { ...article, articleId: "other", version: 2 };
+  const items = selectedApprovalItems([approvalSelectionKey(article, "zh-CN")], [article, other]);
+  assert.deepEqual(items, [{ articleId: "agent-cost", version: 1, language: "zh-CN",
+    contentSha256: { en: "a".repeat(64), "zh-CN": "b".repeat(64) } }]);
+  assert.equal(parseApprovalBatch({ batchId: crypto.randomUUID(), items })?.items.length, 1);
+  assert.equal(selectedApprovalItems([approvalSelectionKey(other, "en"), approvalSelectionKey(other, "zh-CN")], [article, other]).length, 2);
+  assert.deepEqual(selectedApprovalItems(["agent-cost:v9:en"], [article]), []);
 });
