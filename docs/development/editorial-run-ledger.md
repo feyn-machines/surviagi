@@ -12,15 +12,40 @@ identifiers, state transitions, budget reservations and actual cost in integer
 micro-USD (one unit is USD 0.000001). It never stores source captures, article
 text, prompts, credentials or arbitrary error messages.
 
+## Pin completed collection inputs
+
+Before creating a run, prepare a hash-pinned input manifest from matching
+completed official-account and panel X collection records. Both records must be
+real (not synthetic), successful, have exhausted their configured provider
+queries, and cover the same publication window. A collection marked
+`needs_attention` is rejected; do not silently combine it with an earlier or
+different window.
+
+~~~sh
+pnpm editorial:inputs prepare \
+  --official data/collection/official-x/official-2026-10-26T1200_2026-10-27T0000.json \
+  --panel data/collection/panel/panel-2026-10-26T1200_2026-10-27T0000.json
+pnpm editorial:inputs verify editorial-input-0123456789abcdef01234567
+~~~
+
+The private manifest stores only collection paths, content hashes, collection
+status/version, window, coverage note and item counts; it never copies source
+posts. It lives under **data/editorial/inputs/**. Copy the `input_id` printed
+by `prepare` to `verify`, then pass its `input_id` and `input_sha256` to
+`pnpm editorial:run create`. Verify it again before a later stage consumes the
+sources; changed, missing, unsafe or incomplete source files stop the run.
+Preparation is deterministic and idempotent for the same immutable source
+files.
+
 ## Start a run
 
-Use the completed collection run identifier and the SHA-256 of its immutable
-input manifest. The topic key is a stable, normalized identifier, not a title
-or article body. Skill, policy and model-profile versions are required:
+Use the prepared manifest's `input_id` and `input_sha256`. The topic key is a
+stable, normalized identifier, not a title or article body. Skill, policy and
+model-profile versions are required:
 
 ~~~sh
 pnpm editorial:run create \
-  --input-ref collection-20261028 \
+  --input-ref editorial-input-0123456789abcdef01234567 \
   --input-sha256 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef \
   --topic-key ai-image-api-costs \
   --skill-version editorial-v1 \
