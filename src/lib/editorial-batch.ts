@@ -9,6 +9,19 @@ export type ApprovalItem = {
   contentSha256: { en: string; "zh-CN": string };
 };
 
+export type ApprovalQueueArticle = { articleId: string; version: number; contentSha256: string; chineseHash: string };
+
+export function approvalSelectionKey(article: { articleId: string; version: number }, language: "en" | "zh-CN") {
+  return `${article.articleId}:v${article.version}:${language}`;
+}
+
+export function selectedApprovalItems(selected: string[], queue: ApprovalQueueArticle[]): ApprovalItem[] {
+  return queue.flatMap((article) => (["en", "zh-CN"] as const)
+    .filter((language) => selected.includes(approvalSelectionKey(article, language)))
+    .map((language) => ({ articleId: article.articleId, version: article.version, language,
+      contentSha256: { en: article.contentSha256, "zh-CN": article.chineseHash } })));
+}
+
 export function makeApprovalBatch(items: ApprovalItem[]): { batchId: string; items: ApprovalItem[] } {
   return { batchId: crypto.randomUUID(), items };
 }
