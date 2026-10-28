@@ -38,7 +38,10 @@ def apply_schema(conn) -> None:
     """Apply db/app/*.sql in one transaction. `conn` is a connection as the schema's owner."""
     with conn.transaction():
         for path in APP_SQL:
-            conn.execute(path.read_text())
+            source = path.read_text()
+            # This directive is for psql; psycopg does not implement psql commands.
+            source = re.sub(r"(?m)^\\set ON_ERROR_STOP on\r?\n", "", source, count=1)
+            conn.execute(source)
 
 
 # Object kinds already in schema app whose owner must be the app role, and the

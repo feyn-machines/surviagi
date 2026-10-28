@@ -4,12 +4,28 @@ import stat
 import sys
 import tempfile
 import unittest
+from contextlib import nullcontext
 from unittest import mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import app_db
+
+
+class ApplySchemaSql(unittest.TestCase):
+    def test_psql_on_error_stop_directive_is_removed_for_psycopg(self):
+        with tempfile.TemporaryDirectory() as directory:
+            sql_path = Path(directory) / "001_test.sql"
+            sql_path.write_text("-- schema\n\\set ON_ERROR_STOP on\nCREATE TABLE app.test(id integer);\n")
+            connection = mock.Mock()
+            connection.transaction.return_value = nullcontext()
+            with mock.patch.object(app_db, "APP_SQL", (sql_path,)):
+                app_db.apply_schema(connection)
+            executed = connection.execute.call_args.args[0]
+            self.assertNotIn("\\set ON_ERROR_STOP", executed)
+            self.assertIn("-- schema", executed)
+            self.assertIn("CREATE TABLE app.test(id integer);", executed)
 
 
 class WriteEnvLocal(unittest.TestCase):

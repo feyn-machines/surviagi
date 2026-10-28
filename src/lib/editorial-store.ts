@@ -38,7 +38,7 @@ const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const pools = new Map<string, Pool>();
 
 function databasePool(): Pool | null {
-  const url = process.env.DATABASE_URL;
+  const url = process.env.EDITORIAL_DATABASE_URL ?? process.env.DATABASE_URL;
   if (!url) return null;
   const current = pools.get(url);
   if (current) return current;

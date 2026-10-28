@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
-import { createHmac } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { Client } from 'pg';
 import test from 'node:test';
 import { freePort, startServer, stop } from './site-server.mjs';
+import { EditorialPublishError, publishEditorialPreview } from '../editorial-publish.mjs';
 
 const databaseUrl = process.env.EDITORIAL_TEST_DATABASE_URL;
 
@@ -105,6 +106,37 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       await assert.rejects(app.query("UPDATE editorial.publications SET approved_version = 2 WHERE article_id = 'integration-test'"), /permission denied/);
       await assert.rejects(app.query("SELECT editorial.approve_public_preview('integration-test', 2, repeat('c', 64), repeat('d', 64))"), (error) => error.code === '40001');
       assert.equal((await admin.query("SELECT has_schema_privilege('oaw_app', 'editorial', 'CREATE') AS can_create")).rows[0].can_create, false);
+
+      const bodyHash = (body) => createHash('sha256').update(body, 'utf8').digest('hex');
+      const makeBundle = (version, enBody, zhBody) => ({
+        articleId: 'publisher-integration',
+        sourceCutoff: '2026-10-28T00:00:00Z',
+        createdBy: 'editorial-run:0123456789abcdef01234567',
+        expected: { previewVersion: version, approvedVersion: version === null ? null : 1 },
+        localizations: {
+          en: { title: `Publisher integration v${version ?? 1}`, summary: 'English publish fixture', body: enBody, contentSha256: bodyHash(enBody) },
+          'zh-CN': { title: `发布集成测试 v${version ?? 1}`, summary: '中文发布测试', body: zhBody, contentSha256: bodyHash(zhBody) },
+        },
+      });
+      const bodyV1 = '[source](https://example.test/publisher-v1)';
+      const firstBundle = makeBundle(null, bodyV1, bodyV1);
+      const firstPublish = await publishEditorialPreview(writer, firstBundle);
+      assert.deepEqual({ created: firstPublish.created, version: firstPublish.version, approved: firstPublish.approvedVersion },
+        { created: true, version: 1, approved: null });
+      const retryPublish = await publishEditorialPreview(writer, firstBundle);
+      assert.equal(retryPublish.created, false);
+      assert.equal(retryPublish.version, 1);
+      assert.equal((await admin.query("SELECT count(*)::int AS count FROM editorial.publication_history WHERE article_id = 'publisher-integration' AND action = 'preview'")).rows[0].count, 1);
+
+      await admin.query("UPDATE editorial.publications SET approved_version = 1 WHERE article_id = 'publisher-integration'");
+      const bodyV2 = '[source](https://example.test/publisher-v2)';
+      const secondPublish = await publishEditorialPreview(writer, makeBundle(1, bodyV2, bodyV2));
+      assert.deepEqual({ created: secondPublish.created, version: secondPublish.version, approved: secondPublish.approvedVersion },
+        { created: true, version: 2, approved: 1 });
+      await assert.rejects(publishEditorialPreview(writer, makeBundle(1, `${bodyV2} stale`, `${bodyV2} stale`)),
+        EditorialPublishError);
+      assert.deepEqual((await admin.query("SELECT preview_version, approved_version FROM editorial.publications WHERE article_id = 'publisher-integration'")).rows[0],
+        { preview_version: 2, approved_version: 1 });
 
       const review = await app.query(
         `INSERT INTO app.editorial_reviews
