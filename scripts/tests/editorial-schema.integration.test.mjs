@@ -532,6 +532,19 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       assert.equal(passingResponse.status, 200);
       assert.equal((await passingResponse.json()).results[0].status, 'approved');
       assert.equal((await admin.query("SELECT approved_version FROM editorial.publications WHERE article_id = 'integration-test'")).rows[0].approved_version, 2);
+      const completedQueue = await fetch(`${base}/admin/editorial`, { headers: { cookie: authCookie(adminToken) } });
+      const completedQueueHtml = await completedQueue.text();
+      assert.equal(completedQueue.status, 200);
+      const completedApprovals = await admin.query(
+        `SELECT r.article_id, r.version, r.language, r.content_sha256, r.decision, r.review_scope,
+                r.review_id, r.created_at, l.content_sha256 AS current_hash
+           FROM app.editorial_reviews r
+           JOIN editorial.localizations l USING (article_id, version, language)
+          WHERE r.article_id = 'integration-test' AND r.version = 2 AND r.actor_kind = 'human'
+          ORDER BY r.review_id DESC`,
+      );
+      assert.doesNotMatch(completedQueueHtml, /articleId=integration-test&amp;version=v2/,
+        `a fully approved preview disappears from the review queue; approvals=${JSON.stringify(completedApprovals.rows)}\n${log()}`);
       const batchReplay = await fetch(batchUrl, { method: 'POST', headers, body: JSON.stringify(passingBatch) });
       assert.equal((await batchReplay.json()).replayed, true);
 

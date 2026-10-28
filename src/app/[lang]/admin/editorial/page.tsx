@@ -21,7 +21,7 @@ const copy = bilingual({
     title: "Article review",
     eyebrow: "ADMIN · EDITORIAL",
     back: "← Admin",
-    queue: "Current public preprints",
+    queue: "Preprints awaiting review",
     empty: "Every current article language has been reviewed.",
     noPublic: "There are no public article versions to review.",
     open: "Review both language drafts",
@@ -35,7 +35,7 @@ const copy = bilingual({
     title: "文章审核",
     eyebrow: "后台 · 编辑",
     back: "← 后台",
-    queue: "当前公开预发布版本",
+    queue: "待审核的公开预发布稿",
     empty: "当前文章的中英文稿均已完成审批。",
     noPublic: "目前没有可审核的公开文章版本。",
     open: "分别审核中英文稿",
@@ -74,8 +74,6 @@ export default async function EditorialAdminPage({ searchParams }: Props) {
   const chinesePreviews = await publicPreviews("zh-CN").catch(() => []);
   const chinese = new Map(chinesePreviews.map((item) => [`${item.articleId}:v${item.version}`, item]));
   const queue: PublicPreview[] = [...previews].sort((a, b) => b.createdAt.localeCompare(a.createdAt) || a.articleId.localeCompare(b.articleId));
-  const selected = articleId && version ? queue.some((item) => item.articleId === articleId && item.version === version) : false;
-
   const draftItems = await Promise.all(queue.map(async (item) => {
     const zh = chinese.get(`${item.articleId}:v${item.version}`);
     const [enArticle, zhArticle] = await Promise.all([
@@ -83,6 +81,7 @@ export default async function EditorialAdminPage({ searchParams }: Props) {
       publicEditorialArticle(item.articleId, item.version, "zh-CN"),
     ]);
     return { articleId: item.articleId, version: item.version, title: item.title,
+      summary: item.summary, sourceCutoff: item.sourceCutoff,
       chineseTitle: zh?.title ?? c.noTranslation, contentSha256: enArticle?.contentSha256 ?? "",
       chineseHash: zhArticle?.contentSha256 ?? "", enApproved: false, chineseApproved: false };
   }));
@@ -111,6 +110,9 @@ export default async function EditorialAdminPage({ searchParams }: Props) {
     }
   }
   const awaitingItems = draftItems.filter((item) => !item.enApproved || !item.chineseApproved);
+  const selected = articleId && version
+    ? awaitingItems.some((item) => item.articleId === articleId && item.version === version)
+    : false;
 
   return (
     <div className={s.page}>
@@ -122,9 +124,9 @@ export default async function EditorialAdminPage({ searchParams }: Props) {
           <h3 className={s.sectionTitle}>{c.awaiting}</h3>
           <EditorialBatchQueue label={c.batch} language={language} articles={awaitingItems} />
         </> : <p className={s.empty}>{queue.length ? c.empty : c.noPublic}</p>}
-        {queue.length === 0 ? null : (
+        {awaitingItems.length === 0 ? null : (
           <ul className={s.queue}>
-            {queue.map((english) => {
+            {awaitingItems.map((english) => {
               const key = `${english.articleId}:v${english.version}`;
               const zh = chinese.get(key);
               const active = selected && articleId === english.articleId && version === english.version;
