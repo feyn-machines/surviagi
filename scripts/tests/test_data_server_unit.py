@@ -211,18 +211,22 @@ class SetupScriptTest(unittest.TestCase):
         app_sql = server_db.app_sql_files()
         self.assertLess(list(app_sql).index("005_editorial_feedback_samples.sql"),
                         list(app_sql).index("006_editorial_feedback_sample_applications.sql"))
-        self.assertEqual(list(app_sql)[-1], "006_editorial_feedback_sample_applications.sql")
+        self.assertLess(list(app_sql).index("006_editorial_feedback_sample_applications.sql"),
+                        list(app_sql).index("007_editorial_approval_batches.sql"))
+        self.assertEqual(list(app_sql)[-1], "007_editorial_approval_batches.sql")
         script = build(app=app_sql)
         self.assertIn("cat > /opt/openaiwill/db/005_editorial_feedback_samples.sql <<", script)
         self.assertIn("-U oaw_app -d openaiwill < 005_editorial_feedback_samples.sql", script)
         self.assertIn("cat > /opt/openaiwill/db/006_editorial_feedback_sample_applications.sql <<", script)
         self.assertIn("-U oaw_app -d openaiwill < 006_editorial_feedback_sample_applications.sql", script)
+        self.assertIn("cat > /opt/openaiwill/db/007_editorial_approval_batches.sql <<", script)
+        self.assertIn("-U oaw_app -d openaiwill < 007_editorial_approval_batches.sql", script)
 
     def test_database_and_application_files_are_uploaded_before_the_database_starts(self):
         script = build(app=server_db.app_sql_files())
         for name in ("compose.yml", "roles.sql", "001_kg.sql", "002_editorial.sql", "grants.sql", "001_app.sql",
                      "003_editorial_approval.sql", "004_editorial_withdrawal.sql", "005_editorial_feedback_samples.sql",
-                     "006_editorial_feedback_sample_applications.sql"):
+                     "006_editorial_feedback_sample_applications.sql", "007_editorial_approval_batches.sql"):
             self.assertLess(script.index(f"cat > /opt/openaiwill/db/{name} <<"), script.index("up -d --wait"))
 
     def test_the_password_checks_connect_over_the_container_address_where_scram_applies(self):

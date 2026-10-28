@@ -21,6 +21,7 @@ test('editorial schema enforces immutable bilingual public versions and isolated
     const editorialPublicationScope = await readFile(new URL('../../db/app/004_editorial_publication_scope.sql', import.meta.url), 'utf8');
     const editorialFeedbackSamples = await readFile(new URL('../../db/app/005_editorial_feedback_samples.sql', import.meta.url), 'utf8');
     const editorialFeedbackApplications = await readFile(new URL('../../db/app/006_editorial_feedback_sample_applications.sql', import.meta.url), 'utf8');
+    const editorialApprovalBatches = await readFile(new URL('../../db/app/007_editorial_approval_batches.sql', import.meta.url), 'utf8');
     const editorialApproval = await readFile(new URL('../../db/published/003_editorial_approval.sql', import.meta.url), 'utf8');
     const editorialWithdrawal = await readFile(new URL('../../db/published/004_editorial_withdrawal.sql', import.meta.url), 'utf8');
     const grants = await readFile(new URL('../../deploy/db/grants.sql', import.meta.url), 'utf8');
@@ -44,6 +45,8 @@ test('editorial schema enforces immutable bilingual public versions and isolated
     await runPsql(editorialFeedbackSamples, withCredentials('oaw_app', 'app-pass'));
     await runPsql(editorialFeedbackApplications, withCredentials('oaw_app', 'app-pass'));
     await runPsql(editorialFeedbackApplications, withCredentials('oaw_app', 'app-pass'));
+    await runPsql(editorialApprovalBatches, withCredentials('oaw_app', 'app-pass'));
+    await runPsql(editorialApprovalBatches, withCredentials('oaw_app', 'app-pass'));
     await runPsql(editorial, withCredentials('oaw_kg_writer', 'writer-pass'));
     await runPsql(grants, withCredentials('oaw_kg_writer', 'writer-pass'));
     await runPsql(editorialApproval);
@@ -98,6 +101,8 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       await assert.rejects(site.query('SELECT * FROM app.editorial_reviews'), /permission denied/);
       await assert.rejects(site.query('SELECT * FROM app.editorial_feedback_samples'), /permission denied/);
       await assert.rejects(site.query('SELECT * FROM app.editorial_feedback_sample_applications'), /permission denied/);
+      await assert.rejects(site.query('SELECT * FROM app.editorial_approval_batches'), /permission denied/);
+      await assert.rejects(writer.query('SELECT * FROM app.editorial_approval_batch_items'), /permission denied/);
       await assert.rejects(writer.query('SELECT * FROM app.editorial_reviews'), /permission denied/);
       await assert.rejects(site.query('SELECT * FROM editorial.review_approval_evidence'), /permission denied/);
       await assert.rejects(app.query('SELECT * FROM editorial.review_approval_evidence'), /permission denied/);
@@ -208,7 +213,7 @@ test('editorial schema enforces immutable bilingual public versions and isolated
     const authCookie = (token) => `better-auth.session_token=${encodeURIComponent(`${token}.${createHmac('sha256', appSecret).update(token).digest('base64')}`)}`;
     const port = await freePort();
     const baseURL = `http://127.0.0.1:${port}`;
-    const { base, proc } = await startServer({
+    const { base, proc, log } = await startServer({
       DATABASE_URL: withCredentials('oaw_site', 'site-pass'),
       APP_DATABASE_URL: withCredentials('oaw_app', 'app-pass'),
       BETTER_AUTH_SECRET: appSecret,
@@ -222,6 +227,7 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       assert.equal((await fetch(reviewUrl, { headers: { cookie: authCookie(readerToken) } })).status, 404);
       const headers = { cookie: authCookie(adminToken), origin: base, 'content-type': 'application/json' };
       const approveUrl = `${base}/api/admin/editorial/approve`;
+      const batchUrl = `${base}/api/admin/editorial/approve-batch`;
       const withdrawalUrl = `${base}/api/admin/editorial/withdraw`;
       const approveBody = { articleId: 'integration-test', version: 2, contentSha256: { en: 'c'.repeat(64), 'zh-CN': 'd'.repeat(64) } };
       assert.equal((await fetch(approveUrl, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(approveBody) })).status, 404);
@@ -231,6 +237,26 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       assert.equal((await fetch(approveUrl, { method: 'POST', headers, body: JSON.stringify({ articleId: 'integration-test', version: 1, contentSha256: { en: 'a'.repeat(64), 'zh-CN': 'b'.repeat(64) } }) })).status, 409);
       const missingLanguageApproval = await fetch(approveUrl, { method: 'POST', headers, body: JSON.stringify(approveBody) });
       assert.equal(missingLanguageApproval.status, 422);
+      const invalidBatch = await fetch(batchUrl, { method: 'POST', headers, body: JSON.stringify({ batchId: 'bad', items: [approveBody] }) });
+      assert.equal(invalidBatch.status, 400);
+      assert.equal((await fetch(batchUrl, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })).status, 404);
+      assert.equal((await fetch(batchUrl, { method: 'POST', headers: { ...headers, origin: 'https://attacker.example' }, body: JSON.stringify({ batchId: 'b54a5f47-120b-4b6d-8c08-49c2eea9d611', items: [approveBody] }) })).status, 403);
+      const isolatedBatch = {
+        batchId: 'b54a5f47-120b-4b6d-8c08-49c2eea9d611',
+        items: [
+          { articleId: 'integration-test', version: 1, contentSha256: { en: 'a'.repeat(64), 'zh-CN': 'b'.repeat(64) } },
+          approveBody,
+        ],
+      };
+      const isolatedResponse = await fetch(batchUrl, { method: 'POST', headers, body: JSON.stringify(isolatedBatch) });
+      assert.equal(isolatedResponse.status, 200, `${await isolatedResponse.clone().text()}\n${log()}`);
+      const isolatedResult = await isolatedResponse.json();
+      assert.deepEqual(isolatedResult.results.map(({ status }) => status), ['conflict', 'needs_bilingual_approval']);
+      const isolatedRetry = await fetch(batchUrl, { method: 'POST', headers, body: JSON.stringify(isolatedBatch) });
+      assert.equal(isolatedRetry.status, 200);
+      assert.equal((await isolatedRetry.json()).replayed, true);
+      assert.equal((await fetch(batchUrl, { method: 'POST', headers, body: JSON.stringify({ ...isolatedBatch, items: [approveBody] }) })).status, 409);
+      assert.equal((await admin.query('SELECT count(*)::int AS count FROM app.editorial_approval_batch_items WHERE batch_id = $1', [isolatedBatch.batchId])).rows[0].count, 2);
       assert.equal((await fetch(`${base}/admin/editorial`)).status, 404);
       assert.equal((await fetch(`${base}/admin/editorial`, { headers: { cookie: authCookie(readerToken) } })).status, 404);
       const adminQueue = await fetch(`${base}/admin/editorial`, { headers: { cookie: authCookie(adminToken) } });
@@ -487,13 +513,21 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       });
       assert.deepEqual((await articleMcpRecordResponse.json()).result.structuredContent, articleRecord);
 
+      const passingBatch = { batchId: 'd7c2430a-1a30-4ca7-997a-2f115166df37', items: [approveBody] };
+      const passingResponse = await fetch(batchUrl, { method: 'POST', headers, body: JSON.stringify(passingBatch) });
+      assert.equal(passingResponse.status, 200);
+      assert.equal((await passingResponse.json()).results[0].status, 'approved');
+      assert.equal((await admin.query("SELECT approved_version FROM editorial.publications WHERE article_id = 'integration-test'")).rows[0].approved_version, 2);
+      const batchReplay = await fetch(batchUrl, { method: 'POST', headers, body: JSON.stringify(passingBatch) });
+      assert.equal((await batchReplay.json()).replayed, true);
+
       const simultaneousApprovals = await Promise.all([
         fetch(approveUrl, { method: 'POST', headers, body: JSON.stringify(approveBody) }),
         fetch(approveUrl, { method: 'POST', headers, body: JSON.stringify(approveBody) }),
       ]);
       assert.deepEqual(simultaneousApprovals.map((response) => response.status), [200, 200]);
       const approvalResults = await Promise.all(simultaneousApprovals.map((response) => response.json()));
-      assert.deepEqual(approvalResults.map((result) => result.publicationChanged).sort(), [false, true]);
+      assert.deepEqual(approvalResults.map((result) => result.publicationChanged).sort(), [false, false]);
       assert.deepEqual((await admin.query("SELECT preview_version, approved_version FROM editorial.publications WHERE article_id = 'integration-test'")).rows[0], { preview_version: 2, approved_version: 2 });
       assert.equal((await admin.query("SELECT count(*)::int AS count FROM editorial.publication_history WHERE article_id = 'integration-test' AND version = 2 AND action = 'approve'")).rows[0].count, 1);
 

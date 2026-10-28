@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Publish a preflighted bilingual package to the loopback-only local editorial store. */
+/** Publish a preflighted bilingual package to the local store or, with explicit confirmation, a public preview. */
 import { createHash } from "node:crypto";
 import { lstatSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
@@ -285,19 +285,31 @@ function localWriterClient() {
 
 export async function main(argv = process.argv.slice(2)) {
   if (argv.includes("--help") || argv.includes("-h")) {
-    console.log("Usage: pnpm editorial:publish --manifest <private-manifest.json> --confirm-public-preview");
+    console.log("Usage: pnpm editorial:publish --manifest <private-manifest.json> --confirm-public-preview [--target local|server]");
     return 0;
   }
   let manifestPath;
   let confirmed = false;
+  let target = "local";
   for (let index = 0; index < argv.length; index += 1) {
     if (argv[index] === "--manifest" && argv[index + 1]) manifestPath = argv[++index];
     else if (argv[index] === "--confirm-public-preview") confirmed = true;
+    else if (argv[index] === "--target" && ["local", "server"].includes(argv[index + 1])) target = argv[++index];
     else throw new EditorialPublishError(`unknown or incomplete option: ${argv[index]}`);
   }
   if (!manifestPath) throw new EditorialPublishError("--manifest is required");
   if (!confirmed) throw new EditorialPublishError("explicit --confirm-public-preview is required; previews are public and not in the regular article list");
   const bundle = loadEditorialPackage(resolve(ROOT, manifestPath));
+  if (target === "server") {
+    const { spawnSync } = await import("node:child_process");
+    const child = spawnSync(resolve(ROOT, "data/runtime/venv/bin/python"), ["scripts/editorial-server-publish.py"], {
+      cwd: ROOT, input: JSON.stringify(bundle), encoding: "utf8", maxBuffer: 1024 * 1024,
+    });
+    if (child.status !== 0) throw new EditorialPublishError(child.stderr.trim() || "server publisher failed");
+    const result = JSON.parse(child.stdout);
+    console.log(JSON.stringify({ ...result, previewPath: `/articles/previews/${result.articleId}/v${result.version}` }, null, 2));
+    return 0;
+  }
   const client = localWriterClient();
   try {
     await client.connect();

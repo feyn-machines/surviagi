@@ -1,6 +1,6 @@
 # Local editorial prepublication
 
-The editorial publisher writes only to the loopback PostgreSQL database `openaiwill_local`; it does not accept a server URL. Keep its manifest, bilingual Markdown and evidence report under the ignored `data/editorial/` directory. Use directory mode `0700` and file mode `0600`.
+The editorial publisher defaults to the loopback PostgreSQL database `openaiwill_local`. With explicit `--target server`, it writes through the existing SSH database tunnel to a public preprint on SurviAGI. Keep its manifest, bilingual Markdown and evidence report under ignored `data/editorial/`; use directory mode `0700` and file mode `0600`.
 
 ## Prepare a package
 
@@ -34,6 +34,18 @@ pnpm editorial:publish --manifest data/editorial/<package>/manifest.json --confi
 
 The command refuses stale package hashes, failed gates, missing languages, mismatched source links, held claim strings present in the article, symlinks, public file permissions, and changed publication pointers. It writes both localizations and advances only `preview_version` in one transaction. Repeating an identical package is idempotent. A newer preview leaves the approved pointer unchanged.
 
-`--confirm-public-preview` is required because a preprint is reader-visible and is not an approval. This command targets the developer's loopback database only; it does not publish the article to surviagi.com. No credential is written into `.env` or printed. To inspect local preview routes, `pnpm editorial:dev` starts Next.js with the private local connection in process memory; preview pages remain outside the regular article list.
+`--confirm-public-preview` is required because a preprint is reader-visible and is not an approval. Local publication uses the default target:
+
+```sh
+pnpm editorial:publish --manifest data/editorial/<package>/manifest.json --confirm-public-preview
+```
+
+Public prepublication uses the same validation and writes only the preview pointer:
+
+```sh
+pnpm editorial:publish --manifest data/editorial/<package>/manifest.json --confirm-public-preview --target server
+```
+
+The server target uses the existing SSH tunnel and reads the writer credential in process memory; no credential is written into `.env` or printed. An identical package is idempotent. The version appears at `/articles/previews/<id>/v<n>` and stays out of the regular article list until bilingual approval. To inspect local preview routes, `pnpm editorial:dev` starts Next.js with the private local connection in process memory.
 
 The evidence and bilingual gate values are recorded editorial decisions, not a semantic fact checker. The publishing command verifies the package's hashes and structural constraints; it cannot independently establish that a source proves a claim.

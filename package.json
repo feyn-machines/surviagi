@@ -93,6 +93,8 @@
     "editorial:run": "python3 scripts/editorial-run.py",
     "editorial:inputs": "python3 scripts/editorial-inputs.py",
     "editorial:publish": "node scripts/editorial-publish.mjs",
+    "editorial:publish:server": "node scripts/editorial-publish.mjs --target server",
+    "editorial:test:schema": "node --test scripts/tests/editorial-schema.integration.test.mjs",
     "editorial:dev": "node scripts/editorial-dev.mjs",
     "db:setup": "data/runtime/venv/bin/python scripts/data-release.py setup-db --target server",
     "admins:sync": "data/runtime/venv/bin/python scripts/app-db.py admins --target server",

@@ -53,7 +53,7 @@ export async function startServer(env, fixedPort) {
   for (let attempt = 0; attempt < 200; attempt += 1) {
     if (proc.exitCode !== null) assert.fail(`the server exited with ${proc.exitCode}:\n${log}`);
     try {
-      if ((await fetch(`${base}/healthz`, { signal: AbortSignal.timeout(2000) })).status === 200) return { base, proc };
+      if ((await fetch(`${base}/healthz`, { signal: AbortSignal.timeout(2000) })).status === 200) return { base, proc, log: () => log };
     } catch {
       // not listening yet
     }

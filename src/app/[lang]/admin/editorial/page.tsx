@@ -6,11 +6,12 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/data-page";
 import { appEnabled } from "@/lib/app-config";
 import { adminOrNull } from "@/lib/auth";
-import { approvedEditorialArticles, publicPreviews, type ApprovedEditorialSummary, type PublicPreview } from "@/lib/editorial-store";
+import { approvedEditorialArticles, publicEditorialArticle, publicPreviews, type ApprovedEditorialSummary, type PublicPreview } from "@/lib/editorial-store";
 import { bilingual, localizedPath } from "@/lib/i18n";
 import { getLocale } from "@/lib/locale";
 import { href as siteHref } from "@/lib/routes";
 import { EditorialReviewDesk } from "./review-desk";
+import { EditorialBatchQueue } from "./batch-queue";
 import s from "./review.module.css";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +27,7 @@ const copy = bilingual({
     version: "Version",
     cutoff: "Evidence cutoff",
     noTranslation: "No matching Chinese version",
+    batch: "Batch approval",
   },
   "zh-CN": {
     title: "文章审核",
@@ -37,6 +39,7 @@ const copy = bilingual({
     version: "版本",
     cutoff: "证据截止时间",
     noTranslation: "没有匹配的中文版本",
+    batch: "批量批准",
   },
 });
 
@@ -83,6 +86,16 @@ export default async function EditorialAdminPage({ searchParams }: Props) {
       <PageHeader eyebrow={c.eyebrow} title={c.title} />
       <section aria-labelledby="editorial-queue-heading">
         <h2 className={s.sectionTitle} id="editorial-queue-heading">{c.queue}</h2>
+        {queue.length ? <EditorialBatchQueue label={c.batch} language={language} articles={await Promise.all(queue.map(async (item) => {
+          const zh = chinese.get(`${item.articleId}:v${item.version}`);
+          const [enArticle, zhArticle] = await Promise.all([
+            publicEditorialArticle(item.articleId, item.version, "en"),
+            publicEditorialArticle(item.articleId, item.version, "zh-CN"),
+          ]);
+          return { articleId: item.articleId, version: item.version, title: item.title,
+            chineseTitle: zh?.title ?? c.noTranslation, contentSha256: enArticle?.contentSha256 ?? "",
+            chineseHash: zhArticle?.contentSha256 ?? "" };
+        }))} /> : null}
         {queue.length === 0 ? <p className={s.empty}>{c.empty}</p> : (
           <ul className={s.queue}>
             {queue.map((english) => {
