@@ -9,7 +9,7 @@ ALTER FUNCTION editorial.require_bilingual_version() SET search_path = pg_catalo
 
 CREATE OR REPLACE VIEW editorial.review_approval_evidence AS
 SELECT DISTINCT ON (article_id, version, language)
-       article_id, version, language, content_sha256, decision
+       article_id, version, language, content_sha256, decision, review_scope
   FROM app.editorial_reviews
  WHERE actor_kind = 'human'
  ORDER BY article_id, version, language, review_id DESC;

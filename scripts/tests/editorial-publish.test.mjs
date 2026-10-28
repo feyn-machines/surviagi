@@ -90,11 +90,13 @@ test("publisher returns a conflict for stale expected pointers", async () => {
   );
 });
 
-test("approval batches require a unique bounded list of exact bilingual versions", () => {
-  const item = { articleId: "example-article", version: 3, contentSha256: { en: "a".repeat(64), "zh-CN": "b".repeat(64) } };
+test("approval batches require unique language actions bound to exact bilingual hashes", () => {
+  const item = { articleId: "example-article", version: 3, language: "en", contentSha256: { en: "a".repeat(64), "zh-CN": "b".repeat(64) } };
   const batch = { batchId: "b54a5f47-120b-4b6d-8c08-49c2eea9d611", items: [item] };
   assert.deepEqual(parseApprovalBatch(batch), batch);
   assert.equal(parseApprovalBatch({ ...batch, items: [item, item] }), null);
   assert.equal(parseApprovalBatch({ ...batch, items: [{ ...item, contentSha256: { en: "bad", "zh-CN": "b".repeat(64) } }] }), null);
+  assert.equal(parseApprovalBatch({ ...batch, items: [{ ...item, language: "fr" }] }), null);
+  assert.equal(parseApprovalBatch({ ...batch, items: [item, { ...item, language: "zh-CN" }] })?.items.length, 2);
   assert.equal(parseApprovalBatch({ ...batch, items: Array(51).fill(item) }), null);
 });

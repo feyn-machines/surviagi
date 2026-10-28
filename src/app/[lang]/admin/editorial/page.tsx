@@ -5,8 +5,8 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/data-page";
 import { appEnabled } from "@/lib/app-config";
-import { adminOrNull } from "@/lib/auth";
-import { approvedEditorialArticles, publicEditorialArticle, publicPreviews, type ApprovedEditorialSummary, type PublicPreview } from "@/lib/editorial-store";
+import { adminOrNull, appPool } from "@/lib/auth";
+import { publicEditorialArticle, publicPreviews, type PublicPreview } from "@/lib/editorial-store";
 import { bilingual, localizedPath } from "@/lib/i18n";
 import { getLocale } from "@/lib/locale";
 import { href as siteHref } from "@/lib/routes";
@@ -21,25 +21,29 @@ const copy = bilingual({
     title: "Article review",
     eyebrow: "ADMIN · EDITORIAL",
     back: "← Admin",
-    queue: "Public article versions",
-    empty: "There are no public article versions to review.",
-    open: "Review both languages",
+    queue: "Current public preprints",
+    empty: "Every current article language has been reviewed.",
+    noPublic: "There are no public article versions to review.",
+    open: "Review both language drafts",
     version: "Version",
     cutoff: "Evidence cutoff",
     noTranslation: "No matching Chinese version",
-    batch: "Batch approval",
+    batch: "Independent language approvals",
+    awaiting: "Awaiting language approvals",
   },
   "zh-CN": {
     title: "文章审核",
     eyebrow: "后台 · 编辑",
     back: "← 后台",
-    queue: "公开文章版本",
-    empty: "目前没有可审核的公开文章版本。",
-    open: "审核中英文版本",
+    queue: "当前公开预发布版本",
+    empty: "当前文章的中英文稿均已完成审批。",
+    noPublic: "目前没有可审核的公开文章版本。",
+    open: "分别审核中英文稿",
     version: "版本",
     cutoff: "证据截止时间",
     noTranslation: "没有匹配的中文版本",
-    batch: "批量批准",
+    batch: "中英文独立审批",
+    awaiting: "待审核语言",
   },
 });
 
@@ -62,23 +66,51 @@ export default async function EditorialAdminPage({ searchParams }: Props) {
   const version = /^v[1-9][0-9]{0,8}$/.test(versionValue) ? Number(versionValue.slice(1)) : null;
 
   let previews: PublicPreview[] = [];
-  let approved: ApprovedEditorialSummary[] = [];
   try {
-    [previews, approved] = await Promise.all([publicPreviews("en"), approvedEditorialArticles("en")]);
+    previews = await publicPreviews("en");
   } catch (error) {
     console.error(`[admin editorial] preview queue failed: ${error instanceof Error ? error.message : "unknown error"}`);
   }
-  const [chinesePreviews, chineseApproved] = await Promise.all([
-    publicPreviews("zh-CN").catch(() => []),
-    approvedEditorialArticles("zh-CN").catch(() => []),
-  ]);
-  const chinese = new Map([...chineseApproved, ...chinesePreviews].map((item) => [`${item.articleId}:v${item.version}`, item]));
-  const versions = new Map<string, (PublicPreview | ApprovedEditorialSummary)>(
-    approved.map((item) => [`${item.articleId}:v${item.version}`, item]),
-  );
-  for (const preview of previews) versions.set(`${preview.articleId}:v${preview.version}`, preview);
-  const queue = [...versions.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt) || a.articleId.localeCompare(b.articleId));
+  const chinesePreviews = await publicPreviews("zh-CN").catch(() => []);
+  const chinese = new Map(chinesePreviews.map((item) => [`${item.articleId}:v${item.version}`, item]));
+  const queue: PublicPreview[] = [...previews].sort((a, b) => b.createdAt.localeCompare(a.createdAt) || a.articleId.localeCompare(b.articleId));
   const selected = articleId && version ? queue.some((item) => item.articleId === articleId && item.version === version) : false;
+
+  const draftItems = await Promise.all(queue.map(async (item) => {
+    const zh = chinese.get(`${item.articleId}:v${item.version}`);
+    const [enArticle, zhArticle] = await Promise.all([
+      publicEditorialArticle(item.articleId, item.version, "en"),
+      publicEditorialArticle(item.articleId, item.version, "zh-CN"),
+    ]);
+    return { articleId: item.articleId, version: item.version, title: item.title,
+      chineseTitle: zh?.title ?? c.noTranslation, contentSha256: enArticle?.contentSha256 ?? "",
+      chineseHash: zhArticle?.contentSha256 ?? "", enApproved: false, chineseApproved: false };
+  }));
+  if (draftItems.length) {
+    try {
+      const db = appPool();
+      const reviewState = await db.query<{
+        article_id: string; version: number; language: "en" | "zh-CN"; content_sha256: string; decision: string;
+      }>(
+        `SELECT DISTINCT ON (article_id, version, language)
+                article_id, version, language, content_sha256, decision
+           FROM app.editorial_reviews
+          WHERE actor_kind = 'human' AND article_id = ANY($1::text[])
+          ORDER BY article_id, version, language, review_id DESC`,
+        [[...new Set(draftItems.map((item) => item.articleId))]],
+      );
+      const byLanguage = new Map(reviewState.rows.map((row) => [`${row.article_id}:v${row.version}:${row.language}`, row]));
+      for (const item of draftItems) {
+        const english = byLanguage.get(`${item.articleId}:v${item.version}:en`);
+        const chineseReview = byLanguage.get(`${item.articleId}:v${item.version}:zh-CN`);
+        item.enApproved = english?.decision === "approve" && english.content_sha256 === item.contentSha256;
+        item.chineseApproved = chineseReview?.decision === "approve" && chineseReview.content_sha256 === item.chineseHash;
+      }
+    } catch (error) {
+      console.error(`[admin editorial] approval state failed: ${error instanceof Error ? error.message : "unknown error"}`);
+    }
+  }
+  const awaitingItems = draftItems.filter((item) => !item.enApproved || !item.chineseApproved);
 
   return (
     <div className={s.page}>
@@ -86,17 +118,11 @@ export default async function EditorialAdminPage({ searchParams }: Props) {
       <PageHeader eyebrow={c.eyebrow} title={c.title} />
       <section aria-labelledby="editorial-queue-heading">
         <h2 className={s.sectionTitle} id="editorial-queue-heading">{c.queue}</h2>
-        {queue.length ? <EditorialBatchQueue label={c.batch} language={language} articles={await Promise.all(queue.map(async (item) => {
-          const zh = chinese.get(`${item.articleId}:v${item.version}`);
-          const [enArticle, zhArticle] = await Promise.all([
-            publicEditorialArticle(item.articleId, item.version, "en"),
-            publicEditorialArticle(item.articleId, item.version, "zh-CN"),
-          ]);
-          return { articleId: item.articleId, version: item.version, title: item.title,
-            chineseTitle: zh?.title ?? c.noTranslation, contentSha256: enArticle?.contentSha256 ?? "",
-            chineseHash: zhArticle?.contentSha256 ?? "" };
-        }))} /> : null}
-        {queue.length === 0 ? <p className={s.empty}>{c.empty}</p> : (
+        {awaitingItems.length ? <>
+          <h3 className={s.sectionTitle}>{c.awaiting}</h3>
+          <EditorialBatchQueue label={c.batch} language={language} articles={awaitingItems} />
+        </> : <p className={s.empty}>{queue.length ? c.empty : c.noPublic}</p>}
+        {queue.length === 0 ? null : (
           <ul className={s.queue}>
             {queue.map((english) => {
               const key = `${english.articleId}:v${english.version}`;

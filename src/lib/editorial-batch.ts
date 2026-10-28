@@ -5,6 +5,7 @@ const MAX_BATCH_ITEMS = 50;
 export type ApprovalItem = {
   articleId: string;
   version: number;
+  language: "en" | "zh-CN";
   contentSha256: { en: string; "zh-CN": string };
 };
 
@@ -29,10 +30,11 @@ export function parseApprovalBatch(value: unknown): { batchId: string; items: Ap
     const record = hashes as Record<string, unknown>;
     if (typeof record.en !== "string" || !HASH.test(record.en)
         || typeof record["zh-CN"] !== "string" || !HASH.test(record["zh-CN"])) return null;
-    const key = `${item.articleId}:v${item.version}`;
+    if (item.language !== "en" && item.language !== "zh-CN") return null;
+    const key = `${item.articleId}:v${item.version}:${item.language}`;
     if (seen.has(key)) return null;
     seen.add(key);
-    items.push({ articleId: item.articleId, version: item.version as number, contentSha256: { en: record.en, "zh-CN": record["zh-CN"] } });
+    items.push({ articleId: item.articleId, version: item.version as number, language: item.language, contentSha256: { en: record.en, "zh-CN": record["zh-CN"] } });
   }
   return { batchId: body.batchId, items };
 }

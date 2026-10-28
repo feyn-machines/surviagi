@@ -10,7 +10,11 @@
 .batch { display: grid; gap: var(--ah-space-2); margin: 0 0 var(--ah-space-3); padding: var(--ah-space-3); border: 1px solid var(--ah-color-line); background: var(--ah-color-surface); }
 .batch > p { margin: 0; color: var(--ah-color-muted); font-size: 12px; line-height: 1.55; }
 .batch > ul { display: grid; gap: 5px; max-height: 220px; overflow: auto; margin: 0; padding: 0; list-style: none; }
-.batch label { display: flex; align-items: start; gap: var(--ah-space-2); font-size: 12px; line-height: 1.5; }
+.languageApprovals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ah-space-2); margin-block: var(--ah-space-3); }
+.languageApproval { display: flex; align-items: center; gap: var(--ah-space-2); min-height: var(--ah-control-height); padding: var(--ah-space-2) var(--ah-space-3); border: 1px solid var(--ah-color-line); }
+.languageApproval span { color: var(--ah-color-muted); font-size: 13px; line-height: 1.5; }
+.languageApproval b { color: var(--ah-color-text); }
+.languageApproval input { width: 18px; height: 18px; accent-color: var(--ah-color-focus); }
 .batch button { justify-self: start; min-height: var(--ah-control-height); padding: 0 var(--ah-space-3); border: 1px solid var(--ah-color-line); border-radius: var(--ah-radius-control); color: var(--ah-color-text); background: transparent; font: inherit; cursor: pointer; }
 .batch button:disabled { opacity: .55; cursor: default; }
 .queueItem[aria-current="true"] { box-shadow: inset 3px 0 var(--ah-color-signal); }
@@ -82,7 +86,7 @@
   .preview { height: 620px; }
 }
 @media (max-width: 560px) {
-  .titles, .editHistory { grid-template-columns: 1fr; }
+  .titles, .editHistory, .languageApprovals { grid-template-columns: 1fr; }
   .panel { padding: var(--ah-space-3); }
   .preview { height: 72vh; min-height: 360px; }
   .queueItem { padding: var(--ah-space-3); }
