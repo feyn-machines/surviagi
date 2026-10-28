@@ -12,7 +12,7 @@
     "security:check": "python3 scripts/check-public-files.py",
     "security:staged": "python3 scripts/check-public-files.py --staged",
     "security:test": "python3 -m unittest discover -s scripts/tests -p 'test_public_files.py'",
-    "check": "pnpm security:check && pnpm security:test && pnpm metadata:check && pnpm platform:test && pnpm platform:check && pnpm ontology:test && pnpm ontology:check && pnpm data:test:unit && pnpm site:test:unit && pnpm crawl:test:unit && pnpm i18n:test && pnpm design:check && pnpm lint && pnpm typecheck && pnpm build && pnpm site:test && node --test scripts/tests/editorial-schema.integration.test.mjs",
+    "check": "pnpm security:check && pnpm security:test && pnpm metadata:check && pnpm platform:test && pnpm platform:check && pnpm ontology:test && pnpm ontology:check && pnpm data:test:unit && pnpm editorial:test && pnpm site:test:unit && pnpm crawl:test:unit && pnpm i18n:test && pnpm design:check && pnpm lint && pnpm typecheck && pnpm build && pnpm site:test && node --test scripts/tests/editorial-schema.integration.test.mjs",
     "check:full": "pnpm check && pnpm data:test",
     "metadata:check": "node scripts/check-metadata.mjs",
     "design:build": "node scripts/build-design-system.mjs",
@@ -64,6 +64,7 @@
     "site:indexnow": "python3 scripts/site_release.py indexnow",
     "site:env": "python3 scripts/site_release.py env",
     "data:test:unit": "python3 -m unittest discover -s scripts/tests -p 'test_data_*unit.py'",
+    "editorial:test": "python3 -m unittest discover -s scripts/tests -p 'test_editorial_run_unit.py'",
     "data:test": "data/runtime/venv/bin/python -m unittest discover -s scripts/tests -p 'test_data_*.py'",
     "crawl": "data/runtime/crawler-venv/bin/python local/x-crawler/crawler",
     "crawl:x": "data/runtime/crawler-venv/bin/python local/x-crawler/crawler timeline",
@@ -89,11 +90,12 @@
     "data:local:promote": "data/runtime/venv/bin/python scripts/data-release.py promote --target local",
     "data:changes": "data/runtime/venv/bin/python scripts/data-changes.py",
     "app:setup": "data/runtime/venv/bin/python scripts/app-db.py setup-local",
+    "editorial:run": "python3 scripts/editorial-run.py",
     "db:setup": "data/runtime/venv/bin/python scripts/data-release.py setup-db --target server",
     "admins:sync": "data/runtime/venv/bin/python scripts/app-db.py admins --target server",
     "submissions:pull": "data/runtime/venv/bin/python scripts/app-db.py pull --target server",
     "votes:pull": "data/runtime/venv/bin/python scripts/app-db.py votes --target server",
-    "check:public": "pnpm security:check && pnpm security:test && pnpm metadata:check && pnpm site:test:unit && pnpm i18n:test && pnpm design:check && pnpm lint && pnpm typecheck && pnpm build && pnpm site:test"
+    "check:public": "pnpm security:check && pnpm security:test && pnpm metadata:check && pnpm editorial:test && pnpm site:test:unit && pnpm i18n:test && pnpm design:check && pnpm lint && pnpm typecheck && pnpm build && pnpm site:test"
   },
   "dependencies": {
     "better-auth": "1.7.7",
