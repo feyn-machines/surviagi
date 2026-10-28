@@ -5,6 +5,7 @@ import { createRequire } from "node:module";
 import { after, before, test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { cleanup, freePort, startServer, stop } from "./site-server.mjs";
+import { appMigrationSql } from "./app-migrations.mjs";
 
 // The signed-in paths, against the built server. A scratch database with a throwaway role holds the `app`
 // schema; sessions are rows plus a cookie signed the way Better Auth signs it. The owner's working database
@@ -69,7 +70,7 @@ before(async () => {
     await inner.end();
   }
   pool = new Pool({ host: "127.0.0.1", port: 7543, user: names.role, password, database: names.database, max: 4 });
-  for (const name of APP_SQL) await pool.query(readFileSync(`${ROOT}db/app/${name}`, "utf8"));
+  for (const name of APP_SQL) await pool.query(appMigrationSql(readFileSync(`${ROOT}db/app/${name}`, "utf8")));
 
   await makeUser("a", { name: "Ada Admin Zq" });
   await makeUser("b", { name: "Bob <script>x</script> & Co" });

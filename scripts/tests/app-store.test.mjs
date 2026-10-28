@@ -5,6 +5,7 @@ import { createRequire } from "node:module";
 import { after, before, mock, test } from "node:test";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
+import { appMigrationSql } from "./app-migrations.mjs";
 
 // Real PostgreSQL, in a scratch database with a throwaway role. The owner's working database and the
 // real oaw_app role are never touched. Skipped when the local admin password file is absent.
@@ -48,7 +49,7 @@ before(async () => {
     await inner.end();
   }
   pool = new Pool({ host: "127.0.0.1", port: 7543, user: names.role, password, database: names.database, max: 6 });
-  for (const name of APP_SQL) await pool.query(readFileSync(`${ROOT}db/app/${name}`, "utf8"));
+  for (const name of APP_SQL) await pool.query(appMigrationSql(readFileSync(`${ROOT}db/app/${name}`, "utf8")));
   const js = transpile(`${ROOT}src/lib/app-store.ts`);
   store = await import(`data:text/javascript;charset=utf-8,${encodeURIComponent(js)}`);
 });
@@ -436,7 +437,7 @@ test("removing a reader removes their votes", { skip: SKIP }, async () => {
 // ------------------------------------------------- agent access: keys, questions, quotas (Issue #5) ----
 
 test("db/app is repeatable: applying every file again changes nothing", { skip: SKIP }, async () => {
-  for (const name of APP_SQL) await pool.query(readFileSync(`${ROOT}db/app/${name}`, "utf8"));
+  for (const name of APP_SQL) await pool.query(appMigrationSql(readFileSync(`${ROOT}db/app/${name}`, "utf8")));
 });
 
 const ask = (userId, extra = {}) => ({
