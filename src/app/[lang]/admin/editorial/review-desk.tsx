@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useId, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
+import Link from "next/link";
+import type { Route } from "next";
+import { useRouter } from "next/navigation";
+import { localizedPath } from "@/lib/i18n";
+import { languageApproved, type EditorialQueueItem, type QueueView } from "@/lib/editorial-queue";
+import { makeApprovalBatch } from "@/lib/editorial-batch";
 import styles from "./review.module.css";
 
 type Language = "en" | "zh-CN";
@@ -32,7 +38,7 @@ const copy = {
     preview: "Open reader preview",
     loading: "Loading this version…",
     loadFailed: "This version is no longer public or could not be loaded. Refresh the article list.",
-    previewState: "Public preprint · not approved",
+    previewState: "Public preprint · not yet published",
     approvedState: "Approved version",
     cutoff: "Evidence cutoff",
     hash: "Content hash",
@@ -107,7 +113,7 @@ const copy = {
     preview: "打开读者预览",
     loading: "正在加载此版本…",
     loadFailed: "此版本已不再公开或暂时无法读取，请刷新文章列表。",
-    previewState: "公开预发布 · 尚未批准",
+    previewState: "公开预发布 · 尚未正式发布",
     approvedState: "已批准版本",
     cutoff: "证据截止时间",
     hash: "内容 hash",
@@ -180,122 +186,131 @@ const copy = {
 } as const;
 
 const scopes: Scope[] = ["readability", "language_quality", "factual_accuracy", "source_quality", "publication"];
-const decisions: Decision[] = ["comment", "request_revision", "hold", "approve", "withdraw"];
+const decisions: Decision[] = ["request_revision", "comment", "hold", "withdraw"];
 const feedbackIssues: FeedbackIssue[] = ["evidence_boundary", "structure", "clarity", "specificity", "tone", "redundancy", "headline", "natural_language", "other"];
 const articleGenres: ArticleGenre[] = ["event_thread", "product_comparison", "capability_explainer", "workflow", "other"];
 
-export function EditorialReviewDesk({ articleId, version, language }: { articleId: string; version: number; language: Language }) {
+export function EditorialReviewDesk({ articleId, version, language, reviewLanguage, queueItem, returnView, reader }: {
+  articleId: string; version: number; language: Language; reviewLanguage: Language; queueItem: EditorialQueueItem; returnView: QueueView; reader: ReactNode;
+}) {
   const c = copy[language];
-  const [hashes, setHashes] = useState<Partial<Record<Language, string>>>({});
+  const zh = language === "zh-CN";
+  const router = useRouter();
+  const base = localizedPath(language, "/admin/editorial");
+  const [hash, setHash] = useState("");
+  const [dirty, setDirty] = useState(false);
   const [approving, setApproving] = useState(false);
   const [approvalMessage, setApprovalMessage] = useState("");
-  const [approvalError, setApprovalError] = useState(false);
-  const [approvedNow, setApprovedNow] = useState(false);
   const [pointers, setPointers] = useState<{ previewVersion: number | null; approvedVersion: number | null } | null>(null);
   const [withdrawalReason, setWithdrawalReason] = useState("");
   const [withdrawing, setWithdrawing] = useState(false);
   const [withdrawalMessage, setWithdrawalMessage] = useState("");
   const [withdrawalError, setWithdrawalError] = useState(false);
-  const withdrawalHead = pointers?.previewVersion ?? pointers?.approvedVersion ?? null;
-  const onWithdrawalHead = withdrawalHead === version;
-  const onHash = useCallback((itemLanguage: Language, hash: string) => {
-    setHashes((previous) => previous[itemLanguage] === hash ? previous : { ...previous, [itemLanguage]: hash });
-  }, []);
+  const approved = languageApproved(queueItem, reviewLanguage);
+  const bothApproved = queueItem.enApproved && queueItem.chineseApproved;
+  const expectedHash = reviewLanguage === "en" ? queueItem.contentSha256 : queueItem.chineseHash;
+  const onHash = useCallback((_language: Language, value: string) => setHash(value), []);
+  const onPointers = useCallback((value: { previewVersion: number | null; approvedVersion: number | null }) => setPointers(value), []);
+  const onDirty = useCallback((value: boolean) => setDirty(value), []);
+  const onSaved = () => { setDirty(false); router.refresh(); };
+  const canLeave = () => !dirty || window.confirm(zh ? "还有未保存的意见，确认离开？" : "Leave without saving your feedback?");
+  const otherLanguage = reviewLanguage === "en" ? "zh-CN" : "en";
+  const draftHref = (target: Language) => `${base}?articleId=${articleId}&version=v${version}&reviewLanguage=${target}&view=${returnView}` as Route;
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
 
-  const onPointers = useCallback((value: { previewVersion: number | null; approvedVersion: number | null }) => {
-    setPointers((previous) => previous?.previewVersion === value.previewVersion && previous.approvedVersion === value.approvedVersion ? previous : value);
-  }, []);
-
+  async function approve() {
+    if (!hash || hash !== expectedHash || dirty) return;
+    setApproving(true); setApprovalMessage("");
+    try {
+      const response = await fetch("/api/admin/editorial/approve-batch", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify(makeApprovalBatch([{ articleId, version, language: reviewLanguage,
+          contentSha256: { en: queueItem.contentSha256, "zh-CN": queueItem.chineseHash } }])),
+      });
+      const result = await response.json() as { results?: { status: string; publicationChanged: boolean }[] };
+      const item = result.results?.[0];
+      if (!response.ok || !item) throw new Error("unavailable");
+      if (!["approved", "already_approved", "language_approved", "already_language_approved"].includes(item.status)) {
+        setApprovalMessage(item.status === "conflict" ? c.approvalConflict : c.approvalFailed);
+        return;
+      }
+      const published = item.publicationChanged || item.status === "approved" || item.status === "already_approved";
+      router.push(`${base}?view=pending&notice=${published ? "published" : "approved"}` as Route);
+      router.refresh();
+    } catch { setApprovalMessage(c.approvalFailed); }
+    finally { setApproving(false); }
+  }
   async function withdraw() {
     if (!pointers || withdrawalReason.trim().length < 20 || !window.confirm(c.confirmWithdrawal)) return;
-    setWithdrawing(true);
-    setWithdrawalMessage("");
-    setWithdrawalError(false);
+    setWithdrawing(true); setWithdrawalMessage(""); setWithdrawalError(false);
     try {
       const response = await fetch("/api/admin/editorial/withdraw", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
+        method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({ articleId, expectedPreviewVersion: pointers.previewVersion, expectedApprovedVersion: pointers.approvedVersion, reason: withdrawalReason }),
       });
       const result = await response.json().catch(() => ({})) as { error?: string; publicationChanged?: boolean };
       if (!response.ok) {
         setWithdrawalError(true);
-        setWithdrawalMessage(result.error === "bilingual_withdrawal_required" ? c.needBothWithdrawals
-          : result.error === "stale_publication" ? c.withdrawalConflict : c.withdrawalFailed);
+        setWithdrawalMessage(result.error === "bilingual_withdrawal_required" ? c.needBothWithdrawals : result.error === "stale_publication" ? c.withdrawalConflict : c.withdrawalFailed);
         return;
       }
-      setWithdrawalMessage(result.publicationChanged ? c.withdrawn : c.alreadyWithdrawn);
-      setPointers(null);
-    } catch {
-      setWithdrawalError(true);
-      setWithdrawalMessage(c.withdrawalFailed);
-    } finally {
-      setWithdrawing(false);
-    }
+      router.push(`${base}?view=${returnView}` as Route); router.refresh();
+    } catch { setWithdrawalError(true); setWithdrawalMessage(c.withdrawalFailed); }
+    finally { setWithdrawing(false); }
   }
-
-  async function approve() {
-    if (!hashes.en || !hashes["zh-CN"]) return;
-    setApproving(true);
-    setApprovalMessage("");
-    setApprovalError(false);
-    try {
-      const response = await fetch("/api/admin/editorial/approve", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ articleId, version, contentSha256: hashes }),
-      });
-      if (!response.ok) {
-        const result = await response.json().catch(() => ({})) as { error?: string };
-        setApprovalError(true);
-        setApprovalMessage(result.error === "bilingual_approval_required"
-          ? c.needBothApprovals
-          : result.error === "stale_preview" ? c.approvalConflict : c.approvalFailed);
-        return;
-      }
-      const result = await response.json() as { publicationChanged?: boolean };
-      setApprovedNow(true);
-      setApprovalMessage(result.publicationChanged ? c.approved : c.alreadyApproved);
-    } catch {
-      setApprovalError(true);
-      setApprovalMessage(c.approvalFailed);
-    } finally {
-      setApproving(false);
-    }
-  }
-
-  return (
-    <div className={styles.desk}>
-      <section className={styles.approval} aria-label={c.approveBoth}>
-        <p>{c.approveHelp}</p>
-        <button type="button" onClick={() => void approve()} disabled={approving || !hashes.en || !hashes["zh-CN"]}>
-          {approving ? c.approving : c.approveBoth}
-        </button>
-        {approvalMessage ? <p role={approvalError ? "alert" : "status"}>{approvalMessage}</p> : null}
-      </section>
-      <div className={styles.panels}>
-        <LanguagePanel articleId={articleId} version={version} language="en" onHash={onHash} onPointers={onPointers} approvedNow={approvedNow} />
-        <LanguagePanel articleId={articleId} version={version} language="zh-CN" onHash={onHash} onPointers={onPointers} approvedNow={approvedNow} />
-      </div>
-      <section className={styles.approval} aria-label={c.withdrawalTitle}>
-        <h3>{c.withdrawalTitle}</h3>
-        <p>{c.withdrawalHelp}</p>
-        <p>{c.cutoff}: {pointers?.previewVersion ? `preview v${pointers.previewVersion}` : "no preview"}; {pointers?.approvedVersion ? `approved v${pointers.approvedVersion}` : "no approved version"}</p>
-        {!onWithdrawalHead ? <p>{c.wrongWithdrawalVersion}</p> : null}
-        <label htmlFor="editorial-withdrawal-reason">{c.withdrawalReason}</label>
-        <p>{c.withdrawalReasonHelp}</p>
-        <textarea id="editorial-withdrawal-reason" value={withdrawalReason} maxLength={1000} minLength={20} rows={3} onChange={(event) => setWithdrawalReason(event.target.value)} />
-        <button type="button" onClick={() => void withdraw()} disabled={withdrawing || !pointers || !onWithdrawalHead || withdrawalReason.trim().length < 20}>
-          {withdrawing ? c.withdrawing : c.withdraw}
-        </button>
-        {withdrawalMessage ? <p role={withdrawalError ? "alert" : "status"}>{withdrawalMessage}</p> : null}
-      </section>
+  return <div className={styles.desk}>
+    <div className={styles.detailNav}>
+      <Link href={`${base}?view=${returnView}` as Route} onClick={(event) => { if (!canLeave()) event.preventDefault(); }}>{zh ? "← 返回队列" : "← Back to queue"}</Link>
+      <span>{zh ? "版本" : "Version"} {version} · {queueItem.published ? (zh ? "已正式发布" : "Published") : (zh ? "公开预发布" : "Public preprint")}</span>
     </div>
-  );
+    <nav className={styles.tabs} aria-label={zh ? "选择审核语言" : "Review language"}>
+      {(["en", "zh-CN"] as const).map((target) => <Link key={target} href={draftHref(target)} aria-current={target === reviewLanguage ? "page" : undefined} onClick={(event) => { if (!canLeave()) event.preventDefault(); }}>
+        {target === "en" ? (zh ? "英文" : "English") : (zh ? "中文" : "Chinese")} · {languageApproved(queueItem, target) ? (zh ? "✓ 已批准" : "✓ Approved") : (zh ? "待审核" : "To review")}
+      </Link>)}
+    </nav>
+    {approved && <div className={styles.notice}>
+      <p>{queueItem.published ? (zh ? "此版本已正式发布。" : "This version is published.") : bothApproved ? (zh ? "中英文均已批准，点击下方完成发布。" : "Both languages are approved. Finish publication below.") : (zh ? "此语言已批准，无需重复审核。还需另一种语言通过后，文章才会正式发布。" : "This draft is approved. The other language still needs approval before publication.")}</p>
+      {!queueItem.published && !bothApproved && <Link href={draftHref(otherLanguage)} onClick={(event) => { if (!canLeave()) event.preventDefault(); }}>{zh ? "继续审核另一种语言 →" : "Review the other language →"}</Link>}
+      {queueItem.published && <Link href={localizedPath(language, `/articles/approved/${articleId}`) as Route}>{zh ? "查看正式文章 →" : "Open published article →"}</Link>}
+    </div>}
+    <LanguagePanel articleId={articleId} version={version} language={reviewLanguage} uiLanguage={language} onHash={onHash} onPointers={onPointers} approvedNow={queueItem.published} onDirty={onDirty} onSaved={onSaved} reader={reader}
+      approvalAction={<div className={styles.reviewActions}>
+        {(!approved || (bothApproved && !queueItem.published)) && <>
+          <div><strong>{bothApproved ? (zh ? "完成正式发布" : "Finish publication") : (zh ? `批准${reviewLanguage === "en" ? "英文" : "中文"}稿` : `Approve ${reviewLanguage === "en" ? "English" : "Chinese"} draft`)}</strong>
+            <p>{zh ? "确认已阅读此语言正文。批准后返回队列；双语均通过时自动发布。" : "Confirm you have read this draft. Approval returns you to the queue and publishes once both languages pass."}</p></div>
+          <button className={styles.primary} onClick={() => void approve()} disabled={approving || dirty || !hash || hash !== expectedHash}>{approving ? (zh ? "正在批准…" : "Approving…") : bothApproved ? (zh ? "完成发布并返回队列" : "Publish & return to queue") : (zh ? "批准并返回队列" : "Approve & return to queue")}</button>
+        </>}
+        {dirty && <p role="status">{zh ? "有未保存的意见。请先保存意见，再决定是否批准。" : "You have unsaved feedback. Save it before approving."}</p>}
+        {hash && hash !== expectedHash && <p role="alert">{c.approvalConflict}</p>}
+        {approvalMessage && <p role="alert">{approvalMessage} <button className={styles.save} onClick={() => router.refresh()}>{zh ? "重新加载状态" : "Reload status"}</button></p>}
+      </div>} />
+    <details className={styles.advanced}>
+      <summary>{c.withdrawalTitle}</summary>
+      <section className={styles.approval} aria-label={c.withdrawalTitle}>
+        <p>{c.withdrawalHelp}</p>
+        <p>{zh ? "在两种语言的「审核意见」里选择发布范围与撤回决定并保存，再执行撤回。" : "In each language’s feedback form, select Publication and Withdraw, save, then withdraw here."}</p>
+        {(pointers?.previewVersion ?? pointers?.approvedVersion) !== version && <p>{c.wrongWithdrawalVersion}</p>}
+        <label htmlFor="editorial-withdrawal-reason">{c.withdrawalReason}</label><p>{c.withdrawalReasonHelp}</p>
+        <textarea id="editorial-withdrawal-reason" value={withdrawalReason} maxLength={1000} minLength={20} rows={3} onChange={(event) => setWithdrawalReason(event.target.value)} />
+        <button onClick={() => void withdraw()} disabled={withdrawing || dirty || !pointers || (pointers.previewVersion ?? pointers.approvedVersion) !== version || withdrawalReason.trim().length < 20}>{withdrawing ? c.withdrawing : c.withdraw}</button>
+        {withdrawalMessage && <p role={withdrawalError ? "alert" : "status"}>{withdrawalMessage}</p>}
+      </section>
+    </details>
+  </div>;
 }
 
-function LanguagePanel({ articleId, version, language, onHash, onPointers, approvedNow }: { articleId: string; version: number; language: Language; onHash: (language: Language, hash: string) => void; onPointers: (pointers: { previewVersion: number | null; approvedVersion: number | null }) => void; approvedNow: boolean }) {
-  const c = copy[language];
+function LanguagePanel({ articleId, version, language, uiLanguage, onHash, onPointers, approvedNow, onDirty, onSaved, approvalAction, reader }: {
+  articleId: string; version: number; language: Language; uiLanguage: Language;
+  onHash: (language: Language, hash: string) => void;
+  onPointers: (pointers: { previewVersion: number | null; approvedVersion: number | null }) => void;
+  approvedNow: boolean; onDirty: (dirty: boolean) => void; onSaved: () => void; approvalAction: ReactNode; reader: ReactNode;
+}) {
+  const c = copy[uiLanguage];
   const noteId = useId();
   const scopeId = useId();
   const decisionId = useId();
@@ -314,7 +329,7 @@ function LanguagePanel({ articleId, version, language, onHash, onPointers, appro
   const [after, setAfter] = useState("");
   const [annotation, setAnnotation] = useState("");
   const [scope, setScope] = useState<Scope>("readability");
-  const [decision, setDecision] = useState<Decision>("comment");
+  const [decision, setDecision] = useState<Decision>("request_revision");
   const [curatingEdit, setCuratingEdit] = useState<Edit | null>(null);
   const [feedbackScope, setFeedbackScope] = useState<FeedbackScope>("single_article");
   const [feedbackIssue, setFeedbackIssue] = useState<FeedbackIssue>("clarity");
@@ -414,6 +429,7 @@ function LanguagePanel({ articleId, version, language, onHash, onPointers, appro
       setAfter("");
       setAnnotation("");
       setMessage(c.saved);
+      onSaved();
     } catch {
       setMessage(c.failed);
     } finally {
@@ -469,11 +485,11 @@ function LanguagePanel({ articleId, version, language, onHash, onPointers, appro
   const previewPath = `${language === "zh-CN" ? "/zh-CN" : ""}/articles/previews/${articleId}/v${version}`;
 
   return (
-    <section className={styles.panel} lang={language} aria-labelledby={`review-${language}`}>
+    <section className={styles.panel} lang={uiLanguage} aria-labelledby={`review-${language}`}>
       <header className={styles.panelHeader}>
         <div>
-          <p className={styles.language}>{c.language} · v{article.version}</p>
-          <h3 id={`review-${language}`}>{article.title}</h3>
+          <p className={styles.language}>{language === "en" ? (uiLanguage === "en" ? "English draft" : "英文稿") : (uiLanguage === "en" ? "Chinese draft" : "中文稿")} · v{article.version}</p>
+          <h3 lang={language} id={`review-${language}`}>{article.title}</h3>
           <p className={styles.summary}>{article.summary}</p>
         </div>
         <span className={styles.state} data-state={status}>
@@ -481,16 +497,19 @@ function LanguagePanel({ articleId, version, language, onHash, onPointers, appro
         </span>
       </header>
       <dl className={styles.metadata}>
-        <div><dt>{c.hash}</dt><dd title={article.contentSha256}>{article.contentSha256.slice(0, 16)}</dd></div>
+
         <div><dt>{c.cutoff}</dt><dd><time dateTime={article.sourceCutoff}>{article.sourceCutoff.slice(0, 10)}</time></dd></div>
       </dl>
       <div className={styles.previewHeading}>
-        <h4>{article.title}</h4>
+        <h4>{uiLanguage === "en" ? "Read this draft" : "阅读正文"}</h4>
         <a href={previewPath} target="_blank" rel="noreferrer">{c.preview}</a>
       </div>
-      <iframe className={styles.preview} src={previewPath} title={`${c.language}: ${article.title}`} loading="lazy" />
+      <article className={styles.reader} lang={language} aria-label={uiLanguage === "en" ? "Draft text" : "稿件正文"}>{reader}</article>
 
-      <form className={styles.form} onSubmit={(event) => void submit(event)}>
+      {approvalAction}
+      <details className={styles.advanced}>
+      <summary>{uiLanguage === "en" ? "Leave feedback or request changes" : "审核意见与修改建议"}</summary>
+      <form className={styles.form} onChange={() => onDirty(true)} onSubmit={(event) => void submit(event)}>
         <label htmlFor={scopeId}>{c.scope}</label>
         <select id={scopeId} value={scope} onChange={(event) => setScope(event.target.value as Scope)}>
           {scopes.map((value) => <option key={value} value={value}>{c.scopes[value]}</option>)}
@@ -499,10 +518,11 @@ function LanguagePanel({ articleId, version, language, onHash, onPointers, appro
         <select id={decisionId} value={decision} onChange={(event) => setDecision(event.target.value as Decision)}>
           {decisions.map((value) => <option key={value} value={value}>{c.decisions[value]}</option>)}
         </select>
-        <p className={styles.boundary}>{c.publishBoundary}</p>
+        <p className={styles.help}>{uiLanguage === "en" ? "Feedback is private. Suggested edits do not change the public draft. A new decision replaces this language’s previous review decision." : "意见仅供内部使用，修改建议不会覆盖公开稿件。新的审核决定会替代此语言之前的审核决定。"}</p>
         <label htmlFor={noteId}>{c.note}</label>
         <textarea id={noteId} value={note} maxLength={4000} required rows={3} onChange={(event) => setNote(event.target.value)} />
 
+        <details className={styles.advanced}><summary>{c.annotations}</summary>
         <fieldset className={styles.annotation}>
           <legend>{c.annotations}</legend>
           <label htmlFor={paragraphId}>{c.paragraph}</label>
@@ -516,16 +536,20 @@ function LanguagePanel({ articleId, version, language, onHash, onPointers, appro
           <label htmlFor={annotationId}>{c.annotation}</label>
           <textarea id={annotationId} value={annotation} maxLength={3000} rows={2} onChange={(event) => setAnnotation(event.target.value)} />
         </fieldset>
+        </details>
+        <details className={styles.advanced}><summary>{c.edit}</summary>
 
         <label htmlFor={editId}>{c.edit}</label>
         <p className={styles.help}>{c.editHelp}</p>
         <textarea className={styles.markdown} id={editId} value={edit} maxLength={96 * 1024} rows={16} onChange={(event) => setEdit(event.target.value)} />
+        </details>
         <button className={styles.save} type="submit" disabled={saving || note.trim() === ""}>{saving ? c.saving : c.save}</button>
         {message ? <p className={styles.message} role={conflict ? "alert" : "status"}>{message}</p> : null}
       </form>
+      </details>
 
-      <section className={styles.history} aria-labelledby={`history-${language}`}>
-        <h4 id={`history-${language}`}>{c.history}</h4>
+      <details className={styles.history} aria-labelledby={`history-${language}`}>
+        <summary id={`history-${language}`}>{c.history} ({detail.reviews.length})</summary>
         {detail.reviews.length === 0 ? <p>{c.noHistory}</p> : detail.reviews.map((review) => (
           <article className={styles.review} key={review.review_id}>
             <p className={styles.reviewMeta}>{c.scopes[review.review_scope]} · {c.decisions[review.decision]} · {c.actor}: {review.actor_id} · {new Date(review.created_at).toLocaleString(language)}</p>
@@ -597,7 +621,7 @@ function LanguagePanel({ articleId, version, language, onHash, onPointers, appro
             ))}
           </article>
         ))}
-      </section>
+      </details>
     </section>
   );
 }

@@ -111,3 +111,21 @@ test("checked review languages become approval items", () => {
   assert.equal(selectedApprovalItems([approvalSelectionKey(other, "en"), approvalSelectionKey(other, "zh-CN")], [article, other]).length, 2);
   assert.deepEqual(selectedApprovalItems(["agent-cost:v9:en"], [article]), []);
 });
+
+// The queue tracks individual language work independently from publication.
+test("approved languages leave pending immediately and published versions stay manageable", async () => {
+  const { queueLanguages } = await import("../../src/lib/editorial-queue.ts");
+  const item = { articleId: "queue-test", version: 1, enApproved: false, chineseApproved: true, published: false };
+  assert.deepEqual(queueLanguages([item], "pending").map((row) => row.language), ["en"]);
+  assert.deepEqual(queueLanguages([item], "reviewed").map((row) => row.language), ["zh-CN"]);
+  const published = { ...item, enApproved: true, published: true };
+  assert.deepEqual(queueLanguages([published], "pending"), []);
+  assert.deepEqual(queueLanguages([published], "reviewed"), []);
+  assert.equal(published.published, true);
+  // A new preview must not inherit approval from an older published version.
+  const revision = { ...item, version: 2, chineseApproved: false };
+  assert.equal(queueLanguages([published, revision], "pending").length, 2);
+  // A later hold reopens just its own language; a public version stays public.
+  assert.deepEqual(queueLanguages([{ ...item, enApproved: true, chineseApproved: false }], "pending").map((row) => row.language), ["zh-CN"]);
+  assert.equal(queueLanguages([{ ...published, enApproved: false }], "pending").length, 0);
+});

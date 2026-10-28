@@ -265,18 +265,22 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       assert.equal((await fetch(`${base}/admin/editorial`, { headers: { cookie: authCookie(readerToken) } })).status, 404);
       const adminQueue = await fetch(`${base}/admin/editorial`, { headers: { cookie: authCookie(adminToken) } });
       assert.equal(adminQueue.status, 200);
-      const adminQueueHtml = await adminQueue.text();
+      const adminQueueHtml = (await adminQueue.text()).replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, "");
       assert.match(adminQueueHtml, /Article review/);
-      assert.match(adminQueueHtml, /Integration robotics automation preview/);
+      assert.doesNotMatch(adminQueueHtml, /articleId=integration-test&amp;version=v2&amp;reviewLanguage=en/, "approved English draft is no longer a pending task");
       assert.doesNotMatch(adminQueueHtml, /Integration robotics automation report/, 'already approved historical versions are not offered for another approval');
       assert.match(adminQueueHtml, /集成机器人自动化预发布/);
-      assert.match(adminQueueHtml, /Independent language approvals/);
+      assert.match(adminQueueHtml, /To review/);
       assert.match(adminQueueHtml, /English/);
-      assert.match(adminQueueHtml, /Awaiting approval/);
+      assert.match(adminQueueHtml, /Awaiting review/);
+      assert.match(adminQueueHtml, /reviewLanguage=zh-CN/);
+      const reviewedHtml = await (await fetch(`${base}/admin/editorial?view=reviewed`, { headers })).text();
+      assert.match(reviewedHtml, /Review other language/);
+      assert.match(reviewedHtml, /reviewLanguage=en/);
       const selectedReview = await fetch(`${base}/admin/editorial?articleId=integration-test&version=v2`, { headers: { cookie: authCookie(adminToken) } });
       assert.equal(selectedReview.status, 200);
       const selectedHtml = await selectedReview.text();
-      assert.match(selectedHtml, /Review version(?:\s|<!-- -->)*2/);
+      assert.match(selectedHtml, /Version(?:\s|<!-- -->)*2/);
       const chineseQueue = await fetch(`${base}/zh-CN/admin/editorial`, { headers: { cookie: authCookie(adminToken) } });
       assert.equal(chineseQueue.status, 200);
       assert.match(await chineseQueue.text(), /文章审核/);
@@ -533,7 +537,7 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       assert.equal((await passingResponse.json()).results[0].status, 'approved');
       assert.equal((await admin.query("SELECT approved_version FROM editorial.publications WHERE article_id = 'integration-test'")).rows[0].approved_version, 2);
       const completedQueue = await fetch(`${base}/admin/editorial`, { headers: { cookie: authCookie(adminToken) } });
-      const completedQueueHtml = await completedQueue.text();
+      const completedQueueHtml = (await completedQueue.text()).replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, "");
       assert.equal(completedQueue.status, 200);
       const completedApprovals = await admin.query(
         `SELECT r.article_id, r.version, r.language, r.content_sha256, r.decision, r.review_scope,
@@ -545,6 +549,12 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       );
       assert.doesNotMatch(completedQueueHtml, /articleId=integration-test&amp;version=v2/,
         `a fully approved preview disappears from the review queue; approvals=${JSON.stringify(completedApprovals.rows)}\n${log()}`);
+
+      const publishedQueue = await (await fetch(`${base}/admin/editorial?view=published`, { headers })).text();
+      assert.match(publishedQueue, /articleId=integration-test&amp;version=v2/);
+      assert.match(publishedQueue, /Open published article/);
+      const publishedDetail = await (await fetch(`${base}/admin/editorial?articleId=integration-test&version=v2&view=published`, { headers })).text();
+      assert.match(publishedDetail, /This version is published/);
       const batchReplay = await fetch(batchUrl, { method: 'POST', headers, body: JSON.stringify(passingBatch) });
       assert.equal((await batchReplay.json()).replayed, true);
 
@@ -658,6 +668,10 @@ test('editorial schema enforces immutable bilingual public versions and isolated
       const withdrawnSearch = await (await fetch(`${base}/api/agent/search?${new URLSearchParams({ query: 'integration robotics', types: 'article', language: 'en' })}`)).json();
       assert.deepEqual(withdrawnSearch.results, []);
       assert.equal((await fetch(`${base}/api/agent/record?id=article%3Aintegration-test%3Av2`)).status, 404);
+      if (process.env.EDITORIAL_BROWSER_MODULE) {
+        const { verifyEditorialBrowser } = await import('./editorial-browser.mjs');
+        await verifyEditorialBrowser({ admin, base, cookie: authCookie(adminToken) });
+      }
     } finally {
       await stop(proc);
     }
