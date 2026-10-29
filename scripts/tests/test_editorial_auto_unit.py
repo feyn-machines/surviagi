@@ -354,6 +354,30 @@ class AutoRunTests(unittest.TestCase):
             self.run_input()
 
 
+class LatestInputTests(unittest.TestCase):
+    def test_newest_regular_window_wins_over_retry_and_weekly_names(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            names = {"official-x": ["official-2026-10-28T1200_2026-10-29T0000.json",
+                                    "official-2026-10-29T0000_2026-10-29T1200.json",
+                                    "official-retry-2026-10-08_2026-10-08b.json",
+                                    "wk3e-2026-09-21-code-a1.json"],
+                     "panel": ["panel-2026-10-28T1200_2026-10-29T0000.json",
+                               "panel-2026-10-29T0000_2026-10-29T1200.json",
+                               "panel-retry-2026-10-08_2026-10-08b.json",
+                               "plan-2026-09-23.json"]}
+            for folder, files in names.items():
+                (root / "data/collection" / folder).mkdir(parents=True)
+                for name in files:
+                    (root / "data/collection" / folder / name).write_text("{}")
+            official, panel = editorial_auto.latest_input_pair(root)
+            self.assertEqual(official.name, "official-2026-10-29T0000_2026-10-29T1200.json")
+            self.assertEqual(panel.name, "panel-2026-10-29T0000_2026-10-29T1200.json")
+            (root / "data/collection/panel/panel-2026-10-29T0000_2026-10-29T1200.json").unlink()
+            self.assertEqual(editorial_auto.latest_input_pair(root)[0].name,
+                             "official-2026-10-28T1200_2026-10-29T0000.json")
+
+
 class DigestTests(unittest.TestCase):
     def test_digest_drops_reposts_and_rejects_changed_collections(self):
         with tempfile.TemporaryDirectory() as temp:

@@ -970,9 +970,22 @@ def render_evidence_report(selection: dict, brief: dict, preflight: dict, run_id
     return "\n".join(lines) + "\n"
 
 
+WINDOW_FILE = re.compile(r"^(?:official|panel)-(\d{4}-\d{2}-\d{2}T\d{4})_(\d{4}-\d{2}-\d{2}T\d{4})\.json$")
+
+
 def latest_input_pair(root: Path = ROOT) -> tuple[Path, Path] | None:
-    """The newest window with both an official and a panel collection record."""
-    official = {p.name.removeprefix("official-"): p for p in (root / "data/collection/official-x").glob("official-*.json")}
-    panel = {p.name.removeprefix("panel-"): p for p in (root / "data/collection/panel").glob("panel-*.json")}
+    """The newest regular window with both an official and a panel record.
+
+    Retry, weekly and plan files share the directories under other names; ordering by
+    name would let them win, so only the regular window names count, newest end first."""
+    def windows(folder: str) -> dict:
+        found = {}
+        for path in (root / "data/collection" / folder).glob("*.json"):
+            match = WINDOW_FILE.fullmatch(path.name)
+            if match:
+                found[(match.group(2), match.group(1))] = path
+        return found
+
+    official, panel = windows("official-x"), windows("panel")
     common = sorted(set(official) & set(panel))
     return (official[common[-1]], panel[common[-1]]) if common else None
