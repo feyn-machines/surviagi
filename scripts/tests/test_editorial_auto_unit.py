@@ -55,6 +55,7 @@ def body_sha(markdown: str) -> str:
 class FakeRunner:
     def __init__(self, responses=None, cost=1_000_000):
         self.responses = {"selection": SELECTION, "brief": BRIEF, "en": DRAFTS["en"], "zh-CN": DRAFTS["zh-CN"],
+                          "revise-en": {**DRAFTS["en"], "used_samples": []}, "revise-zh-CN": DRAFTS["zh-CN"],
                           "judge": JUDGE, **(responses or {})}
         self.calls, self.cost = [], cost
 
@@ -63,6 +64,8 @@ class FakeRunner:
                 id(editorial_auto.JUDGE_SCHEMA): "judge"}.get(id(schema))
         if kind is None:
             kind = "en" if "English version" in prompt else "zh-CN"
+            if "correcting" in prompt:
+                kind = f"revise-{kind}"
         self.calls.append(kind)
         assert "skill/SKILL.md" in files and budget > 0
         response = self.responses[kind]
@@ -325,16 +328,39 @@ class AutoRunTests(unittest.TestCase):
         self.assertEqual((repeat["state"], repeat["reason"]), ("held", "duplicate_topic"))
         self.assertEqual(len(self.site.published), 1)
 
-    def test_invented_citation_fails_preflight_without_a_model_override(self):
+    def test_invented_citation_is_corrected_once_and_rechecked(self):
         bad = {**DRAFTS["en"], "body_markdown": BODY + " See [blog](https://example.org/unlisted)."}
         self.runner.responses["en"] = bad
         result = self.run_input()
+        self.assertEqual(result["state"], "complete")
+        # The hard failure is never sent to the reviewer; the corrected draft is reviewed instead.
+        self.assertEqual(self.runner.calls, ["selection", "brief", "en", "zh-CN", "revise-en", "revise-zh-CN", "judge"])
+        run_dir = self.root / "data/editorial/runs" / result["run_id"]
+        self.assertNotIn("example.org", (run_dir / "package/en.md").read_text())
+        report = json.loads((run_dir / "preflight.json").read_text())
+        self.assertEqual({f["check"] for f in report["correction"]["first_failures"]},
+                         {"uncited_source", "language_source_mismatch"})
+        # Samples the original writer used stay recorded after correction.
+        self.assertEqual(json.loads((run_dir / "draft-en.corrected.json").read_text())["used_samples"],
+                         DRAFTS["en"]["used_samples"])
+
+    def test_correction_that_still_invents_a_citation_holds(self):
+        bad = {**DRAFTS["en"], "body_markdown": BODY + " See [blog](https://example.org/unlisted).", "used_samples": []}
+        self.runner.responses["en"] = bad
+        self.runner.responses["revise-en"] = bad
+        result = self.run_input()
         self.assertEqual((result["state"], result["held"]), ("held", "preflight_failed"))
-        checks = {f["check"] for f in result["failures"]}
-        self.assertIn("uncited_source", checks)
-        self.assertIn("language_source_mismatch", checks)
         self.assertNotIn("judge", self.runner.calls)
         self.assertEqual(self.site.published, {})
+
+    def test_blocking_review_finding_is_corrected_in_the_affected_language(self):
+        self.runner.responses["judge"] = [
+            {"verdict": "fail", "findings": [{"check": "numbers", "language": "zh-CN", "severity": "blocking",
+                                              "detail": "discount reads as 5% off"}]},
+            JUDGE]
+        result = self.run_input()
+        self.assertEqual(result["state"], "complete")
+        self.assertEqual(self.runner.calls[-3:], ["judge", "revise-zh-CN", "judge"])
 
     def test_held_claim_and_dead_source_are_hard_failures(self):
         self.runner.responses["zh-CN"] = {**DRAFTS["zh-CN"], "claim_ids_used": ["C1", "C2", "C3", "C4"]}
@@ -346,11 +372,12 @@ class AutoRunTests(unittest.TestCase):
         checks = {f["check"] for f in result["failures"]}
         self.assertEqual(checks, {"held_claim_used", "dead_source"})
 
-    def test_blocking_semantic_finding_keeps_the_package_private(self):
+    def test_blocking_finding_that_survives_correction_keeps_the_package_private(self):
         self.runner.responses["judge"] = {"verdict": "fail", "findings": [
             {"check": "bilingual", "severity": "blocking", "detail": "price differs"}]}
         result = self.run_input()
         self.assertEqual(result["held"], "preflight_failed")
+        self.assertEqual(self.runner.calls[-4:], ["judge", "revise-en", "revise-zh-CN", "judge"])
         self.assertEqual(self.site.published, {})
 
     def test_publish_failure_is_retried_and_a_crash_after_commit_reuses_the_version(self):

@@ -14,7 +14,7 @@ uses the existing [prepublication writer](editorial-publishing.md):
 | topic_selection | A model reads the window's original posts, every existing article and earlier selections, and applies the `surviagi-editorial` skill. Choosing is its job: the most valuable non-duplicate candidate with a primary source is written. | No qualifying topic or evidence-only (`no_topic`); a topic still to be checked (`held`); a topic or article already written or in progress (`held`, `duplicate_topic`); a revision whose target is not a live editorial article (`held`, `revision_target_missing`). |
 | evidence_brief | A model opens primary sources and returns the shared claim register and outline. For a revision it also reads the current version of both languages (snapshotted with its pointers when the topic was chosen) and covers the whole revised article. The cutoff is the time this stage finishes. | The brief's gate is `hold`, or fewer than two sourced claims are usable (`insufficient_evidence`). |
 | draft_en, draft_zh | Two independent model calls write each language from the brief only, with private style examples retrieved separately per language. A revision writer also gets the current text in its own language and returns the complete revised article. | The output is malformed (retried, then `failed`). |
-| preflight | Deterministic checks, then a model review. | Any hard failure: a citation not in the brief, an outline claim or source left out, a held claim or source used, different source sets between languages, a dead (404/410) source. A blocking model finding also holds. Unreachable sources are retried. |
+| preflight | Deterministic checks, then a model review. If every failure is one a writer can fix (citations, claim coverage, held material, language parity, a blocking review finding), each affected language is corrected once from the findings and everything is checked again. | A failure that remains after the correction, or one no rewrite can fix (a dead 404/410 source). Unreachable sources are retried. |
 | prepublish | Writes the package (Markdown, evidence report, manifest) and calls `editorial-publish.mjs`. A revision expects the pointers it was based on and becomes the next preview version; the approved version stays public until the new one is approved. Records each style example actually used against the published hash. | Without `--confirm-public-preview` the run waits here. A pointer conflict (someone published or approved in between), withdrawal or package rejection holds. |
 | agent_verify | Reads both languages back through `/api/agent/record` (status `preview`, exact revision, exact content hash) and finds the revision through `/api/agent/search`. | A mismatch is retried, then `failed`. |
 | review_queue | Confirms the preview pointer is this version, unapproved and not withdrawn: it is in the review desk. | Withdrawn or superseded before review (`held`). |
@@ -54,7 +54,9 @@ has published or is still producing.
 ## Cost and retries
 
 Each model stage reserves a fixed amount, which is also the harness's
-`--max-budget-usd` cap: selection 3, evidence 4, each draft 2, review 1.5 (USD).
+`--max-budget-usd` cap: selection 3, evidence 4, each draft 2 (USD). Preflight
+reserves 3 for a review (capped at 0.8), at most one correction per language
+(0.6 each) and a re-review.
 The run budget defaults to USD 15 (`--budget-usd`). A stage that would exceed it
 is not started (`budget_held`); one whose reported cost overruns it holds the
 run. Retryable failures are tried up to `--max-attempts` (default 2) per stage.

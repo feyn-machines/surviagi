@@ -40,12 +40,17 @@ ROOT = Path(__file__).resolve().parents[1]
 RUNS_DIR = ROOT / "data" / "editorial" / "runs"
 SKILL_DIR = ROOT / ".agents" / "skills" / "surviagi-editorial"
 ARTICLES_DIR = ROOT / "docs" / "articles"
-POLICY_VERSION = "auto-prepublish-v2"
+POLICY_VERSION = "auto-prepublish-v3"
 DEFAULT_MODEL = "claude-opus-5-5"
 DEFAULT_BUDGET = 15_000_000
 # Per-stage reservations (micro-USD) double as the harness's hard spending cap.
 RESERVE = {"topic_selection": 3_000_000, "evidence_brief": 4_000_000,
-           "draft_en": 2_000_000, "draft_zh": 2_000_000, "preflight": 1_500_000}
+           "draft_en": 2_000_000, "draft_zh": 2_000_000, "preflight": 3_000_000}
+# Preflight makes several calls inside its reservation: a review, at most one correction per language, a re-review.
+CALL_CAP = {"judge": 800_000, "revise": 600_000}
+# Failures a corrected draft can resolve; a dead or unreachable source cannot be written away.
+REVISABLE = frozenset(("uncited_source", "missing_citation", "missing_claim", "held_claim_used",
+                       "held_source_cited", "language_source_mismatch", "semantic_review"))
 SITE_URLS = {"server": "https://surviagi.com", "local": "http://127.0.0.1:3000"}
 SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+){1,9}$")
 LINK = re.compile(r"\[[^\]]*\]\((https://[^)\s]+)\)")
@@ -480,6 +485,15 @@ This is a revision. {existing} holds the current {language_name} version of the 
 article: keep what remains accurate and reads well, integrate the new material where it belongs, and change only what
 the brief requires. The title and description may change if the article's answer changed."""
 
+REVISE_PROMPT = """You are correcting the {language_name} version of a SurviAGI article after its preflight review.
+
+Read skill/SKILL.md, the style guide skill/references/{style}, brief.json, the current draft current.json, the other
+language's article other.md (for parity only) and the review findings findings.json. Fix every blocking finding and
+every finding that concerns this language, including differences from the other language in facts, numbers, named
+limitations and conclusion. Change nothing else. The drafting rules still hold: only facts from brief.json, every
+outline claim cited with its source_url as a Markdown link, no URL outside the brief, no frontmatter or H1, title
+without a date. Return the complete corrected article; used_samples stays an empty list."""
+
 JUDGE_PROMPT = """You are the semantic preflight reviewer for a SurviAGI bilingual article. Read
 skill/references/evidence.md, brief.json, en.md and zh-CN.md. Check:
 
@@ -544,9 +558,10 @@ class AutoRun:
         return {f"skill/{p.relative_to(self.skill_dir).as_posix()}": p.read_bytes()
                 for p in sorted(self.skill_dir.rglob("*")) if p.is_file()}
 
-    def _model(self, prompt: str, schema: dict, files: dict, stage: str, web: bool) -> ModelResult:
+    def _model(self, prompt: str, schema: dict, files: dict, stage: str, web: bool,
+               budget: int | None = None) -> ModelResult:
         return self.services.runner.run(prompt=prompt, schema=schema, files={**self._skill_files(), **files},
-                                        budget=RESERVE[stage], web=web)
+                                        budget=budget or RESERVE[stage], web=web)
 
     def _execute(self, run_id: str, stage: str, input_hash: str, work) -> dict | None:
         """Run one stage with ledger bookkeeping; retries retryable failures within the attempt cap."""
@@ -782,31 +797,72 @@ class AutoRun:
         drafts = {"en": self._load(run_id, "draft_en", "draft-en.json"),
                   "zh-CN": self._load(run_id, "draft_zh", "draft-zh-CN.json")}
         digest = json.loads((self._dir(run_id) / "digest.json").read_bytes())
-        markdown = {lang: render_markdown(drafts[lang], lang, brief["source_cutoff"]) for lang in LANGUAGES}
-        input_hash = _sha(markdown["en"].encode() + markdown["zh-CN"].encode())
+        captured = {p["url"] for p in digest["posts"]}
+        cutoff = brief["source_cutoff"]
+        input_hash = _sha(b"".join(render_markdown(drafts[lang], lang, cutoff).encode() for lang in LANGUAGES))
+
+        def review(current: dict) -> tuple[dict, int]:
+            report = deterministic_preflight(brief, current, captured, self.services.link)
+            if report["failures"]:
+                return report, 0
+            files = {"brief.json": _json_bytes(brief),
+                     **{f"{lang}.md": render_markdown(current[lang], lang, cutoff).encode() for lang in LANGUAGES}}
+            result = self._model(JUDGE_PROMPT, JUDGE_SCHEMA, files, "preflight", web=False, budget=CALL_CAP["judge"])
+            report["semantic"] = result.data
+            if result.data.get("verdict") != "pass" or any(
+                    f.get("severity") == "blocking" for f in result.data.get("findings", [])):
+                report["failures"].append({"check": "semantic_review", "detail": "blocking findings"})
+            return report, result.cost
+
+        def correct(current: dict, report: dict) -> tuple[dict, list, int]:
+            """One correction per affected language, from the review's own findings."""
+            findings = [f for f in report["failures"] if f["check"] != "semantic_review"]
+            findings += report.get("semantic", {}).get("findings", [])
+            languages = [lang for lang in LANGUAGES
+                         if any(f.get("language") in (lang, None, "", "None") for f in findings)]
+            cost, corrected = 0, dict(current)
+            for lang in languages:
+                other = "zh-CN" if lang == "en" else "en"
+                name = "English" if lang == "en" else "Simplified Chinese"
+                files = {"brief.json": _json_bytes(brief), "current.json": _json_bytes(current[lang]),
+                         "other.md": render_markdown(current[other], other, cutoff).encode(),
+                         "findings.json": _json_bytes(findings)}
+                result = self._model(REVISE_PROMPT.format(language_name=name, style=f"{lang}.md"), DRAFT_SCHEMA,
+                                     files, "preflight", web=False, budget=CALL_CAP["revise"])
+                cost += result.cost
+                draft = {**result.data, "used_samples": current[lang].get("used_samples", [])}
+                if draft_problems(draft, brief, {str(s["sample_id"]) for s in draft["used_samples"]}):
+                    raise StageHold("correction_invalid", cost)
+                corrected[lang] = draft
+            return corrected, languages, cost
 
         def work():
-            report = deterministic_preflight(brief, drafts, {p["url"] for p in digest["posts"]}, self.services.link)
-            cost = 0
-            if not report["failures"]:
-                files = {"brief.json": _json_bytes(brief), "en.md": markdown["en"].encode(),
-                         "zh-CN.md": markdown["zh-CN"].encode()}
-                result = self._model(JUDGE_PROMPT, JUDGE_SCHEMA, files, "preflight", web=False)
-                cost = result.cost
-                report["semantic"] = result.data
-                if result.data.get("verdict") != "pass" or any(
-                        f.get("severity") == "blocking" for f in result.data.get("findings", [])):
-                    report["failures"].append({"check": "semantic_review", "detail": "blocking findings"})
+            report, cost = review(drafts)
+            final = drafts
+            if report["failures"] and all(f["check"] in REVISABLE for f in report["failures"]):
+                first = report
+                try:
+                    final, languages, spent = correct(drafts, report)
+                except StageHold as hold:
+                    hold.cost += cost
+                    raise
+                report, again = review(final)
+                cost += spent + again
+                report["correction"] = {"languages": languages, "first_failures": first["failures"],
+                                        "first_semantic": first.get("semantic")}
             report["passed"] = not report["failures"]
+            report["titles"] = {lang: final[lang]["title"] for lang in LANGUAGES}
             data = _json_bytes(report)
             if not report["passed"]:
                 _write_private(self._dir(run_id) / "preflight.held.json", data)
-                transient = all(f["check"] == "source_unreachable" for f in report["failures"])
-                if transient:
+                if all(f["check"] == "source_unreachable" for f in report["failures"]):
                     raise StageFail("source_unreachable", cost)
                 raise StageHold("preflight_failed", cost, {"failures": report["failures"]})
             for lang in LANGUAGES:
-                _write_private(self._dir(run_id) / "package" / f"{lang}.md", markdown[lang].encode())
+                if final[lang] is not drafts[lang]:
+                    _write_private(self._dir(run_id) / f"draft-{lang}.corrected.json", _json_bytes(final[lang]))
+                _write_private(self._dir(run_id) / "package" / f"{lang}.md",
+                               render_markdown(final[lang], lang, cutoff).encode())
             return _write_private(self._dir(run_id) / "preflight.json", data), cost, None
 
         return self._execute(run_id, "preflight", input_hash, work)
@@ -871,7 +927,7 @@ class AutoRun:
                 if (record.get("revision_id") != revision or record.get("status") != "preview"
                         or record.get("content_sha256") != publish["contentSha256"][lang]):
                     raise StageFail("agent_record_mismatch")
-            title = self._load(run_id, "draft_en", "draft-en.json")["title"]
+            title = self._load(run_id, "preflight", "preflight.json")["titles"]["en"]
             query = urllib.parse.urlencode({"query": title, "types": "article", "status": "preview", "limit": 20})
             found = self.services.fetch(f"{self.site_url}/api/agent/search?{query}")
             ids = [r.get("revision_id") for r in found.get("results", [])]
