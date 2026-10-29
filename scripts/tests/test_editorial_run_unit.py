@@ -212,6 +212,30 @@ class EditorialRunLedgerTests(unittest.TestCase):
             self.ledger.finish_stage(run["run_id"], "topic_selection", outcome="failed",
                                      error_code="the secret prompt text")
 
+    def test_selection_is_recorded_once_and_closes_a_ready_run(self):
+        run, _ = self.create()
+        with self.assertRaises(editorial_run.LedgerError):
+            self.ledger.record_selection(run["run_id"], decision="new_article", topic_key="t", article_id="a-b")
+        self.ledger.start_stage(run["run_id"], "topic_selection", input_sha256=STAGE_INPUT,
+                                reserve_cost=10, model_id="model-x")
+        self.ledger.finish_stage(run["run_id"], "topic_selection", outcome="succeeded",
+                                 actual_cost=5, output_sha256=OUTPUT_HASH)
+        first = self.ledger.record_selection(run["run_id"], decision="no_qualifying_topic",
+                                             topic_key="quiet-window", article_id=None)
+        self.assertEqual(self.ledger.record_selection(run["run_id"], decision="no_qualifying_topic",
+                                                      topic_key="quiet-window", article_id=None), first)
+        with self.assertRaises(editorial_run.LedgerError):
+            self.ledger.record_selection(run["run_id"], decision="new_article", topic_key="other", article_id="a-b")
+        closed = self.ledger.close_run(run["run_id"], "no_topic", "no_qualifying_topic")
+        self.assertEqual(closed["state"], "no_topic")
+        self.assertEqual(self.ledger.close_run(run["run_id"], "no_topic", "no_qualifying_topic")["state"], "no_topic")
+        with self.assertRaises(editorial_run.LedgerError):
+            self.ledger.close_run(run["run_id"], "held", "late")
+        view = self.ledger.show(run["run_id"])
+        self.assertEqual(view["selection"]["topic_key"], "quiet-window")
+        self.assertEqual(self.ledger.selections(exclude_run=run["run_id"]), [])
+        self.assertEqual(self.ledger.selections()[0]["run_state"], "no_topic")
+
     def test_symlink_ledger_is_refused(self):
         target = Path(self.temp.name) / "target.sqlite3"
         target.write_bytes(b"not a ledger")

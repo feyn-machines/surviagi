@@ -91,6 +91,7 @@
     "data:changes": "data/runtime/venv/bin/python scripts/data-changes.py",
     "app:setup": "data/runtime/venv/bin/python scripts/app-db.py setup-local",
     "editorial:run": "python3 scripts/editorial-run.py",
+    "editorial:auto": "data/runtime/venv/bin/python scripts/editorial-auto.py",
     "editorial:inputs": "python3 scripts/editorial-inputs.py",
     "editorial:publish": "node scripts/editorial-publish.mjs",
     "editorial:publish:server": "node scripts/editorial-publish.mjs --target server",

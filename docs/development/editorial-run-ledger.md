@@ -124,8 +124,7 @@ article content.
   Existing stage outputs and public article versions are never overwritten by
   this ledger.
 
-The current ledger records an operator's stage result; it does not yet verify
-that a preflight was sound, that a URL resolves, that a publication transaction
-succeeded, or that Agent search found the article. Those integrations and their
-failure-path acceptance remain part of Issue #11. No scheduled job is created
-or triggered by these commands.
+The ledger itself only records stage results. The automatic workflow in
+[editorial-auto.md](editorial-auto.md) performs the stages and reports them here;
+the manual commands above remain for operator corrections. No scheduled job is
+created or triggered by these commands.

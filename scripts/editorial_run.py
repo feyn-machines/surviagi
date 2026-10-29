@@ -20,6 +20,7 @@ DEFAULT_LEDGER = ROOT / "data" / "editorial" / "runs.sqlite3"
 STAGES = ("topic_selection", "evidence_brief", "draft_en", "draft_zh",
           "preflight", "prepublish", "agent_verify", "review_queue")
 MODEL_STAGES = frozenset(("topic_selection", "evidence_brief", "draft_en", "draft_zh"))
+SELECTION_DECISIONS = ("new_article", "revise_existing", "evidence_only", "hold_for_evidence", "no_qualifying_topic")
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 SAFE_KEY = re.compile(r"^[a-z0-9][a-z0-9._:-]{0,119}$")
 SAFE_MODEL = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,119}$")
@@ -144,6 +145,14 @@ class EditorialRunLedger:
                 );
                 CREATE INDEX IF NOT EXISTS editorial_run_events_by_run
                     ON events (run_id, event_id);
+                CREATE TABLE IF NOT EXISTS selections (
+                    run_id TEXT PRIMARY KEY REFERENCES runs(run_id),
+                    decision TEXT NOT NULL CHECK (decision IN (
+                        'new_article', 'revise_existing', 'evidence_only', 'hold_for_evidence', 'no_qualifying_topic')),
+                    topic_key TEXT NOT NULL,
+                    article_id TEXT,
+                    created_at TEXT NOT NULL
+                );
             """)
             conn.execute("PRAGMA user_version = 1")
         os.chmod(self.path, 0o600)
@@ -320,6 +329,65 @@ class EditorialRunLedger:
             return {"run_id": run_id, "stage": stage, "stage_state": final_state,
                     "run_state": run_state, "budget_spent": run["budget_spent"] + actual_cost}
 
+    def record_selection(self, run_id: str, *, decision: str, topic_key: str,
+                         article_id: str | None) -> dict:
+        """Remember what topic selection chose, once per run, so later runs can avoid repeating it."""
+        if decision not in SELECTION_DECISIONS:
+            raise LedgerError("unknown topic selection decision")
+        topic_key = _require_key(topic_key, "topic key")
+        if article_id is not None and not re.fullmatch(r"^[a-z0-9]+(?:-[a-z0-9]+)*$", article_id):
+            raise LedgerError("article id must be a lowercase slug")
+        with closing(self._connect()) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            stage = conn.execute("SELECT state FROM stages WHERE run_id=? AND name='topic_selection'",
+                                 (run_id,)).fetchone()
+            if not stage or stage["state"] != "succeeded":
+                raise LedgerError("topic selection must succeed before its decision is recorded")
+            old = conn.execute("SELECT * FROM selections WHERE run_id=?", (run_id,)).fetchone()
+            if old:
+                if (old["decision"], old["topic_key"], old["article_id"]) != (decision, topic_key, article_id):
+                    raise LedgerError("this run already recorded a different topic selection")
+                conn.commit()
+                return dict(old)
+            conn.execute("INSERT INTO selections (run_id,decision,topic_key,article_id,created_at) VALUES (?,?,?,?,?)",
+                         (run_id, decision, topic_key, article_id, _now()))
+            row = conn.execute("SELECT * FROM selections WHERE run_id=?", (run_id,)).fetchone()
+            conn.commit()
+            return dict(row)
+
+    def selections(self, *, exclude_run: str | None = None) -> list[dict]:
+        """Earlier selections with their run state; no article text is stored here."""
+        with closing(self._connect()) as conn:
+            rows = conn.execute(
+                "SELECT s.run_id,s.decision,s.topic_key,s.article_id,s.created_at,r.state AS run_state,r.input_ref "
+                "FROM selections s JOIN runs r USING (run_id) WHERE s.run_id IS NOT ? ORDER BY s.created_at",
+                (exclude_run,)).fetchall()
+            return [dict(row) for row in rows]
+
+    def close_run(self, run_id: str, state: str, error_code: str) -> dict:
+        """End a ready run without an article: no qualifying topic, or held for an operator."""
+        if state not in ("no_topic", "held"):
+            raise LedgerError("a run can only be closed as no_topic or held")
+        if not SAFE_CODE.fullmatch(error_code or ""):
+            raise LedgerError("closing a run requires a short non-sensitive code")
+        now = _now()
+        with closing(self._connect()) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            run = conn.execute("SELECT * FROM runs WHERE run_id=?", (run_id,)).fetchone()
+            if not run:
+                raise LedgerError("unknown run")
+            if run["state"] == state:
+                conn.commit()
+                return self._run_view(run)
+            if run["state"] != "ready":
+                raise LedgerError(f"run cannot be closed while {run['state']}")
+            conn.execute("UPDATE runs SET state=?,updated_at=? WHERE run_id=?", (state, now, run_id))
+            conn.execute("INSERT INTO events (run_id,kind,from_state,to_state,error_code,created_at) VALUES (?,?,?,?,?,?)",
+                         (run_id, "closed", run["state"], state, error_code, now))
+            row = conn.execute("SELECT * FROM runs WHERE run_id=?", (run_id,)).fetchone()
+            conn.commit()
+            return self._run_view(row)
+
     def pause(self, run_id: str) -> dict:
         return self._set_run_state(run_id, "paused", allowed=("ready", "running"), event="paused")
 
@@ -376,5 +444,8 @@ class EditorialRunLedger:
                                   (run_id,)).fetchall()
             events = conn.execute("SELECT kind,stage,from_state,to_state,attempt,cost,reserved_cost,model_id,input_sha256,output_sha256,error_code,created_at FROM events WHERE run_id=? ORDER BY event_id",
                                   (run_id,)).fetchall()
+            selection = conn.execute("SELECT decision,topic_key,article_id,created_at FROM selections WHERE run_id=?",
+                                     (run_id,)).fetchone()
             return {"run": self._run_view(run), "stages": [dict(x) for x in stages],
-                    "events": [dict(x) for x in events]}
+                    "events": [dict(x) for x in events],
+                    "selection": dict(selection) if selection else None}
