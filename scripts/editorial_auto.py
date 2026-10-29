@@ -40,7 +40,7 @@ ROOT = Path(__file__).resolve().parents[1]
 RUNS_DIR = ROOT / "data" / "editorial" / "runs"
 SKILL_DIR = ROOT / ".agents" / "skills" / "surviagi-editorial"
 ARTICLES_DIR = ROOT / "docs" / "articles"
-POLICY_VERSION = "auto-prepublish-v1"
+POLICY_VERSION = "auto-prepublish-v2"
 DEFAULT_MODEL = "claude-opus-5-5"
 DEFAULT_BUDGET = 15_000_000
 # Per-stage reservations (micro-USD) double as the harness's hard spending cap.
@@ -53,12 +53,11 @@ MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", 
 LANGUAGES = ("en", "zh-CN")
 DRAFT_STAGE = {"en": "draft_en", "zh-CN": "draft_zh"}
 
-# Decisions the automatic path does not draft, and how the run ends.
+# Decisions that produce no article, and how the run ends; new articles and revisions are written.
 CLOSE_DECISION = {
     "no_qualifying_topic": ("no_topic", "no_qualifying_topic"),
     "evidence_only": ("no_topic", "evidence_only"),
     "hold_for_evidence": ("held", "hold_for_evidence"),
-    "revise_existing": ("held", "revision_needs_operator"),
 }
 
 
@@ -264,6 +263,14 @@ class PgStore:
         with self.connect() as conn:
             return _pg_pointers(conn, article_id)
 
+    def localizations(self, article_id: str, version: int) -> dict:
+        with self.connect() as conn:
+            rows = conn.execute(
+                """SELECT language, title, summary, body_markdown FROM editorial.localizations
+                    WHERE article_id = %s AND version = %s""", (article_id, version)).fetchall()
+        return {r["language"]: {"title": r["title"], "summary": r["summary"], "body_markdown": r["body_markdown"]}
+                for r in rows}
+
 
 def local_connect():
     import psycopg
@@ -411,17 +418,21 @@ Read skill/SKILL.md and skill/references/evidence.md first and apply them. {untr
 Material:
 - digest.json: original posts from official AI-company accounts (role "official") and a panel of people (role "panel") collected for the window {window}.
 - articles.json: every existing SurviAGI article, Markdown and editorial store.
-- selections.json: topics earlier automatic runs already chose; do not choose these again.
+- selections.json: topics earlier automatic runs chose, with their run_state. Do not choose a topic whose run is
+  `complete`, `ready`, `running` or `paused`; one that ended `held`, `budget_held` or `failed` may be chosen again.
 
 You may use WebSearch/WebFetch only to confirm that a candidate has an accessible primary source.
 
-Return one decision. Only `new_article` is drafted automatically; if the most valuable candidate would materially
-revise an existing article, return `revise_existing` with that article's article_id. Do not choose a topic an existing
-article or earlier selection already answers. Return `no_qualifying_topic` when nothing clears the evidence and
-novelty gates; never fill a quota. For `new_article`, article_id is a new lowercase hyphenated slug of 2-10 words and
-topic_key a stable lowercase key for the subject (letters, digits, hyphens). For other decisions use a descriptive
-topic_key and the existing article_id or null. List what you checked in existing_checked and the alternatives you
-rejected with the failed gate."""
+Choosing the topic is your job: pick the most valuable candidate that has an accessible primary source and does not
+repeat what an existing article already says, and it will be written. Return one decision:
+- `new_article` for a topic no existing article answers;
+- `revise_existing` when the new material materially adds to, corrects or narrows an article whose `store` is
+  `editorial` in articles.json (only those can take a new version; for an article that exists only as `markdown`,
+  write a `new_article` that builds on it instead);
+- `no_qualifying_topic` only when every candidate lacks a primary source or would repeat existing coverage.
+Never fill a quota with a weak topic. For `new_article`, article_id is a new lowercase hyphenated slug of 2-10 words;
+for `revise_existing`, it is the existing article_id. topic_key is a stable lowercase key for the subject (letters,
+digits, hyphens). List what you checked in existing_checked and the alternatives you rejected with the failed gate."""
 
 BRIEF_PROMPT = """You are the evidence step of SurviAGI's automatic editorial workflow.
 
@@ -455,6 +466,19 @@ Return claim_ids_used.
 examples.json may hold private curated style examples. They are style guidance only, never evidence; never copy them or
 their provenance into the article. List in used_samples only the examples you actually followed, with a short note on
 the style change; otherwise return an empty list."""
+
+REVISION_BRIEF = """
+
+This is a revision. existing-en.md and existing-zh-CN.md hold the current version of the article being revised. The
+brief must cover the complete revised article: keep the existing claims that remain accurate, re-checking their
+sources, add the new material from selection.json, and record any existing claim the new evidence corrects or narrows.
+The outline is the skeleton of the whole revised article."""
+
+REVISION_DRAFT = """
+
+This is a revision. {existing} holds the current {language_name} version of the article. Return the complete revised
+article: keep what remains accurate and reads well, integrate the new material where it belongs, and change only what
+the brief requires. The title and description may change if the article's answer changed."""
 
 JUDGE_PROMPT = """You are the semantic preflight reviewer for a SurviAGI bilingual article. Read
 skill/references/evidence.md, brief.json, en.md and zh-CN.md. Check:
@@ -652,28 +676,70 @@ class AutoRun:
             state, code = CLOSE_DECISION[decision]
             self.ledger.close_run(run_id, state, code)
             return {"state": state, "reason": code, "decision": decision}
-        known = {row["article_id"] for row in json.loads((self._dir(run_id) / "articles.json").read_bytes())}
+        index = json.loads((self._dir(run_id) / "articles.json").read_bytes())
+        known = {row["article_id"] for row in index}
         # A topic another run has published or is still producing is taken; one that ended held may be retried.
+        taken, revising = False, False
         for earlier in self.ledger.selections(exclude_run=run_id):
-            if earlier["decision"] == "new_article" and earlier["run_state"] in ("ready", "running", "paused", "complete"):
-                known.add(earlier["article_id"])
-                if earlier["topic_key"] == selection["topic_key"]:
-                    known.add(article_id)
-        if article_id in known:
+            active = earlier["run_state"] in ("ready", "running", "paused")
+            if earlier["run_state"] in ("ready", "running", "paused", "complete"):
+                taken |= earlier["topic_key"] == selection["topic_key"]
+                if earlier["decision"] == "new_article":
+                    known.add(earlier["article_id"])
+            revising |= active and earlier["decision"] == "revise_existing" and earlier["article_id"] == article_id
+        duplicate = taken or (article_id in known if decision == "new_article" else revising)
+        if duplicate:
             self.ledger.close_run(run_id, "held", "duplicate_topic")
             return {"state": "held", "reason": "duplicate_topic", "article_id": article_id}
+        if decision == "revise_existing" and not (self._dir(run_id) / "existing.json").exists():
+            target = [r for r in index if r["article_id"] == article_id and r.get("store") == "editorial"
+                      and not r.get("withdrawn")]
+            pointers = self.services.store.pointers(article_id) if target else None
+            head = pointers and (pointers["preview_version"] or pointers["approved_version"])
+            texts = self.services.store.localizations(article_id, head) if head else {}
+            if not head or pointers.get("withdrawn") or set(texts) != set(LANGUAGES):
+                self.ledger.close_run(run_id, "held", "revision_target_missing")
+                return {"state": "held", "reason": "revision_target_missing", "article_id": article_id}
+            base = {"article_id": article_id, "version": head, "preview_version": pointers["preview_version"],
+                    "approved_version": pointers["approved_version"], "localizations": texts}
+            _write_private(self._dir(run_id) / "existing.json", _json_bytes(base))
         return None
+
+    def _existing(self, run_id: str, brief: dict | None = None) -> dict | None:
+        """The snapshot a revision is based on, checked against the hash the brief recorded."""
+        path = self._dir(run_id) / "existing.json"
+        if not path.exists():
+            return None
+        data = path.read_bytes()
+        if brief is not None and brief.get("base", {}).get("existing_sha256") != _sha(data):
+            raise AutoError("revision base changed after the brief was recorded; start a new versioned run")
+        return json.loads(data)
+
+    @staticmethod
+    def _existing_files(base: dict, languages=LANGUAGES) -> dict:
+        return {f"existing-{lang}.md": (f"# {base['localizations'][lang]['title']}\n\n"
+                                        f"{base['localizations'][lang]['summary']}\n\n"
+                                        f"{base['localizations'][lang]['body_markdown']}\n").encode()
+                for lang in languages}
 
     def _brief(self, run_id: str) -> dict | None:
         selection_bytes = (self._dir(run_id) / "selection.json").read_bytes()
         digest_bytes = (self._dir(run_id) / "digest.json").read_bytes()
         files = {"selection.json": selection_bytes, "digest.json": digest_bytes}
+        prompt = BRIEF_PROMPT.format(untrusted=UNTRUSTED)
+        base = self._existing(run_id)
+        if base:
+            files.update(self._existing_files(base))
+            prompt += REVISION_BRIEF
+        input_hash = _sha(selection_bytes + b"".join(files[k] for k in sorted(files) if k.startswith("existing-")))
 
         def work():
-            result = self._model(BRIEF_PROMPT.format(untrusted=UNTRUSTED), BRIEF_SCHEMA, files,
-                                 "evidence_brief", web=True)
+            result = self._model(prompt, BRIEF_SCHEMA, files, "evidence_brief", web=True)
             brief = result.data
             brief["source_cutoff"] = _iso(self.clock())
+            if base:
+                brief["base"] = {k: base[k] for k in ("article_id", "version", "preview_version", "approved_version")}
+                brief["base"]["existing_sha256"] = _sha((self._dir(run_id) / "existing.json").read_bytes())
             problems = brief_problems(brief)
             if problems:
                 raise StageFail("brief_invalid", result.cost)
@@ -683,7 +749,7 @@ class AutoRun:
                 raise StageHold("insufficient_evidence", result.cost)
             return _write_private(self._dir(run_id) / "brief.json", _json_bytes(brief)), result.cost, None
 
-        return self._execute(run_id, "evidence_brief", _sha(selection_bytes), work)
+        return self._execute(run_id, "evidence_brief", input_hash, work)
 
     def _draft(self, run_id: str, language: str) -> dict | None:
         stage = DRAFT_STAGE[language]
@@ -692,11 +758,17 @@ class AutoRun:
         style = "en.md" if language == "en" else "zh-CN.md"
         name = "English" if language == "en" else "Simplified Chinese"
 
+        prompt = DRAFT_PROMPT.format(language_name=name, style=style)
+        base = self._existing(run_id, brief)
+        if base:
+            prompt += REVISION_DRAFT.format(existing=f"existing-{language}.md", language_name=name)
+
         def work():
             samples = self.services.samples(language)
             files = {"brief.json": brief_bytes, "examples.json": _json_bytes(samples["samples"])}
-            result = self._model(DRAFT_PROMPT.format(language_name=name, style=style), DRAFT_SCHEMA, files,
-                                 stage, web=False)
+            if base:
+                files.update(self._existing_files(base, (language,)))
+            result = self._model(prompt, DRAFT_SCHEMA, files, stage, web=False)
             draft = result.data
             if draft_problems(draft, brief, {str(s.get("sample_id")) for s in samples["samples"]}):
                 raise StageFail("draft_invalid", result.cost)
@@ -756,7 +828,9 @@ class AutoRun:
         manifest = {
             "articleId": selection["article_id"], "sourceCutoff": brief["source_cutoff"],
             "createdBy": f"editorial-run:{run_id}", "evidenceGate": "pass", "bilingualGate": "pass",
-            "expected": {"previewVersion": None, "approvedVersion": None},
+            "expected": ({"previewVersion": brief["base"]["preview_version"],
+                          "approvedVersion": brief["base"]["approved_version"]} if brief.get("base")
+                         else {"previewVersion": None, "approvedVersion": None}),
             "evidenceReport": {"path": "evidence-report.md", "sha256": _write_private(package / "evidence-report.md", evidence)},
             "excludedClaims": preflight["excluded_urls"],
             "languages": {lang: {"path": f"{lang}.md", "sha256": hashes[lang]} for lang in LANGUAGES},
@@ -946,6 +1020,9 @@ def render_evidence_report(selection: dict, brief: dict, preflight: dict, run_id
         f"- New fact: {cell(selection.get('new_fact'))}",
         f"- Strongest limitation: {cell(selection.get('strongest_limitation'))}",
         f"- Evidence cutoff: {brief['source_cutoff']}",
+        *([f"- Revises `{brief['base']['article_id']}` v{brief['base']['version']} "
+           f"(preview v{brief['base']['preview_version']}, approved v{brief['base']['approved_version']})"]
+          if brief.get("base") else []),
         f"- Headline limit: {cell(brief.get('headline_limit'))}", "",
         "## Claims", "",
         "| ID | Claim | Source | Kind / use | Status | Conditions and limits |",

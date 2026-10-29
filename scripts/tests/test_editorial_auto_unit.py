@@ -6,6 +6,7 @@ import json
 import sys
 import tempfile
 import unittest
+import urllib.parse
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest import mock
@@ -74,7 +75,7 @@ class FakeRunner:
 
 class FakeStore:
     def __init__(self):
-        self.rows, self.pointer = [], {}
+        self.rows, self.pointer, self.texts = [], {}, {}
 
     def index(self):
         return list(self.rows)
@@ -82,12 +83,15 @@ class FakeStore:
     def pointers(self, article_id):
         return self.pointer.get(article_id)
 
+    def localizations(self, article_id, version):
+        return self.texts.get((article_id, version), {})
+
 
 class FakeSite:
     """Publisher plus Agent API over the same fake store, so read-back reflects what was written."""
 
     def __init__(self, store):
-        self.store, self.published, self.failures = store, {}, []
+        self.store, self.published, self.failures, self.manifests = store, {}, [], []
 
     def publish(self, manifest_path, target):
         if self.failures:
@@ -100,22 +104,33 @@ class FakeSite:
 
     def _write(self, manifest_path):
         manifest = json.loads(Path(manifest_path).read_text())
+        self.manifests.append(manifest)
         hashes = {lang: body_sha((Path(manifest_path).parent / f"{lang}.md").read_text()) for lang in ("en", "zh-CN")}
         article = manifest["articleId"]
-        created = self.published.get(article) != hashes
-        if created:
-            self.published[article] = hashes
-            self.store.pointer[article] = {"preview_version": 1, "approved_version": None, "withdrawn": False}
-        return {"created": created, "articleId": article, "version": 1, "approvedVersion": None, "contentSha256": hashes}
+        pointer = self.store.pointer.get(article)
+        versions = self.published.setdefault(article, {})
+        if pointer and versions.get(pointer["preview_version"]) == hashes:
+            return {"created": False, "articleId": article, "version": pointer["preview_version"],
+                    "approvedVersion": pointer["approved_version"], "contentSha256": hashes}
+        current = (pointer["preview_version"], pointer["approved_version"]) if pointer else (None, None)
+        if current != (manifest["expected"]["previewVersion"], manifest["expected"]["approvedVersion"]):
+            raise editorial_auto.StageHold("publish_rejected")
+        version = max([0, *versions, *(v for v in current if v)]) + 1
+        versions[version] = hashes
+        self.store.pointer[article] = {"preview_version": version, "approved_version": current[1], "withdrawn": False}
+        return {"created": True, "articleId": article, "version": version, "approvedVersion": current[1],
+                "contentSha256": hashes}
 
     def fetch(self, url):
-        article = "where-new-models-launch-first"
-        hashes = self.published.get(article, {})
-        if "/api/agent/record" in url:
-            lang = "zh-CN" if "language=zh-CN" in url else "en"
-            return {"revision_id": f"article:{article}:v1", "status": "preview", "review": "not_approved_public_preview",
-                    "content_sha256": hashes.get(lang)}
-        return {"results": [{"revision_id": f"article:{article}:v1"}] if hashes else []}
+        for article, versions in self.published.items():
+            version = self.store.pointer[article]["preview_version"]
+            revision = f"article:{article}:v{version}"
+            if "/api/agent/record" in url and urllib.parse.quote(revision, safe="") in url:
+                lang = "zh-CN" if "language=zh-CN" in url else "en"
+                return {"revision_id": revision, "status": "preview", "content_sha256": versions[version][lang]}
+            if "/api/agent/search" in url:
+                return {"results": [{"revision_id": revision}]}
+        return {"results": []}
 
 
 class AutoRunTests(unittest.TestCase):
@@ -207,10 +222,59 @@ class AutoRunTests(unittest.TestCase):
         self.assertEqual(self.run_input()["state"], "no_topic")
         self.assertEqual(self.runner.calls, ["selection"])
 
-    def test_revision_and_evidence_hold_are_left_to_an_operator(self):
+    def revisable(self):
+        article = "agent-cost"
+        self.store.rows = [{"article_id": article, "store": "editorial", "withdrawn": False}]
+        self.store.pointer[article] = {"preview_version": 1, "approved_version": 1, "withdrawn": False}
+        self.store.texts[(article, 1)] = {lang: {"title": f"Old {lang}", "summary": "s", "body_markdown": "old body"}
+                                          for lang in ("en", "zh-CN")}
+        self.site.published[article] = {1: {"en": "x", "zh-CN": "y"}}
+        self.runner.responses["selection"] = {**SELECTION, "decision": "revise_existing", "article_id": article,
+                                              "topic_key": "router-cost-claim"}
+        return article
+
+    def test_revision_writes_a_new_preview_and_keeps_the_approved_version(self):
+        article = self.revisable()
+        prompts = []
+        run = self.runner.run
+
+        def spy(**kwargs):
+            prompts.append((sorted(k for k in kwargs["files"] if k.startswith("existing-")), kwargs["prompt"]))
+            return run(**kwargs)
+
+        self.runner.run = spy
+        result = self.run_input()
+        self.assertEqual((result["state"], result["article_id"], result["article_version"]), ("complete", article, 2))
+        self.assertEqual(self.site.manifests[-1]["expected"], {"previewVersion": 1, "approvedVersion": 1})
+        self.assertEqual(self.store.pointer[article], {"preview_version": 2, "approved_version": 1, "withdrawn": False})
+        # The brief sees both current languages; each writer sees only its own.
+        self.assertEqual(prompts[1][0], ["existing-en.md", "existing-zh-CN.md"])
+        self.assertEqual(prompts[2][0], ["existing-en.md"])
+        self.assertEqual(prompts[3][0], ["existing-zh-CN.md"])
+        self.assertIn("This is a revision", prompts[2][1])
+        evidence = (self.root / "data/editorial/runs" / result["run_id"] / "package/evidence-report.md").read_text()
+        self.assertIn(f"Revises `{article}` v1", evidence)
+
+    def test_revision_of_a_markdown_only_article_is_held(self):
         self.runner.responses["selection"] = {**SELECTION, "decision": "revise_existing", "article_id": "ai-agent-computer"}
         result = self.run_input()
-        self.assertEqual((result["state"], result["reason"]), ("held", "revision_needs_operator"))
+        self.assertEqual((result["state"], result["reason"]), ("held", "revision_target_missing"))
+        self.assertEqual(self.runner.calls, ["selection"])
+
+    def test_revision_superseded_during_the_run_is_not_overwritten(self):
+        article = self.revisable()
+        original = self.runner.run
+
+        def newer_preview_lands(**kwargs):
+            if kwargs["schema"] is editorial_auto.JUDGE_SCHEMA:
+                self.store.pointer[article] = {"preview_version": 2, "approved_version": 1, "withdrawn": False}
+                self.site.published[article][2] = {"en": "other", "zh-CN": "other"}
+            return original(**kwargs)
+
+        self.runner.run = newer_preview_lands
+        result = self.run_input()
+        self.assertEqual((result["state"], result["held"]), ("held", "publish_rejected"))
+        self.assertEqual(self.store.pointer[article]["preview_version"], 2)
 
     def test_insufficient_evidence_holds_privately(self):
         self.runner.responses["brief"] = {**BRIEF, "gate": "hold", "held_reason": "no primary source"}
