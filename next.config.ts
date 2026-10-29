@@ -33,6 +33,9 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["pg"],
   // No page uses the image optimizer, and its native `sharp` binary would be built for this machine, not the server's architecture.
   images: { unoptimized: true },
+  outputFileTracingIncludes: {
+    "/api/agent/packages/*": ["./integrations/workbuddy/**", "./src/app/icon.svg"],
+  },
   outputFileTracingExcludes: {
     "/**": ["./datasets/**", "./data/**", "./local/**", "./docs/**", "./design/**", "./output/**", "./db/**", "./scripts/**"],
     // Next's own server pulls in `sharp`; it is traced under this key, not under the routes' glob.

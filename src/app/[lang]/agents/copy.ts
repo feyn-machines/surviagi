@@ -146,3 +146,43 @@ export const agentsCopy: Record<Language, { title: string; description: string; 
     ],
   },
 };
+
+
+export const installCopy = {
+  en: {
+    heading: "Install the SurviAGI Skill",
+    intro: "Give your AI assistant access to AI progress records and articles, with links to the evidence. Searching and reading are free to access, with no sign-in or API key.",
+    download: "Download Skill (.zip)",
+    source: "View source on GitHub",
+    steps: [
+      "Download and unzip the package. It contains a surviagi-http folder with SKILL.md and scripts/surviagi.py. Python 3 is required; no extra packages are needed.",
+      "If your assistant supports importing Skill folders, import surviagi-http. Otherwise, place the folder in your client's Skill directory. Tell the assistant to read SKILL.md and use the included script from that folder.",
+      'Try: “Use SurviAGI to find evidence about AI coding agents. Read the relevant records, cite their sources and dates, and distinguish approved articles from previews.”',
+    ],
+    promptLabel: "Or send this to an assistant that can download files and run Python:",
+    prompt: "Download https://surviagi.com/api/agent/packages/surviagi-http.zip and extract it. Read surviagi-http/SKILL.md, then use its scripts/surviagi.py with Python 3 to search SurviAGI for evidence about AI coding agents. Read relevant records and cite their sources and dates. Distinguish approved articles from previews. Reading needs no API key.",
+    workbuddy: "WorkBuddy connector packages",
+    workbuddyBody: "For WorkBuddy developer installation or open-platform submission, download the connector packages below. These are source packages; a WorkBuddy marketplace listing and installation in the actual client have not yet been verified. For other MCP clients, use the endpoint instructions below.",
+    readConnector: "Search connector (.zip, no key)",
+    submitConnector: "Search and submit connector (.zip, key required)",
+    keys: "Only submitting a question or suggesting an account needs your API key. Create one below and configure it locally as SURVIAGI_API_KEY; keep it out of chat messages and shared files.",
+  },
+  "zh-CN": {
+    heading: "安装 SurviAGI Skill",
+    intro: "让你的 AI 助手查询 AI 进展记录与文章，回答时附上证据来源。搜索和读取公开内容无需登录、无需 API Key。",
+    download: "下载 Skill（.zip）",
+    source: "在 GitHub 查看源码",
+    steps: [
+      "下载并解压安装包，得到 surviagi-http 文件夹，内含 SKILL.md 与 scripts/surviagi.py。需要 Python 3，无需额外安装依赖。",
+      "如果助手支持导入 Skill 文件夹，导入 surviagi-http；否则把它放入所用客户端的 Skill 目录。让助手阅读 SKILL.md，并在该文件夹内运行附带的脚本。",
+      "试着问：『用 SurviAGI 查找 AI 编程助手的证据，读取相关记录，引用来源和日期，并区分正式文章与预发布稿。』",
+    ],
+    promptLabel: "也可以把下面这段话交给能下载文件、运行 Python 的助手：",
+    prompt: "下载 https://surviagi.com/api/agent/packages/surviagi-http.zip 并解压，阅读 surviagi-http/SKILL.md，然后用 Python 3 运行其中 scripts/surviagi.py，搜索 SurviAGI 中关于 AI 编程助手的证据。读取相关记录，引用来源与日期，区分正式文章和预发布稿。读取无需 API Key。",
+    workbuddy: "WorkBuddy 连接器安装包",
+    workbuddyBody: "用于 WorkBuddy 开发安装或开放平台提交，可下载下面的连接器源码包。尚未验证 WorkBuddy 商店上架及真实客户端安装；其他 MCP 客户端可使用下方的接入地址。",
+    readConnector: "下载搜索连接器（.zip，免 Key）",
+    submitConnector: "下载搜索与提交连接器（.zip，需 Key）",
+    keys: "只有提交研究问题、建议监测账号时才需要 API Key。可在下方生成，在本地配置为 SURVIAGI_API_KEY；请勿把 Key 放进聊天消息或共享文件。",
+  },
+};

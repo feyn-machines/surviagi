@@ -266,6 +266,8 @@ test("every fixed page answers in both languages", () => {
 test("a Chinese page links only to Chinese pages, an English page only to unprefixed ones", () => {
   for (const path of FIXED) {
     for (const link of internal(anchors(html("zh-CN", path)))) {
+      // Installation archives are shared binary downloads, with no page language.
+      if (/^\/api\/agent\/packages\/(surviagi|surviagi-http|surviagi-submit)\.zip$/.test(link)) continue;
       assert.ok(link === "/zh-CN" || link.startsWith("/zh-CN/"), `zh-CN${path} links to ${link}`);
     }
     for (const link of internal(anchors(html("en", path)))) {
@@ -1123,5 +1125,53 @@ test("the WorkBuddy packages assemble in the layout WorkBuddy expects, with no k
     const skillText = readFileSync(join(out, connector, "skills", skill, "SKILL.md"), "utf8");
     assert.match(skillText, /^---\nname: /);
     for (const field of ["display_name", "display_name_en", "description_zh", "description_en", "version", "author"]) assert.match(skillText, new RegExp(`\\n${field}: `), `${skill} ${field}`);
+  }
+});
+
+
+test("public Skill downloads are complete, extractable, reproducible and limited to public sources", async () => {
+  const expected = {
+    "surviagi-http": ["surviagi-http/SKILL.md", "surviagi-http/scripts/surviagi.py"],
+    surviagi: ["connector-meta.json", "mcp.json", "icon.svg", "skills/surviagi-search/SKILL.md"],
+    "surviagi-submit": ["connector-meta.json", "mcp.json", "icon.svg", "skills/surviagi-submit/SKILL.md", "token-schema.json"],
+  };
+  for (const [name, paths] of Object.entries(expected)) {
+    const path = `/api/agent/packages/${name}.zip`;
+    const response = await fetch(`${site.base}${path}`, { headers: { cookie: "openaiwill_language=zh-CN" } });
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("content-type"), "application/zip");
+    assert.equal(response.headers.get("content-disposition"), `attachment; filename="${name}.zip"`);
+    const archive = Buffer.from(await response.arrayBuffer());
+    assert.deepEqual(archive, Buffer.from(await (await fetch(`${site.base}${path}`)).arrayBuffer()));
+    // Validate with an independent ZIP reader, including CRCs and the Python script's syntax.
+    const inspected = spawnSync("python3", ["-c", `
+import io, json, sys, zipfile
+with zipfile.ZipFile(io.BytesIO(sys.stdin.buffer.read())) as z:
+    assert z.testzip() is None
+    files = {name: z.read(name).decode() for name in z.namelist()}
+    for name, content in files.items():
+        if name.endswith('.py'): compile(content, name, 'exec')
+    print(json.dumps(files))
+`], { input: archive });
+    assert.equal(inspected.status, 0, inspected.stderr.toString());
+    const files = JSON.parse(inspected.stdout.toString());
+    assert.deepEqual(Object.keys(files).sort(), paths.sort());
+    if (name === "surviagi-http") {
+      for (const path of paths) assert.equal(files[path], readFileSync(join(ROOT, "integrations/workbuddy/skill-http", path), "utf8"));
+    } else {
+      const connector = JSON.parse(files["mcp.json"]).mcpServers[name];
+      assert.equal(connector.url, `https://surviagi.com/api/mcp${name === "surviagi-submit" ? "/submit" : ""}`);
+      assert.equal(connector.headers?.Authorization, name === "surviagi-submit" ? "Bearer ${SURVIAGI_API_KEY}" : undefined);
+    }
+  }
+  assert.equal((await fetch(`${site.base}/api/agent/packages/private.zip`)).status, 404);
+  assert.equal((await fetch(`${site.base}/api/agent/packages/.env`)).status, 404);
+  for (const language of ["en", "zh-CN"]) {
+    const page = html(language, "/agents");
+    assert.ok(page.includes('id="install"'));
+    for (const name of Object.keys(expected)) assert.ok(page.includes(`/api/agent/packages/${name}.zip`));
+    assert.ok(page.includes("Python 3"));
+    assert.ok(page.includes("SKILL.md"));
+    assert.match(html(language, ""), /<nav[^>]*>[\s\S]*?href="(?:\/zh-CN)?\/agents"[\s\S]*?<\/nav>/);
   }
 });

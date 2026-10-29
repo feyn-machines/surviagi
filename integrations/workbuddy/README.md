@@ -21,6 +21,16 @@ node scripts/pack-workbuddy.mjs   # 写入被忽略的 out/workbuddy/
 cd out/workbuddy && for d in surviagi surviagi-submit surviagi-http; do (cd "$d" && zip -qr "../$d.zip" .); done
 ```
 
+## 公开下载
+
+官网安装说明：[English](https://surviagi.com/agents#install) · [简体中文](https://surviagi.com/zh-CN/agents#install)。
+
+- [HTTP Skill 安装包](https://surviagi.com/api/agent/packages/surviagi-http.zip)：解压后导入 `surviagi-http` 文件夹，或交给支持运行 Python 3 的助手阅读其中的 `SKILL.md`。
+- [搜索连接器源码包](https://surviagi.com/api/agent/packages/surviagi.zip)
+- [搜索与提交连接器源码包](https://surviagi.com/api/agent/packages/surviagi-submit.zip)
+
+下载接口只从明确列出的公开源码组装 ZIP，不读取本地配置或私有 skill。WorkBuddy 商店上架与客户端安装仍待验收；官网直接下载不等于商店已发布。
+
 ## 用户怎样用
 
 1. 只想查：安装「SurviAGI 搜索」，无需任何账号。

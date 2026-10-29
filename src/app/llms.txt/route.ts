@@ -72,6 +72,8 @@ export async function GET() {
     "",
     "## For AI agents",
     "",
+    `Install the SurviAGI HTTP Skill: ${SITE_URL}/api/agent/packages/surviagi-http.zip (SKILL.md and a Python 3 script; no dependencies or key for reading). Installation guide: ${absoluteUrl("en", "/agents")}#install.`,
+    "",
     `Search and read the published records over MCP (Streamable HTTP) at ${SITE_URL}/api/mcp, no key needed: tools \`search\` and \`get_record\`. ` +
       `The same as HTTP: ${SITE_URL}/api/agent/search?query=... and ${SITE_URL}/api/agent/record?id=... ` +
       `Submitting research questions or accounts to monitor needs a reader's API key and ${SITE_URL}/api/mcp/submit. ` +

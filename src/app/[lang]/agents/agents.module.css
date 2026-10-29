@@ -19,3 +19,47 @@
   color: var(--ah-color-text);
   white-space: pre;
 }
+
+.install {
+  padding: var(--ah-space-5);
+  margin-bottom: var(--ah-space-6);
+  border: 1px solid var(--ah-color-line);
+  border-radius: var(--ah-radius-control);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ah-space-4);
+  margin-bottom: var(--ah-space-5);
+}
+
+.download {
+  display: inline-block;
+  padding: var(--ah-space-3) var(--ah-space-4);
+  background: var(--ah-color-text);
+  color: var(--ah-color-bg);
+  border-radius: var(--ah-radius-control);
+  text-decoration: none;
+}
+
+.steps {
+  padding-left: var(--ah-space-5);
+  line-height: var(--ah-leading-body);
+}
+
+.steps li { margin-bottom: var(--ah-space-3); }
+.prompt { white-space: pre-wrap; overflow-wrap: anywhere; }
+.install summary { cursor: pointer; margin-bottom: var(--ah-space-4); }
+
+.install > h2 {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.actions a:not(.download) {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
