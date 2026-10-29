@@ -397,6 +397,11 @@ class AutoRunTests(unittest.TestCase):
         self.site.failures = [editorial_auto.StageHold("publish_rejected")]
         result = self.run_input()
         self.assertEqual((result["state"], result["held"]), ("held", "publish_rejected"))
+        # Once the cause is fixed, the operator reopens the same run; no model stage repeats.
+        calls = len(self.runner.calls)
+        self.ledger.reopen(result["run_id"])
+        self.assertEqual(self.run_input()["state"], "complete")
+        self.assertEqual(len(self.runner.calls), calls)
 
     def test_harness_failures_stop_at_the_retry_cap(self):
         self.runner.responses["brief"] = [editorial_auto.StageFail("model_error", 10),

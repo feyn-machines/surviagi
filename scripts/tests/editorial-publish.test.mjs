@@ -70,6 +70,8 @@ test("preflight loader detects changed content and cross-language source mismatc
   assert.throws(() => loadEditorialPackage(changed.manifestPath, { editorialRoot: changed.root }), /hash/);
   const mismatch = await makePackage(t, { zh: "---\ntitle: 中文文章\ndescription: 中文摘要\ndate: 2026-10-28\n---\n\n正文[来源](https://example.test/other)。\n" });
   assert.throws(() => loadEditorialPackage(mismatch.manifestPath, { editorialRoot: mismatch.root }), /same non-empty set/);
+  const repeated = await makePackage(t, { zh: "---\ntitle: 中文文章\ndescription: 中文摘要\ndate: 2026-10-28\n---\n\n正文[来源](https://example.test/source)，另见[同一来源](https://example.test/source)。\n" });
+  assert.equal(loadEditorialPackage(repeated.manifestPath, { editorialRoot: repeated.root }).articleId, "example-article");
 });
 
 test("publisher returns a conflict for stale expected pointers", async () => {

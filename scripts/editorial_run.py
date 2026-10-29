@@ -20,6 +20,7 @@ DEFAULT_LEDGER = ROOT / "data" / "editorial" / "runs.sqlite3"
 STAGES = ("topic_selection", "evidence_brief", "draft_en", "draft_zh",
           "preflight", "prepublish", "agent_verify", "review_queue")
 MODEL_STAGES = frozenset(("topic_selection", "evidence_brief", "draft_en", "draft_zh"))
+REOPENABLE_STAGES = frozenset(("prepublish", "agent_verify", "review_queue"))
 SELECTION_DECISIONS = ("new_article", "revise_existing", "evidence_only", "hold_for_evidence", "no_qualifying_topic")
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 SAFE_KEY = re.compile(r"^[a-z0-9][a-z0-9._:-]{0,119}$")
@@ -384,6 +385,31 @@ class EditorialRunLedger:
             conn.execute("UPDATE runs SET state=?,updated_at=? WHERE run_id=?", (state, now, run_id))
             conn.execute("INSERT INTO events (run_id,kind,from_state,to_state,error_code,created_at) VALUES (?,?,?,?,?,?)",
                          (run_id, "closed", run["state"], state, error_code, now))
+            row = conn.execute("SELECT * FROM runs WHERE run_id=?", (run_id,)).fetchone()
+            conn.commit()
+            return self._run_view(row)
+
+    def reopen(self, run_id: str) -> dict:
+        """Let a run held after preflight retry its held stage, within its attempt cap.
+
+        For holds caused by tooling or a transient conflict at publication; content holds before
+        publication stay final so a model review cannot be re-rolled until it passes."""
+        now = _now()
+        with closing(self._connect()) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            run = conn.execute("SELECT * FROM runs WHERE run_id=?", (run_id,)).fetchone()
+            if not run or run["state"] != "held":
+                raise LedgerError("only a held run can be reopened")
+            stage = conn.execute("SELECT * FROM stages WHERE run_id=? AND state='held'", (run_id,)).fetchone()
+            if not stage or stage["name"] not in REOPENABLE_STAGES:
+                raise LedgerError("only a run held at prepublish, agent_verify or review_queue can be reopened")
+            if stage["error_code"] == "budget_exceeded" or stage["attempts"] >= run["max_attempts"]:
+                raise LedgerError("the held stage has no attempt or budget left")
+            conn.execute("UPDATE stages SET state='failed',updated_at=? WHERE run_id=? AND name=?",
+                         (now, run_id, stage["name"]))
+            conn.execute("UPDATE runs SET state='ready',updated_at=? WHERE run_id=?", (now, run_id))
+            conn.execute("INSERT INTO events (run_id,stage,kind,from_state,to_state,attempt,error_code,created_at) VALUES (?,?,?,?,?,?,?,?)",
+                         (run_id, stage["name"], "reopened", "held", "ready", stage["attempts"], stage["error_code"], now))
             row = conn.execute("SELECT * FROM runs WHERE run_id=?", (run_id,)).fetchone()
             conn.commit()
             return self._run_view(row)

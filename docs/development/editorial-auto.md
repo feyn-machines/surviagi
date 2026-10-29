@@ -84,6 +84,11 @@ attempt is charged at its reservation and retried if attempts remain. If the
 publisher committed but the process died before recording it, the retry finds
 the identical version and records it instead of writing another.
 
-A held, failed or budget-held run is final. Fix the cause, then start a new run
+A run held at prepublish, agent_verify or review_queue by a tooling fault or a
+transient conflict can continue once the cause is fixed: `pnpm editorial:auto
+reopen RUN_ID`, then the same run command. It uses the stage's remaining
+attempts and repeats no model stage. Holds before publication cannot be
+reopened, so a review cannot be re-run until it happens to pass. Otherwise a
+held, failed or budget-held run is final. Fix the cause, then start a new run
 by changing the input window, the skill or `--model`; a held topic can be chosen
 again by a later run.

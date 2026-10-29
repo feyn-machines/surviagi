@@ -34,7 +34,7 @@ def main(argv=None) -> int:
     run.add_argument("--model", default=editorial_auto.DEFAULT_MODEL)
     run.add_argument("--budget-usd", type=float, default=editorial_auto.DEFAULT_BUDGET / 1_000_000)
     run.add_argument("--max-attempts", type=int, default=2)
-    for name in ("show", "pause", "resume"):
+    for name in ("show", "pause", "resume", "reopen"):
         commands.add_parser(name).add_argument("run_id")
     args = parser.parse_args(argv)
     try:
@@ -45,6 +45,8 @@ def main(argv=None) -> int:
             output = ledger.pause(args.run_id)
         elif args.command == "resume":
             output = ledger.resume(args.run_id)
+        elif args.command == "reopen":
+            output = ledger.reopen(args.run_id)
         else:
             input_id = args.input
             if args.latest:

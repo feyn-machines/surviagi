@@ -141,7 +141,8 @@ export function loadEditorialPackage(manifestPath, {
   }
   const linkSets = Object.fromEntries(LANGUAGES.map((language) => [
     language,
-    [...localizations[language].body.matchAll(/\[[^\]]*\]\((https:\/\/[^)]+)\)/g)].map((match) => match[1]).sort(),
+    // A set, not a list: one language may cite the same source more often than the other.
+    [...new Set([...localizations[language].body.matchAll(/\[[^\]]*\]\((https:\/\/[^)]+)\)/g)].map((match) => match[1]))].sort(),
   ]));
   if (linkSets.en.length === 0 || JSON.stringify(linkSets.en) !== JSON.stringify(linkSets["zh-CN"])) {
     throw new EditorialPublishError("both languages must cite the same non-empty set of HTTPS sources");

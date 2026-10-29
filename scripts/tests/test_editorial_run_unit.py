@@ -236,6 +236,31 @@ class EditorialRunLedgerTests(unittest.TestCase):
         self.assertEqual(self.ledger.selections(exclude_run=run["run_id"]), [])
         self.assertEqual(self.ledger.selections()[0]["run_state"], "no_topic")
 
+    def test_reopen_only_after_preflight_and_within_attempts(self):
+        run, _ = self.create(budget_limit=1000)
+        run_id = run["run_id"]
+        for stage in editorial_run.STAGES[:5]:
+            model = stage in editorial_run.MODEL_STAGES
+            self.ledger.start_stage(run_id, stage, input_sha256=STAGE_INPUT, reserve_cost=10 if model else 0,
+                                    model_id="model-x" if model else None)
+            self.ledger.finish_stage(run_id, stage, outcome="succeeded", actual_cost=1, output_sha256=OUTPUT_HASH)
+        self.ledger.start_stage(run_id, "prepublish", input_sha256=STAGE_INPUT)
+        self.ledger.finish_stage(run_id, "prepublish", outcome="held", error_code="publish_rejected")
+        self.assertEqual(self.ledger.reopen(run_id)["state"], "ready")
+        self.ledger.start_stage(run_id, "prepublish", input_sha256=STAGE_INPUT)
+        self.ledger.finish_stage(run_id, "prepublish", outcome="held", error_code="publish_rejected")
+        with self.assertRaises(editorial_run.LedgerError):
+            self.ledger.reopen(run_id)  # max_attempts is 2
+        kinds = [e["kind"] for e in self.ledger.show(run_id)["events"]]
+        self.assertIn("reopened", kinds)
+
+        held, _ = self.create(input_sha256="d" * 64)
+        self.ledger.start_stage(held["run_id"], "topic_selection", input_sha256=STAGE_INPUT,
+                                reserve_cost=10, model_id="model-x")
+        self.ledger.finish_stage(held["run_id"], "topic_selection", outcome="held", error_code="evidence")
+        with self.assertRaises(editorial_run.LedgerError):
+            self.ledger.reopen(held["run_id"])
+
     def test_symlink_ledger_is_refused(self):
         target = Path(self.temp.name) / "target.sqlite3"
         target.write_bytes(b"not a ledger")
