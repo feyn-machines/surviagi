@@ -142,6 +142,13 @@ def main():
                       help='A file written by `pnpm votes:pull`; default is the newest one under data/votes/')
     searched = sub.add_parser('topic-searched', help='Record which topics a search run was made for')
     searched.add_argument('run', type=Path)
+    health = sub.add_parser('topic-health', help='Say whether topics are still being fed and which need a person')
+    health.add_argument('--issues', action='store_true', help='Open, update or close the topic-health Issues on GitHub')
+    health.add_argument('--dry-run', action='store_true', help='With --issues: print what would change, change nothing')
+    health.add_argument('--only', action='append', choices=['pipeline', 'stalled', 'evidence', 'review'],
+                        help='With --issues: touch only the Issues of this kind; repeat for several')
+    health.add_argument('--resolve', metavar='KEY', help='Record that a person settled this listed item')
+    health.add_argument('--reason', default='', help='With --resolve: what was decided')
     reword = sub.add_parser('topic-reword', help='Rewrite stored answers that are longer than the standard allows; ids stay')
     reword.add_argument('--reason', required=True, help='Why the answers are being reworded; kept with the old wording')
     evidence = sub.add_parser('topic-evidence', help='Ask the judge which answers of which topics each update is evidence for or against')
@@ -356,6 +363,17 @@ def main():
             run_doc = json.loads(args.run.read_text())
             print(json.dumps({'run_id': args.run.stem,
                               'searches_recorded': topic_mining.record_searches(conn, run_doc, args.run.stem)}))
+        elif args.command == 'topic-health':
+            from data_pipeline import topic_health
+            reviewed = ROOT / 'data' / 'topics' / 'health-reviewed.json'
+            if args.resolve:
+                print(json.dumps(topic_health.resolve(reviewed, args.resolve, args.reason, datetime.now(timezone.utc)),
+                                 ensure_ascii=False))
+            else:
+                migrate(conn)
+                print(json.dumps(topic_health.report(conn, daily_dir=ROOT / 'data' / 'daily', reviewed_path=reviewed,
+                                                     issues=args.issues, only=args.only, dry_run=args.dry_run),
+                                 ensure_ascii=False, indent=2, default=json_default))
         elif args.command == 'topic-reword':
             from data_pipeline import deepseek, topic_mining
             deepseek.load_env(ROOT)

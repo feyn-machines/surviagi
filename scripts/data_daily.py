@@ -11,6 +11,12 @@ directory `data/daily/<tag>/` with one log per step and a `done` list: a run tha
 picked up at the step that stopped, so posts are not collected or sent to a model twice. The cursor
 moves only once the snapshot is written.
 
+Topics are fed in the same run: before mining, the topics that most need another voice are searched on X
+for the window (`topic-queries` -> `crawl search` -> `topic-searched`), so mining reads those posts with the
+panel's; after the brief, `data:topics:health --issues` checks that topics are still growing and keeps the
+`topic-health` GitHub Issues in step. These steps are optional: one that fails is a note, never a stop or a
+hold, because publishing the window does not depend on them; the health check reports it the next time.
+
 Before the first judge call, TypeSafe must be reachable from here (a region block answers 451); if it
 is not, the run stops and keeps its place. A step that reports failed or fallback batches, or a crawl
 that finished needing attention, keeps the release from going live: the release is still imported and
@@ -72,6 +78,8 @@ class Step:
     # Exit statuses that still count as finished (the crawler's 2 = finished but needs attention).
     finished: tuple[int, ...] = (0,)
     before: Callable[[], None] | None = None
+    # A step the window does not depend on: when it fails the run notes it and goes on.
+    optional: bool = False
 
 
 @dataclass
@@ -255,6 +263,31 @@ def typesafe_preflight(url: str = TYPESAFE_URL, opener=urllib.request.urlopen) -
         raise Stop(f"TypeSafe is not reachable from this machine: {error}")
 
 
+# How much the topic search may spend in one window: the topics searched, phrases each, and X requests.
+TOPIC_SEARCH_TOPICS, TOPIC_SEARCH_PER_TOPIC, TOPIC_SEARCH_REQUESTS = 20, 2, 80
+
+
+def search_notes(run_file: Path) -> Callable[[Outcome], list[str]]:
+    """What the topic search brought back, as a note; a short search is said, never held."""
+    def notes(_outcome: Outcome) -> list[str]:
+        try:
+            run = json.loads(run_file.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return [f"{run_file.name} cannot be read"]
+        jobs = run.get("jobs") or []
+        done = sum(1 for j in jobs if j.get("status") == "search_ended")
+        return [f"topic search: {done} of {len(jobs)} queries complete, {run.get('total', 0)} posts"]
+    return notes
+
+
+def health_notes(outcome: Outcome) -> list[str]:
+    """The topic-health alerts and what was done with their Issues."""
+    found = [f"topics {kind}: {'; '.join(reasons)}" for kind, reasons in (outcome.result.get("alerts") or {}).items()]
+    done = [f"issue {a['do']} {a.get('issue') or a.get('url') or a.get('title')} ({a['kind']})"
+            for a in outcome.result.get("issues") or []]
+    return found + done
+
+
 def pnpm(*args: str) -> list[str]:
     return ["pnpm", "-s", *args]
 
@@ -265,6 +298,7 @@ def steps(window: Window, root: Path = ROOT) -> list[Step]:
     official, panel = f"official-{tag}", f"panel-{tag}"
     extraction = f"data/extraction/v230-{tag}.json"
     official_run, panel_run = f"data/collection/official-x/{official}.json", f"data/collection/panel/{panel}.json"
+    queries, search_run = f"data/topics/queries-{tag}.txt", f"data/collection/search/search-topics-{tag}.json"
 
     def crawl(run_file: str) -> dict:
         return {"check": lambda outcome: crawl_review(root / run_file, outcome)[0],
@@ -285,6 +319,14 @@ def steps(window: Window, root: Path = ROOT) -> list[Step]:
         Step("route-events", pnpm("data:route:events"), check=batch_problems, before=typesafe_preflight),
         Step("measure-markets", pnpm("data:measure:markets"), check=batch_problems),
         Step("gate-state", pnpm("data:gate:state"), check=batch_problems),
+        # Search for the topics that most need another voice; mining then reads what came back.
+        Step("topic-queries", pnpm("data:topics:queries", "--limit", str(TOPIC_SEARCH_TOPICS), "--per-topic",
+                                   str(TOPIC_SEARCH_PER_TOPIC), "--output", queries), optional=True),
+        Step("topic-search", pnpm("crawl", "search", "--queries-file", queries, "--start", start, "--end", end,
+                                  "--max-pages", "1", "--max-requests", str(TOPIC_SEARCH_REQUESTS),
+                                  "--timeout", "1200", "--output", search_run),
+             notes=search_notes(root / search_run), finished=(0, 2), optional=True),
+        Step("topic-searched", pnpm("data:topics:searched", search_run), optional=True),
         Step("mine-topics", pnpm("data:mine:topics", "--window-start", start, "--window-end", end,
                                  "--output", f"data/topics/topics-{tag}.json"), check=batch_problems),
         Step("topic-evidence", pnpm("data:topics:evidence", "--since", f"{window.start:%Y-%m-%d}T00:00:00+00:00"),
@@ -297,6 +339,8 @@ def steps(window: Window, root: Path = ROOT) -> list[Step]:
         Step("local-promote", pnpm("data:local:promote")),
         # A Chinese brief of what this window changed: data/reports/changes-<from>_<to>.md.
         Step("changes", pnpm("data:changes")),
+        # Are topics still growing? Opens, updates or closes the topic-health Issues.
+        Step("topic-health", pnpm("data:topics:health", "--issues"), notes=health_notes, optional=True),
     ]
 
 
@@ -337,7 +381,7 @@ class Daily:
         record_path = folder / "record.json"
         record = json.loads(record_path.read_text(encoding="utf-8")) if record_path.exists() else {"steps": {}}
         for number, step in enumerate(steps(window, self.root), 1):
-            if step.name in record["steps"] and record["steps"][step.name]["finished"]:
+            if step.name in record["steps"] and (record["steps"][step.name]["finished"] or step.optional):
                 continue
             if step.before:
                 step.before()
@@ -346,6 +390,9 @@ class Daily:
             finished = outcome.returncode in step.finished
             problems = step.check(outcome) if finished else []
             notes = step.notes(outcome) if finished else []
+            log = folder / f"{number:02}-{step.name}.log"
+            if not finished and step.optional:
+                notes = [f"{step.name} failed (exit {outcome.returncode}) and was passed over; log: {log}"]
             record["steps"][step.name] = {"finished": finished, "exit": outcome.returncode,
                                           "seconds": round(outcome.seconds, 1), "problems": problems,
                                           "notes": notes,
@@ -354,8 +401,8 @@ class Daily:
             record_path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
             self.out(f"     exit {outcome.returncode} in {outcome.seconds:.0f}s"
                      + "".join(f"\n     ! {p}" for p in problems) + "".join(f"\n     - {n}" for n in notes))
-            if not finished:
-                raise Stop(f"{step.name} failed (exit {outcome.returncode}); log: {folder / f'{number:02}-{step.name}.log'}")
+            if not finished and not step.optional:
+                raise Stop(f"{step.name} failed (exit {outcome.returncode}); log: {log}")
         state.pop("pending", None)
         state["window_end"] = window.end.isoformat()
         write_state(state, self.state_path)

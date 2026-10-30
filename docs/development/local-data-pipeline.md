@@ -134,7 +134,7 @@ pnpm data:search -- "会计" --index topics          # 关键词加向量的混�
 - **实测（2026-09-29 至 10-08，3,392 条帖子）**：约 2% 的帖子有这样的主张（64 条）；归成 32 个话题，11 条主张归到已有话题，21 条放弃；2 个话题两边都有人主张；29 个对上了目录。同一批帖子多次运行，主张数在 45 到 73 之间波动，归并结果也随提示词变化，尚不稳定。
 - **搜索索引**：Meilisearch 里有 `topics`、`updates`、`catalog` 三个索引，是数据库的副本，可随时重建。Meilisearch 自己调用向量服务，所以一次请求同时按词和按意思匹配，中英文互通。
 
-### 搜索回流（2026-10-09 跑通一轮）
+### 搜索回流（2026-10-09 跑通一轮；2026-10-30 起每日自动运行，见下文“话题持续更新与监控”）
 
 ```sh
 pnpm data:topics:queries -- --limit 30 --per-topic 2 --output data/topics/queries-<日期>.txt   # 最需要另一边声音的话题的搜索词
@@ -212,6 +212,43 @@ pnpm data:topics:queries -- --output data/topics/queries-<日期>.txt   # 默认
 
 未做：市场测量单独的页面；读者提交新话题；服务器上的搜索服务和站内搜索；投资机构与被投公司的关系。
 
+### 话题持续更新与监控（2026-10-30）
+
+**为什么停更**：话题挖掘一直在每日运行里跑（每 12 小时一次，没有失败），但新话题从 10-05 那周的 108 个降到 10-26 那周的 6 个。原因是话题有两个来源，只有一个是自动的：名单帖子里带主张的约 1–2%，每个窗口只有 0–6 条；搜索回流（为最需要另一边声音的话题搜 X）带主张的约 12%，到 10-30 贡献了全部 381 条主张中的 221 条，却只在 10-09、10-11 手动跑过两轮。手动的那一半停了，没有任何检查会报出来——每日运行把“新话题”列为不拦的提醒，没有“多久没有新话题”的判断。
+
+**现在的做法**：搜索回流是 `pnpm data:daily` 的一部分，排在 `data:gate:state` 之后、`data:mine:topics` 之前：
+
+```sh
+pnpm data:topics:queries --limit 20 --per-topic 2 --output data/topics/queries-<窗口>.txt
+pnpm crawl search --queries-file data/topics/queries-<窗口>.txt --start <窗口起> --end <窗口止> \
+  --max-pages 1 --max-requests 80 --timeout 1200 --output data/collection/search/search-topics-<窗口>.json
+pnpm data:topics:searched data/collection/search/search-topics-<窗口>.json
+```
+
+- 每个窗口搜 20 个话题、每个 2 个词、每词 1 页，最多 80 次请求（2026-10-11 的 60 个词约 6 分钟）。排序仍按 `search_plan`：读者投票、只有一边、没搜过、最久没搜，所以 143 个话题约三四天轮一遍。搜索时间范围就是当前窗口，搜到的帖子随后由同一窗口的 `data:mine:topics` 读（它不按运行过滤，所以名单帖子和搜索帖子一起读，不用另跑一次）。
+- 这三步和最后的健康检查是**可选步骤**：失败只记一条提醒，不停下、不拦发布；同一窗口续跑时不重搜。是否失败由下面的健康检查报告。
+- 投票文件只有 `pnpm votes:pull` 才会更新（会连服务器，不在每日运行里）；没有新文件时排序沿用最近一份。
+
+**监控**：每日运行最后一步是 `pnpm data:topics:health --issues`（可单独运行；不加 `--issues` 只打印读数）。它读本地数据库和最近一个每日窗口的记录，按四类判断：
+
+| 类 | 何时触发 | 何时自动解除 |
+| --- | --- | --- |
+| `pipeline` 链路未运行或失败 | 挖掘超过 36 小时没跑；搜索超过 72 小时没跑；最近一次挖掘有失败批次；最近一次证据判断失败；最近窗口里任一话题步骤未完成 | 以上都不再成立 |
+| `stalled` 断更 | 7 天内没有新话题，或 7 天内归入的主张少于 10 条 | 7 天内至少 1 个新话题且至少 10 条主张 |
+| `evidence` 证据不足 | 只有一边的话题，开了两周以上、搜过 3 次以上仍没有另一边；或 45 天没有新主张 | 列表为空 |
+| `review` 需人工判断 | 话题未通过自己的标准（`checks`）；同类话题里一个的对象按整词包含另一个的（“manager”/“middle manager”），可能是同一问题 | 列表为空 |
+
+**GitHub Issue**：每类最多一个打开的 Issue，标签 `topic-health`，正文第一行的标记 `<!-- topic-health:<类> first-seen=<时间> -->` 用来找回它。正文字段固定：类型、状态（首次发现、最近检查）、触发原因、涉及话题（key、问题、状态、账号数、说明）、当前读数、建议处理、自动关闭条件。
+
+- 触发且没有打开的 Issue：新开；同类 Issue 关闭不到 7 天又触发：重新打开并评论原因，不另开。
+- 持续触发：只改写正文（不发评论、不通知），首次发现时间保留。
+- 条件解除：评论“条件已解除”并以 completed 关闭。
+- 只写网站已公开的内容（话题问题、编号、计数、运行编号），不写帖子原文、账号名、本地数据路径或凭据。`--dry-run` 只打印将做的事；`--only <类>` 只动某一类。
+- 人看过某一项并决定不需处理（例如“wealth manager”与“manager”是两个问题）：`pnpm data:topics:health -- --resolve '<key>' --reason '…'`，记在本地 `data/topics/health-reviewed.json`（只追加），之后不再列出。合并、改写或关闭话题本身仍按本体规则另行处理，健康检查不改任何话题。
+- `gh` 不可用时这一步失败，只留提醒；下一轮再同步。
+
+**后续会话照此执行**：读每日运行报告里的 `topic-health` 提醒和打开的 `topic-health` Issue；`pipeline` 类先修链路，`review`/`evidence` 类需要判断的列入 STATUS 待决策；不要为了让 Issue 关闭而调低阈值，阈值改动要写明原因。
+
 ## 每日更新（`pnpm data:daily`，2026-10-16）
 
 网站的数据只有在有人跑完“采集 → 处理 → 快照 → 发布”这一串之后才会变。`pnpm data:daily` 把这一串做成一条命令，供定时任务每天调用；它会花 X 账号额度、调用 DeepSeek 和 TypeSafe，并写服务器数据库，所以只在负责人要求或负责人建的定时任务里运行。
@@ -223,11 +260,11 @@ pnpm data:daily --promote    # ……没有需要人看的问题时再 data:prom
 ```
 
 - **窗口**：从上一个完成的窗口结束处开始（`data/daily/state.json`；第一次运行取最新一次官方账号采集的结束时间），到当前的最后一个整点为止；不足 6 小时的窗口留到下次。
-- **顺序**（2026-10-16 手动跑通的一轮）：官方账号采集、名单账号采集（分开两次）、`data:extract:events`、`data:verify`、`data:identify:models`、`data:route:events`、`data:measure:markets`、`data:gate:state`、`data:mine:topics`、`data:topics:evidence`、`data:post-events`、`data:activity:state`、`data:publish:snapshot`，然后 `data:local:release`、`data:local:promote`（本机数据库留同样的版本）和 `data:changes`（这次变了什么的中文简报，写到 `data/reports/changes-<前>_<后>.md`，路径在输出的最后）。一轮大约 1 小时 15 分。
+- **顺序**（2026-10-16 手动跑通的一轮）：官方账号采集、名单账号采集（分开两次）、`data:extract:events`、`data:verify`、`data:identify:models`、`data:route:events`、`data:measure:markets`、`data:gate:state`、话题搜索三步（`data:topics:queries`、`crawl search`、`data:topics:searched`，2026-10-30 加入）、`data:mine:topics`、`data:topics:evidence`、`data:post-events`、`data:activity:state`、`data:publish:snapshot`，然后 `data:local:release`、`data:local:promote`（本机数据库留同样的版本）、`data:changes`（这次变了什么的中文简报，写到 `data/reports/changes-<前>_<后>.md`）和 `data:topics:health --issues`（话题监控，见上文）。一轮大约 1 小时 15 分。
 - **断点续跑**：每个窗口一个目录 `data/daily/<窗口>/`，每步一个日志，`record.json` 记下做完的步骤。中途停下的窗口下次从停下的那一步接着跑，已采集的帖子不重采、已发给模型的不再发。抽取结果文件已写出但没入库时改为 `data:ingest:events`。快照写好之后游标才前进。
 - **停下（退出码 1，保留位置）**：某一步失败；采集被拒（退出码 1）；第一次调用判断模型之前 TypeSafe 从本机连不上或回 451（地区封锁，要在代理里把 `typesafe.ai` 走美国出口）；`data:release` 连续 3 次失败（它在一个事务里，断线不留半个版本）。
 - **发布但不生效（退出码 2）**：采集没有入库、X 的应答格式变了，或超过 5% 的采集任务没完成（只要有任务因解析错误以外的原因停下也算）；任何一步报告失败或改用备用模型的批次（`failed`、`failed_batches`、`batches_failed`、`fallback_batches`）或没处理完的更新。版本仍导入并校验，报告列出原因，人看过后用 `pnpm data:promote` 生效。
-- **不拦的**：采集里个别记录解析失败（`parse_error:*`，只拒那一条，2026-10-16 名单 324 个任务里有 1 个），作为提醒列在报告里；新话题。它们列在 `mine-topics` 的结果里，值得人看一眼（2026-10-16 见过 `decisions-api` 与 `openai-decisions-api` 这样的重复），但不阻止发布。
+- **不拦的**：可选步骤（话题搜索三步、话题健康检查）失败；采集里个别记录解析失败（`parse_error:*`，只拒那一条，2026-10-16 名单 324 个任务里有 1 个），作为提醒列在报告里；新话题。它们列在 `mine-topics` 的结果里，值得人看一眼（2026-10-16 见过 `decisions-api` 与 `openai-decisions-api` 这样的重复），但不阻止发布。
 - 采集有上限，一次没采到不等于那段时间没有更新。
 
 ## 指标和实验进度

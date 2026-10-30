@@ -43,6 +43,7 @@
     "data:topics:searched": "data/runtime/venv/bin/python scripts/data-pipeline.py topic-searched",
     "data:topics:reword": "data/runtime/venv/bin/python scripts/data-pipeline.py topic-reword",
     "data:topics:evidence": "data/runtime/venv/bin/python scripts/data-pipeline.py topic-evidence",
+    "data:topics:health": "data/runtime/venv/bin/python scripts/data-pipeline.py topic-health",
     "data:measure:markets": "data/runtime/venv/bin/python scripts/data-pipeline.py measure-markets",
     "data:mine:topics": "data/runtime/venv/bin/python scripts/data-pipeline.py mine-topics",
     "data:ingest:events": "data/runtime/venv/bin/python scripts/data-pipeline.py ingest-events",

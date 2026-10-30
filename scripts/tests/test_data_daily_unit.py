@@ -104,7 +104,7 @@ class RunTest(DailyCase):
     def test_the_local_database_gets_the_release_too_and_the_brief_is_reported(self):
         runner = FakeRunner({"changes": (0, "wrote data/reports/changes-a_b.md")})
         self.make(runner).main([])
-        self.assertEqual(runner.ran[-4:], ["local-release", "local-promote", "changes", "data:release"])
+        self.assertEqual(runner.ran[-5:], ["local-release", "local-promote", "changes", "topic-health", "data:release"])
         self.assertIn("window done; brief: wrote data/reports/changes-a_b.md", self.lines)
 
     def test_without_promote_the_release_is_verified_but_not_made_live(self):
@@ -126,6 +126,39 @@ class RunTest(DailyCase):
         self.assertEqual(self.make(later, now=tomorrow).main(["--promote"]), 0)
         self.assertEqual(later.ran, STEP_NAMES[STEP_NAMES.index("route-events"):] + ["data:release", "data:promote"])
         self.assertEqual(self.saved()["window_end"], "2026-10-17T03:00:00+00:00")
+
+    def test_topics_are_searched_before_mining_and_checked_after_the_brief(self):
+        self.assertEqual(STEP_NAMES[STEP_NAMES.index("gate-state") + 1:STEP_NAMES.index("topic-evidence")],
+                         ["topic-queries", "topic-search", "topic-searched", "mine-topics"])
+        self.assertEqual(STEP_NAMES[-1], "topic-health")
+        argv = {s.name: s.argv for s in daily.steps(daily.Window(LAST_END, NOW))}
+        self.assertIn("--max-pages", argv["topic-search"])
+        self.assertEqual(argv["topic-searched"][-1], argv["topic-search"][argv["topic-search"].index("--output") + 1])
+        self.assertEqual(argv["topic-search"][argv["topic-search"].index("--queries-file") + 1],
+                         argv["topic-queries"][argv["topic-queries"].index("--output") + 1])
+        self.assertIn("--issues", argv["topic-health"])
+
+    def test_a_failed_topic_search_is_a_note_and_the_window_is_still_published(self):
+        runner = FakeRunner({"topic-search": (1, ""), "topic-searched": (1, ""), "topic-health": (1, "")})
+        self.assertEqual(self.make(runner).main(["--promote"]), 0)
+        self.assertEqual(runner.ran, STEP_NAMES + ["data:release", "data:promote"])
+        self.assertTrue(any("topic-search failed (exit 1) and was passed over" in line for line in self.lines))
+        self.assertNotIn("pending", self.saved())
+
+    def test_a_resumed_window_does_not_search_again_after_a_failed_search(self):
+        first = FakeRunner({"topic-search": (1, ""), "route-events": (0, ""), "mine-topics": (1, "")})
+        self.assertEqual(self.make(first).main(["--promote"]), 1)
+        later = FakeRunner()
+        self.assertEqual(self.make(later, now=datetime(2026, 10, 18, 3, 10, tzinfo=timezone.utc)).main(["--promote"]), 0)
+        self.assertEqual(later.ran[0], "mine-topics")
+
+    def test_topic_health_alerts_and_issue_actions_are_reported_as_notes(self):
+        result = json.dumps({"alerts": {"pipeline": ["搜索回流 400 小时没有运行"]},
+                             "issues": [{"kind": "pipeline", "do": "create", "url": "https://x/issues/9"}]})
+        runner = FakeRunner({"topic-health": (0, result)})
+        self.assertEqual(self.make(runner).main(["--promote"]), 0)
+        self.assertTrue(any("topics pipeline: 搜索回流 400 小时没有运行" in line for line in self.lines))
+        self.assertTrue(any("issue create https://x/issues/9 (pipeline)" in line for line in self.lines))
 
     def test_failed_or_fallback_batches_hold_the_release_back_from_going_live(self):
         routed = json.dumps({"events": 49, "fallback_batches": 0, "failed_batches": 2})
