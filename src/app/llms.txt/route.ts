@@ -72,6 +72,8 @@ export async function GET() {
     "",
     "## For AI agents",
     "",
+    "Use SurviAGI to find AI updates and evidence related to specific work, such as accounting, customer support and software development. Search by short task or product keywords, read the matching record, and check its original sources. Machine summaries and work-level readings are unreviewed; public articles identify their approval or preview status. Records do not establish that an entire occupation is automated, and coverage can be incomplete.",
+    "",
     `Install the SurviAGI HTTP Skill: ${SITE_URL}/api/agent/packages/surviagi-http.zip (SKILL.md and a Python 3 script; no dependencies or key for reading). Installation guide: ${absoluteUrl("en", "/agents")}#install.`,
     "",
     `Search and read the published records over MCP (Streamable HTTP) at ${SITE_URL}/api/mcp, no key needed: tools \`search\` and \`get_record\`. ` +

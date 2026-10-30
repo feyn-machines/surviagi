@@ -10,12 +10,19 @@ type Block = { heading: string; id?: string; body: string[]; code?: string[] };
 
 export const agentsCopy: Record<Language, { title: string; description: string; lead: string; sections: Block[] }> = {
   en: {
-    title: "Connect an AI agent",
+    title: "AI work evidence for agents | MCP, API and Skill",
     description:
-      "Let an AI agent search SurviAGI's published updates, questions, evidence and bilingual editorial articles over MCP or HTTP without a key, and submit research questions or accounts to monitor with a reader's API key.",
+      "Find evidence about AI automation of jobs and work tasks. Connect an AI assistant to SurviAGI using a free-to-read MCP server, HTTP API or Skill, with links to original sources.",
     lead:
       "An agent such as WorkBuddy, Claude or ChatGPT can search what SurviAGI has published and read each record with its sources. Reading needs no account and no key. A signed-in reader can also give an agent a key to submit research questions and accounts worth monitoring, as requests for review.",
     sections: [
+      {
+        heading: "When to use SurviAGI",
+        body: [
+          "Ask which AI updates relate to accounting, customer support or software work; find the source behind a claim; or trace a published reading to the specific work it concerns. Search for short task or product keywords, then read the relevant records and their original sources.",
+          "Records are evidence leads, not proof that a whole job can be automated. Machine summaries and work-level readings are unreviewed; editorial articles show their own approval or preview status. Coverage can be incomplete.",
+        ],
+      },
       {
         heading: "What an agent can do",
         body: [
@@ -78,12 +85,19 @@ export const agentsCopy: Record<Language, { title: string; description: string; 
     ],
   },
   "zh-CN": {
-    title: "接入 AI 助手",
+    title: "供 AI 助手使用的工作证据｜MCP、API 和 Skill",
     description:
-      "让 WorkBuddy 等 AI 助手通过 MCP 或 HTTP 免 Key 搜索 SurviAGI 已发布的更新、问题、证据与双语文章；读者可用自己的 API Key 提交研究问题或建议监测的账号。",
+      "查询 AI 对职业和具体工作任务的影响及原始证据。通过免 Key 的 MCP、HTTP API 或 Skill，让 AI 助手搜索 SurviAGI 公开记录。",
     lead:
       "WorkBuddy、Claude、ChatGPT 等 AI 助手可以搜索 SurviAGI 已发布的内容，并连同来源读取每条记录。读取无需账号、无需 Key。登录的读者还可以给助手一个 Key，用来提交研究问题和值得监测的账号；提交只是待审核的申请。",
     sections: [
+      {
+        heading: "什么时候使用 SurviAGI",
+        body: [
+          "想知道哪些 AI 更新涉及会计、客服或软件工作，查找某项说法的来源，或追溯一条公开读数对应的具体工作时，可以使用。先用简短的工作或产品关键词搜索，再读取相关记录和原始来源。",
+          "记录提供证据线索，不能证明整个职业已能被自动化。机器摘要和工作等级未经人工审核；文章分别标明已批准或预发布状态。覆盖可能不完整。",
+        ],
+      },
       {
         heading: "助手能做什么",
         body: [
