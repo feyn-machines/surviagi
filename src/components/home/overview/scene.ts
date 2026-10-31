@@ -26,6 +26,7 @@ export type PanelItem = NodeRef & {
   accepted?: number;
   tier?: string;
   date?: string | null;
+  announced?: boolean;
 };
 
 export type Panel = NodeRef & {
@@ -33,7 +34,7 @@ export type Panel = NodeRef & {
   lit: Record<NodeKind, number>;
   groups: { kind: NodeKind; count: number; items: PanelItem[] }[];
   work?: { level: number; claimed: number };
-  update?: { date: string | null; org: string; url: string | null; sources: number };
+  update?: { date: string | null; announced: boolean; org: string; url: string | null; sources: number };
 };
 
 export type View = {
@@ -58,6 +59,7 @@ export type Hover = {
   claimed?: number;
   updates?: number;
   date?: string | null;
+  announced?: boolean;
   org?: string;
 };
 
@@ -477,6 +479,7 @@ export function createScene(o: SceneOptions): OverviewScene {
           const row = sel.kind === "work" ? sel.down.find((l) => l.b === n)?.row : null;
           if (row) Object.assign(item, { claimed: row.claimed, accepted: row.accepted, tier: row.tier });
           item.date = n.update?.date ?? null;
+          item.announced = n.update?.announced;
         }
         return item;
       });
@@ -484,7 +487,7 @@ export function createScene(o: SceneOptions): OverviewScene {
     }
     const out: Panel = { ...ref(sel), trail: trail.map(ref), lit, groups };
     if (sel.kind === "work") out.work = { level: sel.level, claimed: sel.claimed };
-    if (sel.update) out.update = { date: sel.update.date, org: sel.update.org, url: sel.update.url, sources: sel.update.sources };
+    if (sel.update) out.update = { date: sel.update.date, announced: sel.update.announced, org: sel.update.org, url: sel.update.url, sources: sel.update.sources };
     return out;
   }
 
@@ -685,7 +688,7 @@ export function createScene(o: SceneOptions): OverviewScene {
     if (!n) return o.onHover(null);
     const hover: Hover = { x: e.clientX, y: e.clientY, kind: n.kind, name: n.name };
     if (n.kind === "work") Object.assign(hover, { level: n.level, claimed: n.claimed, updates: n.down.filter((l) => l.on).length });
-    if (n.update) Object.assign(hover, { date: n.update.date, org: n.update.org });
+    if (n.update) Object.assign(hover, { date: n.update.date, announced: n.update.announced, org: n.update.org });
     if (n.kind === "org") hover.updates = n.up.filter((l) => l.on).length;
     o.onHover(hover);
   };

@@ -95,3 +95,22 @@ test("the root layout resolves metadata per reader rather than statically", () =
   // The confirmed headline stays the default title in both languages.
   assert.ok(!source.includes("Will AI Kill Your Idea?"), "the retired title is back");
 });
+
+test("update chronology prefers occurrence, labels source announcements and preserves missing dates", async () => {
+  const ts = (await import("typescript")).default;
+  const js = ts.transpileModule(read("src/lib/update-date.ts"), {
+    compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const { updateTimestamp, updateDateLabel } = await import(`data:text/javascript;charset=utf-8,${encodeURIComponent(js)}`);
+  const occurred = { occurred_at: "2026-01-02T08:00:00Z", announced_at: "2026-01-03T09:00:00Z" };
+  const announced = { occurred_at: null, announced_at: "2026-01-03T09:00:00Z" };
+  const missing = { occurred_at: null };
+  assert.equal(updateTimestamp(occurred), occurred.occurred_at);
+  assert.equal(updateDateLabel(occurred, "en"), "2026-01-02");
+  assert.equal(updateTimestamp(announced), announced.announced_at);
+  assert.equal(updateDateLabel(announced, "en"), "Announced 2026-01-03");
+  assert.equal(updateDateLabel(announced, "zh-CN"), "2026-01-03 宣布");
+  assert.equal(updateTimestamp(missing), null);
+  assert.equal(updateDateLabel(missing, "en"), null);
+  assert.equal(announced.occurred_at, null, "display chronology must not rewrite event facts");
+});

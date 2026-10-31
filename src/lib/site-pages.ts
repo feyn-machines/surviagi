@@ -1,3 +1,4 @@
+import { updateTimestamp } from "./update-date";
 import {
   activities,
   chainEvents,
@@ -31,14 +32,14 @@ export const detailPages = {
   /** Only work an update has reached has a page of its own. */
   work: () => activities().filter((a) => a.evidence_rows && a.level).map((a) => workSlug(a.activity_id)),
   topics: () => topics().map((topic) => ({ slug: topic.slug, latest: topic.latest_claim_at })),
-  updates: () => chainEvents().map((e) => ({ id: e.event_id, occurredAt: e.occurred_at ?? null })),
+  updates: () => chainEvents().map((e) => ({ id: e.event_id, occurredAt: updateTimestamp(e) })),
 };
 
 /** An update keeps its original words in every language, so it is listed once. */
 export const UPDATE_LANGUAGES = ["en"] as const;
 
 /**
- * When each detail page last had something new to show: the newest `occurred_at` among the updates whose
+ * When each detail page last had something new to show: the newest occurrence or source announcement among the updates whose
  * readings it lists, following the same joins as the pages (work -> its readings; market -> its work;
  * occupation -> the markets serving it; group -> its occupations). Undefined when none of its readings is dated.
  * A page's sitemap `lastmod` is this rather than the time the data was published, so it moves only when the
@@ -46,7 +47,7 @@ export const UPDATE_LANGUAGES = ["en"] as const;
  * that changed.
  */
 export function evidenceDates() {
-  const occurred = new Map(chainEvents().map((e) => [e.event_id, e.occurred_at ?? null]));
+  const occurred = new Map(chainEvents().map((e) => [e.event_id, updateTimestamp(e)]));
   const newer = (a: string | null | undefined, b: string | null | undefined) =>
     !a ? b ?? null : !b || Date.parse(a) > Date.parse(b) ? a : b;
   const work = new Map<string, string | null>();

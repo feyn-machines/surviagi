@@ -1,3 +1,4 @@
+import { updateTimestamp } from "./update-date";
 import { vocabularyTerm } from "@/components/ontology-labels";
 import marketGroups from "@/content/market-groups.json";
 import * as snapshot from "@/lib/snapshot";
@@ -31,6 +32,8 @@ export type HomeUpdate = {
   /** Days since the window opened; undated updates carry `date: null`. */
   day: number;
   date: string | null;
+  /** True when the timeline uses the source announcement instead of an occurrence. */
+  announced: boolean;
   url: string | null;
   sources: number;
   kind: Both | null;
@@ -87,8 +90,9 @@ const dayOf = (iso: string) => Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, 
 export function buildHomeData(): HomeData | null {
   const manifest = snapshot.manifest();
   const coverage = snapshot.coverage();
-  const first = coverage?.collection_window.first;
-  const last = coverage?.collection_window.last;
+  const times = snapshot.chainEvents().map(updateTimestamp).filter((at): at is string => Boolean(at));
+  const first = [coverage?.collection_window.first, ...times].filter((at): at is string => Boolean(at)).sort()[0];
+  const last = [coverage?.collection_window.last, ...times].filter((at): at is string => Boolean(at)).sort().at(-1);
   if (!manifest || !coverage || !first || !last) return null;
 
   // Domains are sealed ontology concepts, not a prefix cut from a market id.
@@ -130,7 +134,7 @@ export function buildHomeData(): HomeData | null {
     if (!used.has(e.event_id)) continue;
     const more = detail.get(e.event_id);
     const term = vocabularyTerm("event_kind", more?.kind);
-    const date = e.occurred_at ? e.occurred_at.slice(0, 10) : null;
+    const date = updateTimestamp(e)?.slice(0, 10) ?? null;
     const day = date ? Math.min(days - 1, Math.max(0, Math.round((dayOf(date) - start) / DAY))) : days - 1;
     updates.push({
       id: e.event_id,
@@ -139,6 +143,7 @@ export function buildHomeData(): HomeData | null {
       org: e.org_name ?? "",
       day,
       date,
+      announced: !e.occurred_at && Boolean(e.announced_at),
       url: e.source_urls[0] ?? null,
       sources: e.source_urls.length,
       kind: term?.en ? { en: term.en, zh: term["zh-CN"] ?? term.en } : null,

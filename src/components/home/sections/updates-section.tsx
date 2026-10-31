@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLabel } from "@/lib/update-date";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { bilingual, type Language } from "@/lib/i18n";
@@ -256,6 +257,7 @@ export function UpdatesSection({ data, language, index }: { data: HomeData; lang
                     <span className={`${s.tag} ${s[levelClass(top)]}`}>L{top} {LEVEL_NAMES[language][top]}</span>
                   </div>
                   <div className={s.t}>{u.title}</div>
+                  {u.announced && <div className={frame.mono}>{dateLabel(u.date, true, language)}</div>}
                   {u.summary && <div className={s.sum}>{u.summary}</div>}
                   {rows.slice(0, 5).map((r, n) => {
                     const w = model.workById.get(r.work);

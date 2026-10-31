@@ -1,3 +1,4 @@
+import { updateTimestamp } from "@/lib/update-date";
 import type { Metadata } from "next";
 import { getLocale } from "@/lib/locale";
 import { pageMetadata } from "@/lib/seo";
@@ -211,13 +212,15 @@ export default async function UpdatesPage() {
   // Only updates that bear on some work are listed; the rest say nothing this page can show.
   const rows: UpdateRow[] = [...events()]
     .filter((row) => landed.has(row.event_id))
-    .sort((a, b) => (b.occurred_at ?? "").localeCompare(a.occurred_at ?? ""))
+    .sort((a, b) => (updateTimestamp(b) ?? "").localeCompare(updateTimestamp(a) ?? ""))
     .map((row) => {
       const hit = landed.get(row.event_id);
       return {
         id: row.event_id,
         title: row.title,
-        date: isoDate(row.occurred_at),
+        date: isoDate(updateTimestamp(row)),
+        timestamp: updateTimestamp(row),
+        announced: !row.occurred_at && Boolean(row.announced_at),
         org: (language === "zh-CN" ? row.org_name_zh_cn : row.org_name) ?? row.org_name,
         orgKey: row.org_name,
         url: row.source_urls?.[0] ?? null,

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { dateLabel } from "@/lib/update-date";
 import { updateHref, workHref } from "@/lib/routes";
 import type { HomeData } from "@/lib/home-data";
 import type { Language } from "@/lib/i18n";
@@ -137,7 +138,7 @@ export function Overview({ data, language }: { data: HomeData; language: Languag
       );
     }
     if (item.level != null) return `L${item.level}`;
-    if (item.kind === "update") return item.date ?? c.undated;
+    if (item.kind === "update") return dateLabel(item.date, item.announced, language) ?? c.undated;
     return null;
   };
 
@@ -331,7 +332,7 @@ export function Overview({ data, language }: { data: HomeData; language: Languag
                 {fill(c.updatesN, { n: hover.updates ?? 0 })}
               </>
             ) : hover.kind === "update" ? (
-              `${hover.date ?? c.undated} · ${hover.org ?? ""}`
+              `${dateLabel(hover.date, hover.announced, language) ?? c.undated} · ${hover.org ?? ""}`
             ) : hover.kind === "org" ? (
               fill(c.updatesN, { n: hover.updates ?? 0 })
             ) : null}
@@ -405,7 +406,7 @@ export function Overview({ data, language }: { data: HomeData; language: Languag
               ) : null}
               {panel.update ? (
                 <>
-                  <div className={s.mono}>{`${panel.update.date ?? c.undated} · ${panel.update.org}`}</div>
+                  <div className={s.mono}>{`${dateLabel(panel.update.date, panel.update.announced, language) ?? c.undated} · ${panel.update.org}`}</div>
                   {panel.update.url ? (
                     <p className={s.source}>
                       <Link href={updateHref(language, panel.id)}>{c.openUpdate}</Link>{" · "}

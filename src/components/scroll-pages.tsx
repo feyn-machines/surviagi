@@ -15,6 +15,9 @@ export function useScrollPages(signature: string, page = 30) {
   const frame = useRef<HTMLDivElement>(null);
   const sentinel = useRef<HTMLDivElement>(null);
   const [state, setState] = useState({ signature, count: page });
+  // Commit the new filter even when its result is shorter than one page and
+  // no sentinel is mounted. Otherwise clearing it restores the old page count.
+  if (state.signature !== signature) setState({ signature, count: page });
   const count = state.signature === signature ? state.count : page;
 
   useEffect(() => {
