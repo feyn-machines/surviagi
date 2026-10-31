@@ -1,65 +1,808 @@
-/* The agents page: the legal pages' text column, plus code samples that scroll inside their own frame. */
+/* The agents page: an integration manual, not a legal document.
+ *
+ * It keeps the site's dark canvas, ruled surfaces, mono labels and 2px controls,
+ * but uses the width the page actually has: a hero with the connection summary
+ * beside it, then a contents rail and a document column. The previous version
+ * put a legally-sized text column under a display headline and left the right
+ * half of every desktop empty.
+ */
+
+.page {
+  padding: 56px 0 120px;
+}
+
+/* ------------------------------------------------------------------ hero */
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 348px;
+  align-items: end;
+  gap: 40px 64px;
+  padding-bottom: 48px;
+  border-bottom: 1px solid var(--ah-color-line);
+}
+
+.heroCopy {
+  min-width: 0;
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 22px;
+  color: var(--ah-color-muted);
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-label);
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.eyebrow::before {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  background: var(--ah-color-signal);
+}
+
+/* The public title carries two things: the promise and the three ways to
+   connect. Split, the promise reads at display size and the protocol list
+   becomes a signal-coloured second line instead of a third wrapped row. */
+.title {
+  margin: 0 0 24px;
+  color: var(--ah-color-text);
+  font-size: clamp(2.4rem, 4.3vw, 3.5rem);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1.03;
+  text-wrap: balance;
+}
+
+.titleMain {
+  display: block;
+}
+
+.titleTail {
+  display: block;
+  margin-top: 14px;
+  color: var(--ah-color-signal);
+  font-size: 0.46em;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
 
 .lead {
-  font-size: var(--ah-text-body);
-  line-height: var(--ah-leading-body);
-  color: var(--ah-color-text);
-  margin: 0 0 var(--ah-space-6);
+  max-width: 62ch;
+  margin: 0 0 30px;
+  color: var(--ah-color-muted);
+  font-size: 17px;
+  line-height: 1.75;
 }
 
-.code {
-  margin: 0 0 var(--ah-space-5);
-  padding: var(--ah-space-4);
-  overflow-x: auto;
-  border: 1px solid var(--ah-color-line);
-  border-radius: var(--ah-radius-control);
-  font-family: var(--ah-font-mono);
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--ah-color-text);
-  white-space: pre;
-}
-
-.install {
-  padding: var(--ah-space-5);
-  margin-bottom: var(--ah-space-6);
-  border: 1px solid var(--ah-color-line);
-  border-radius: var(--ah-radius-control);
-}
-
-.actions {
+.heroActions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--ah-space-4);
-  margin-bottom: var(--ah-space-5);
+  gap: 12px 26px;
 }
 
-.download {
-  display: inline-block;
-  padding: var(--ah-space-3) var(--ah-space-4);
-  background: var(--ah-color-text);
-  color: var(--ah-color-bg);
+.primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  min-height: 46px;
+  padding: 0 18px;
+  border: 1px solid var(--ah-color-text);
   border-radius: var(--ah-radius-control);
+  background: var(--ah-color-text);
+  color: var(--ah-color-ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
   text-decoration: none;
+  transition: background var(--ah-motion-feedback) var(--ah-ease-out), border-color var(--ah-motion-feedback) var(--ah-ease-out);
 }
 
-.steps {
-  padding-left: var(--ah-space-5);
-  line-height: var(--ah-leading-body);
+.primary:hover {
+  border-color: var(--ah-color-signal);
+  background: var(--ah-color-signal);
+  color: var(--ah-color-ink);
 }
 
-.steps li { margin-bottom: var(--ah-space-3); }
-.prompt { white-space: pre-wrap; overflow-wrap: anywhere; }
-.install summary { cursor: pointer; margin-bottom: var(--ah-space-4); }
+.primary:focus-visible {
+  outline: 2px solid var(--ah-color-focus);
+  outline-offset: 3px;
+}
 
-.install > h2 {
-  margin-top: 0;
+.buttonMark {
+  font-family: var(--ah-font-mono);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.quietLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  color: var(--ah-color-text);
+  font-size: 14px;
+  line-height: 1.4;
+  text-decoration: underline;
+  text-decoration-color: var(--ah-color-control);
+  text-underline-offset: 5px;
+}
+
+.quietLink:hover {
+  color: var(--ah-color-signal);
+  text-decoration-color: var(--ah-color-signal);
+}
+
+.quietLink:focus-visible {
+  outline: 2px solid var(--ah-color-focus);
+  outline-offset: 3px;
+}
+
+.linkMark {
+  font-family: var(--ah-font-mono);
+  font-size: 12px;
+}
+
+/* The connection summary fills the space the old page left blank, and answers
+   the first question a developer has before reading any of the prose. */
+.panel {
+  position: relative;
+  padding: 20px;
+  border: 1px solid var(--ah-color-line);
+  border-top: 2px solid var(--ah-color-signal);
+  background-color: var(--ah-color-surface);
+  background-image:
+    linear-gradient(to right, var(--ah-color-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--ah-color-grid) 1px, transparent 1px);
+  background-size: var(--ah-grid-unit) var(--ah-grid-unit);
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 22px;
+  color: var(--ah-color-signal);
+  font-family: var(--ah-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.statusDot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  background: currentColor;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--ah-color-signal) 14%, transparent);
+}
+
+.panelBlock {
+  min-width: 0;
+}
+
+.panelLabel {
+  margin: 0 0 6px;
+  color: var(--ah-color-subtle);
+  font-family: var(--ah-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.endpoint {
+  margin: 0;
+  color: var(--ah-color-text);
+  font-family: var(--ah-font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.panelList {
+  display: grid;
+  gap: 12px;
+  margin: 20px 0 0;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--ah-color-line);
+}
+
+.panelList > div {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 10px;
+}
+
+.panelList dt {
+  color: var(--ah-color-subtle);
+  font-family: var(--ah-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.panelList dd {
+  margin: 0;
+  color: var(--ah-color-text);
+  font-family: var(--ah-font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.panelNote {
+  margin: 12px 0 0;
+  color: var(--ah-color-subtle);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+/* --------------------------------------------------------------- layout */
+
+.layout {
+  display: grid;
+  grid-template-columns: 204px minmax(0, 1fr);
+  align-items: start;
+  gap: 56px;
+  margin-top: 44px;
+}
+
+/* globals.css gives every <nav> a row layout for the header; this one is a
+   sticky column. */
+.toc {
+  display: block;
+  position: sticky;
+  top: 32px;
+  align-self: start;
+  min-width: 0;
+}
+
+.tocLabel {
+  margin: 0 0 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--ah-color-line);
+  color: var(--ah-color-muted);
+  font-family: var(--ah-font-mono);
+  font-size: var(--ah-text-label);
+  letter-spacing: 0.06em;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.tocList {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tocLink {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 0 7px 10px;
+  border-left: 1px solid transparent;
+  color: var(--ah-color-muted);
+  font-size: 13px;
+  line-height: 1.45;
+  text-decoration: none;
+  transition: color var(--ah-motion-feedback) var(--ah-ease-out), border-color var(--ah-motion-feedback) var(--ah-ease-out);
+}
+
+.tocLink:hover {
+  border-left-color: var(--ah-color-control);
+  color: var(--ah-color-text);
+}
+
+.tocLink:focus-visible {
+  outline: 2px solid var(--ah-color-focus);
+  outline-offset: 2px;
+}
+
+.tocIndex {
+  color: var(--ah-color-subtle);
+  font-family: var(--ah-font-mono);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
+
+.tocCurrent {
+  border-left-color: var(--ah-color-signal);
+  color: var(--ah-color-text);
+}
+
+.tocCurrent .tocIndex {
+  color: var(--ah-color-signal);
+}
+
+/* ------------------------------------------------------------- document */
+
+.doc {
+  min-width: 0;
+}
+
+.section {
+  padding: 44px 0;
+  border-top: 1px solid var(--ah-color-line);
+  scroll-margin-top: 28px;
+}
+
+/* The hero already draws the rule above the first section. */
+.section:first-child {
   padding-top: 0;
   border-top: 0;
 }
 
-.actions a:not(.download) {
-  text-decoration: underline;
-  text-underline-offset: 3px;
+.sectionHead {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 12px;
+  margin: 0 0 18px;
+}
+
+.sectionNumber {
+  color: var(--ah-color-signal);
+  font-family: var(--ah-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+}
+
+.h2 {
+  margin: 0;
+  color: var(--ah-color-text);
+  font-family: var(--ah-font-heading);
+  font-size: clamp(1.45rem, 2.2vw, 1.85rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.paragraph {
+  max-width: 70ch;
+  margin: 0 0 16px;
+  color: var(--ah-color-muted);
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.paragraph:last-child {
+  margin-bottom: 0;
+}
+
+/* ---------------------------------------------------------------- install */
+
+.installBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 24px;
+  margin: 24px 0;
+  padding: 16px 18px;
+  border: 1px solid var(--ah-color-line);
+  background: var(--ah-color-surface);
+}
+
+.installActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+}
+
+.installMeta {
+  margin: 0;
+  color: var(--ah-color-subtle);
+  font-family: var(--ah-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  line-height: 1.6;
+}
+
+.steps {
+  margin: 0 0 28px;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.steps li {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 70ch);
+  gap: 12px;
+  padding: 14px 0;
+  border-top: 1px solid var(--ah-color-line);
+  color: var(--ah-color-muted);
+  font-size: 15px;
+  line-height: 1.75;
+  counter-increment: step;
+}
+
+.steps li:last-child {
+  border-bottom: 1px solid var(--ah-color-line);
+}
+
+.steps li::before {
+  content: counter(step, decimal-leading-zero);
+  padding-top: 5px;
+  color: var(--ah-color-signal);
+  font-family: var(--ah-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+}
+
+.note {
+  max-width: 72ch;
+  margin: 0 0 24px;
+  padding: 12px 0 12px 16px;
+  border-left: 2px solid var(--ah-color-signal);
+  color: var(--ah-color-muted);
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+.disclosure {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--ah-color-line);
+}
+
+.disclosure summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+  color: var(--ah-color-text);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+  list-style: none;
+  cursor: pointer;
+}
+
+.disclosure summary::-webkit-details-marker {
+  display: none;
+}
+
+.disclosure summary::before {
+  content: "+";
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--ah-color-control);
+  color: var(--ah-color-signal);
+  font-family: var(--ah-font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.disclosure[open] summary::before {
+  content: "−";
+}
+
+.disclosure summary:focus-visible {
+  outline: 2px solid var(--ah-color-focus);
+  outline-offset: 3px;
+}
+
+.disclosureBody {
+  padding: 12px 0 0 28px;
+}
+
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--ah-color-control);
+  border-radius: var(--ah-radius-control);
+  color: var(--ah-color-text);
+  font-size: 13px;
+  line-height: 1.4;
+  text-decoration: none;
+  transition: border-color var(--ah-motion-feedback) var(--ah-ease-out), color var(--ah-motion-feedback) var(--ah-ease-out);
+}
+
+.secondary:hover {
+  border-color: var(--ah-color-signal);
+  color: var(--ah-color-signal);
+}
+
+.secondary:focus-visible {
+  outline: 2px solid var(--ah-color-focus);
+  outline-offset: 3px;
+}
+
+/* ------------------------------------------------------------------ code */
+
+.codeFrame {
+  margin: 0 0 24px;
+  border: 1px solid var(--ah-color-line);
+  background: var(--ah-color-ink);
+}
+
+.codeBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--ah-color-line);
+  background: var(--ah-color-surface);
+}
+
+.codeLabel {
+  color: var(--ah-color-subtle);
+  font-family: var(--ah-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.codeTools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.codeHint {
+  color: var(--ah-color-subtle);
+  font-family: var(--ah-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.copyButton {
+  appearance: none;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--ah-color-muted);
+  font-family: var(--ah-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.copyButton:hover {
+  color: var(--ah-color-signal);
+}
+
+.copyButton:focus-visible {
+  outline: 2px solid var(--ah-color-focus);
+  outline-offset: 3px;
+}
+
+.code {
+  margin: 0;
+  padding: 16px 18px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ah-color-control) transparent;
+  color: var(--ah-color-text);
+  font-family: var(--ah-font-mono);
+  font-size: 13px;
+  line-height: 1.75;
+  tab-size: 2;
+  white-space: pre;
+}
+
+.code code {
+  font: inherit;
+}
+
+.codeFrameWrap .code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* --------------------------------------------------------------- API keys */
+
+.keysPanel {
+  position: relative;
+  padding: 44px 0 0 52px;
+  border-top: 1px solid var(--ah-color-line);
+}
+
+.keysNumber {
+  position: absolute;
+  top: 50px;
+  left: 0;
+  color: var(--ah-color-signal);
+  font-family: var(--ah-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+}
+
+.keysPanel :global(section) {
+  margin-top: 0;
+}
+
+.keysPanel :global(#keys) {
+  scroll-margin-top: 28px;
+}
+
+.keysPanel :global(h2) {
+  margin-bottom: 18px;
+  font-family: var(--ah-font-heading);
+  font-size: clamp(1.45rem, 2.2vw, 1.85rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+/* ---------------------------------------------------------------- narrow */
+
+@media (max-width: 1000px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+    padding-bottom: 36px;
+  }
+
+  .panel {
+    max-width: 560px;
+  }
+
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+    margin-top: 32px;
+  }
+
+  .toc {
+    position: static;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--ah-color-line);
+  }
+
+  /* On one column the contents become a row of anchors above the document. */
+  .tocList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .tocLink {
+    display: flex;
+    gap: 6px;
+    padding: 6px 10px;
+    border: 1px solid var(--ah-color-line);
+  }
+
+  .tocCurrent {
+    border-color: var(--ah-color-signal);
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 32px 0 72px;
+  }
+
+  .eyebrow {
+    margin-bottom: 16px;
+  }
+
+  /* One line for the Chinese promise at 390px and under; the longer English
+     promise still wraps, but on a word boundary rather than mid-phrase. */
+  .title {
+    margin-bottom: 20px;
+    font-size: clamp(1.45rem, 7.4vw, 2.3rem);
+    letter-spacing: -0.03em;
+  }
+
+  .titleTail {
+    margin-top: 10px;
+    font-size: 0.56em;
+    line-height: 1.25;
+  }
+
+  .lead {
+    margin-bottom: 24px;
+    font-size: 16px;
+  }
+
+  .heroActions {
+    gap: 4px 20px;
+  }
+
+  .heroActions .primary {
+    flex: 1 1 100%;
+  }
+
+  .primary {
+    min-height: 44px;
+    padding: 0 16px;
+  }
+
+  .panel {
+    padding: 16px;
+  }
+
+  .installBar {
+    padding: 14px;
+  }
+
+  .installActions {
+    width: 100%;
+  }
+
+  .installActions .primary {
+    flex: 1 1 100%;
+  }
+
+  .installMeta {
+    font-size: 10px;
+  }
+
+  .steps li {
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 8px;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  .section {
+    padding: 32px 0;
+  }
+
+  .sectionHead {
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .h2 {
+    font-size: 24px;
+  }
+
+  .paragraph {
+    font-size: 15.5px;
+    line-height: 1.75;
+  }
+
+  .disclosureBody {
+    padding-left: 0;
+  }
+
+  .code {
+    padding: 14px;
+    font-size: 12px;
+  }
+
+  .keysPanel {
+    padding: 32px 0 0 38px;
+  }
+
+  .keysNumber {
+    top: 37px;
+  }
 }
