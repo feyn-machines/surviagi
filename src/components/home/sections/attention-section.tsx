@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLabel } from "@/lib/update-date";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { bilingual, type Language } from "@/lib/i18n";
@@ -135,7 +136,7 @@ export function AttentionSection({ data, language, index }: { data: HomeData; la
       <>
         <div className={s.h}><b>{compact(d.views, language)}</b><span className={`${s.tag} ${s[levelClass(d.level)]}`}>L{d.level}</span></div>
         <div className={s.t}>{d.u.title}</div>
-        <div className={frame.mono}>{d.u.org} · {d.u.date ?? c.undated}{d.u.kind ? ` · ${pick(d.u.kind, language)}` : ""}</div>
+        <div className={frame.mono}>{d.u.org} · {dateLabel(d.u.date, d.u.announced, language) ?? c.undated}{d.u.kind ? ` · ${pick(d.u.kind, language)}` : ""}</div>
       </>
     );
     return d.u.url

@@ -378,24 +378,51 @@ test("work, market, occupation and topic pages name a Markdown copy that says wh
   }
 });
 
-test("an update with no date of its own is shown and marked up under the date its source announced it", { skip: !HAS_SNAPSHOT, timeout: 60000 }, async () => {
-  // A copy of the release in which one update lost the date of what happened and kept its earliest post's.
+test("announcement chronology reaches lists, timelines, work pages and sitemap without inventing an occurrence", { skip: !HAS_SNAPSHOT, timeout: 60000 }, async () => {
   const dir = mkdtempSync(join(tmpdir(), "surviagi-announced-"));
   cpSync(SNAPSHOT_DIR, dir, { recursive: true });
   const chain = JSON.parse(readFileSync(join(dir, "chain.json"), "utf8"));
-  const event = chain.events[0];
-  Object.assign(event, { occurred_at: null, announced_at: "2026-08-30T09:00:00+00:00" });
+  const events = JSON.parse(readFileSync(join(dir, "events.json"), "utf8"));
+  const activity = chain.activities.find((a) => a.evidence_rows && a.level);
+  const reading = chain.evidence.find((r) => r.activity_id === activity.activity_id && r.level != null && r.observed_level != null);
+  const event = chain.events.find((e) => e.event_id === reading.event_id);
+  // Later than every occurrence AND the collection window, so the timeline must extend too.
+  const coverage = JSON.parse(readFileSync(join(dir, "coverage.json"), "utf8"));
+  const latest = Math.max(Date.parse(coverage.collection_window.last), ...chain.events.map((e) => Date.parse(e.occurred_at ?? e.announced_at ?? "")).filter(Number.isFinite));
+  const day = new Date(latest + 86400000).toISOString().slice(0, 10);
+  const announced = `${day}T09:00:00+00:00`;
+  for (const row of [event, events.find((e) => e.event_id === event.event_id)]) {
+    Object.assign(row, { occurred_at: null, announced_at: announced });
+  }
   writeFileSync(join(dir, "chain.json"), JSON.stringify(chain));
+  writeFileSync(join(dir, "events.json"), JSON.stringify(events));
   const { base, proc } = await startServer({ SNAPSHOT_DIR: dir });
   try {
-    for (const [prefix, line] of [["", "Announced 2026-08-30"], ["/zh-CN", "2026-08-30 宣布"]]) {
+    for (const [prefix, line] of [["", `Announced ${day}`], ["/zh-CN", `${day} 宣布`]]) {
       const page = await (await fetch(`${base}${prefix}/updates/${event.event_id}`)).text();
-      assert.ok(page.includes(line), `${prefix}: the page does not say when it was announced`);
+      assert.ok(page.includes(line), `${prefix}: no announcement label`);
       const ld = [...page.matchAll(/<script type="application\/ld\+json"[^>]*>([^<]+)<\/script>/g)].flatMap((m) => [JSON.parse(m[1])].flat());
-      assert.ok(ld.some((d) => d["@type"] === "Article" && d.datePublished === "2026-08-30T09:00:00+00:00"), `${prefix}: no datePublished`);
+      assert.ok(ld.some((d) => d["@type"] === "Article" && d.datePublished === announced));
       const md = await (await fetch(`${base}${prefix}/updates/${event.event_id}/raw.md`)).text();
-      assert.ok(md.includes(line), `${prefix}/raw.md does not say when it was announced`);
+      assert.ok(md.includes(line));
+      const list = await (await fetch(`${base}${prefix}/updates`)).text();
+      const first = list.match(/<tbody[^>]*>\s*(<tr[\s\S]*?<\/tr>)/)?.[1];
+      assert.ok(first?.includes(event.event_id), `${prefix}: the latest announcement is absent from the first row`);
+      assert.ok(first.includes(line));
+      const home = await (await fetch(`${base}${prefix || "/"}`)).text();
+      const timeline = home.match(/<section id="updates"[\s\S]*?<\/section>/)?.[0];
+      assert.ok(timeline?.includes(event.event_id), `${prefix}: announcement is absent from the latest timeline day`);
+      assert.ok(timeline.includes(line));
+      assert.ok(home.includes(day));
+      const workId = activity.activity_id.replace(/^oaw:market:/, "");
+      for (const suffix of ["", "/raw.md"]) {
+        const work = await (await fetch(`${base}${prefix}/work/${workId}${suffix}`)).text();
+        assert.ok(work.includes(line), `${prefix}/work/${workId}${suffix}: no announcement label`);
+      }
     }
+    const sitemap = await (await fetch(`${base}/sitemap.xml`)).text();
+    const entry = [...sitemap.matchAll(/<url>[\s\S]*?<\/url>/g)].map((m) => m[0]).find((x) => x.includes(`/updates/${event.event_id}</loc>`));
+    assert.ok(entry?.includes(`<lastmod>${announced}</lastmod>`), "sitemap lost the source announcement");
   } finally {
     await stop(proc);
     rmSync(dir, { recursive: true, force: true });
@@ -696,7 +723,7 @@ test("a detail page's lastmod is when its newest dated evidence happened, never 
 
   // The same joins the pages make: work -> its readings; market -> its work; occupation -> the markets serving it;
   // group -> its occupations.
-  const occurred = new Map(events.map((e) => [e.event_id, e.occurred_at]));
+  const occurred = new Map(events.map((e) => [e.event_id, e.occurred_at ?? e.announced_at]));
   const byActivity = new Map();
   for (const row of evidence) byActivity.set(row.activity_id, latest([byActivity.get(row.activity_id), occurred.get(row.event_id)]));
   const byMarket = new Map();
@@ -814,9 +841,9 @@ test("the home page's count of recent updates covers only the last 30 days of th
   const coverage = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "coverage.json"), "utf8"));
   const levelled = new Set(chain.activities.filter((a) => a.evidence_rows && a.level).map((a) => a.activity_id));
   const used = new Set(chain.evidence.filter((r) => r.level != null && r.observed_level != null && levelled.has(r.activity_id)).map((r) => r.event_id));
-  const last = Date.parse(coverage.collection_window.last.slice(0, 10));
+  const last = Math.max(Date.parse(coverage.collection_window.last.slice(0, 10)), ...chain.events.map((e) => Date.parse((e.occurred_at ?? e.announced_at ?? "").slice(0, 10))).filter(Number.isFinite));
   const day = 24 * 60 * 60 * 1000;
-  const recent = chain.events.filter((e) => used.has(e.event_id) && e.occurred_at && last - Date.parse(e.occurred_at.slice(0, 10)) < 30 * day).length;
+  const recent = chain.events.filter((e) => used.has(e.event_id) && (e.occurred_at ?? e.announced_at) && last - Date.parse((e.occurred_at ?? e.announced_at).slice(0, 10)) < 30 * day).length;
   for (const [language, label] of [["en", "AI updates in 30 days"], ["zh-CN", "30 天内的 AI 更新"]]) {
     const text = html(language, "").replace(/<script[\s\S]*?<\/script>/g, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
     const shown = text.match(new RegExp(`(\\d+) ${label}`))?.[1];

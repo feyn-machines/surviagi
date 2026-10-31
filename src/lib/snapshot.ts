@@ -1,3 +1,4 @@
+import { updateTimestamp } from "./update-date";
 import { LEVEL_NAMES } from "@/lib/level-names";
 import { activityAnchor } from "./anchors";
 
@@ -130,6 +131,7 @@ export type Reading = EvidenceRow & {
   title: string;
   summary: string;
   occurred_at: string | null;
+  announced_at?: string;
   org_name: string | null;
   source_urls: string[];
 };
@@ -618,6 +620,7 @@ function reading(store: Store, row: EvidenceRow): Reading {
     title: event?.title ?? "",
     summary: event?.summary ?? "",
     occurred_at: event?.occurred_at ?? null,
+    announced_at: event?.announced_at,
     org_name: event?.org_name ?? null,
     source_urls: event?.source_urls ?? [],
   };
@@ -645,7 +648,7 @@ export function evidenceForActivity(activityId: string): Reading[] {
   return (store.data?.chain.evidence ?? [])
     .filter((row) => row.activity_id === activityId)
     .map((row) => reading(store, row))
-    .sort((a, b) => (b.occurred_at ?? "").localeCompare(a.occurred_at ?? ""));
+    .sort((a, b) => (updateTimestamp(b) ?? "").localeCompare(updateTimestamp(a) ?? ""));
 }
 
 /**

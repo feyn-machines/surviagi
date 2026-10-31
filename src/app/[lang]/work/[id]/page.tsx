@@ -1,3 +1,4 @@
+import { updateDateLabel } from "@/lib/update-date";
 import { plural } from "@/lib/plural";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -150,7 +151,7 @@ export default async function WorkPage({ params }: Props) {
       <ul className={s.list}>
         {rows.map((r) => (
           <li key={r.event_id} className={s.row}>
-            <div className={s.when}><b>{r.occurred_at ? r.occurred_at.slice(0, 10) : c.undated}</b>{r.org_name}</div>
+            <div className={s.when}><b>{updateDateLabel(r, language) ?? c.undated}</b>{r.org_name}</div>
             <div className={s.what}>
               <Link className={s.name} href={updateHref(language, r.event_id)}>{r.title}</Link>
               <p>{r.summary}</p>

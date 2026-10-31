@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLabel } from "@/lib/update-date";
 import { plural } from "@/lib/plural";
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -35,6 +36,8 @@ export type UpdateRow = {
   title: string;
   /** Already `2026-09-14`; null when no publication time was recorded. */
   date: string | null;
+  timestamp: string | null;
+  announced: boolean;
   /** What the reader sees. */
   org: string | null;
   /** The publisher's registry name, which is what the chart filters on: the
@@ -130,7 +133,7 @@ export function UpdatesBrowser({
       if (needle && !(haystack.get(row.id) ?? "").includes(needle)) return false;
       return true;
     });
-    const byDate = (a: UpdateRow, b: UpdateRow) => (b.date ?? "").localeCompare(a.date ?? "");
+    const byDate = (a: UpdateRow, b: UpdateRow) => (b.timestamp ?? "").localeCompare(a.timestamp ?? "");
     return sort === "time"
       ? [...filtered].sort(byDate)
       : [...filtered].sort((a, b) => b.activities - a.activities || byDate(a, b));
@@ -247,7 +250,7 @@ export function UpdatesBrowser({
                   const isOpen = open === row.id;
                   return [
                     <tr key={row.id}>
-                      <td className={s.cellWhen}>{row.date ?? <Blank reason={copy.noDate} />}</td>
+                      <td className={s.cellWhen}>{dateLabel(row.date, row.announced, language) ?? <Blank reason={copy.noDate} />}</td>
                       <th scope="row">
                         {row.readings.length > 0 ? (
                           <Link className={s.title} href={updateHref(language, row.id)}>

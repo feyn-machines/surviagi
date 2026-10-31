@@ -1,3 +1,4 @@
+import { updateDateLabel } from "@/lib/update-date";
 import { LEVEL_NAMES, TIER_NAMES } from "@/components/home/sections/levels";
 import { detailCopy, fill } from "@/app/[lang]/markets/copy";
 import { termNameOrRaw } from "@/components/ontology-labels";
@@ -73,7 +74,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
       : `L${accepted} ${levels[accepted]}`;
     const source = r.source_urls[0] ? ` · [${c.source.replace(/\s*↗$/, "")}](${r.source_urls[0]})` : "";
     body.push(
-      `- ${r.occurred_at ? r.occurred_at.slice(0, 10) : c.undated} · ${r.org_name ?? ""} · ` +
+      `- ${updateDateLabel(r, language) ?? c.undated} · ${r.org_name ?? ""} · ` +
         `${link(language, r.title, `/updates/${r.event_id}`)}${sep}${claimed} · ${tiers[r.evidence_tier] ?? r.evidence_tier}${source}`,
     );
     if (r.summary) body.push(`  ${r.summary.replace(/\s+/g, " ")}`);
