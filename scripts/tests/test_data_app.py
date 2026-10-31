@@ -69,7 +69,8 @@ class Schema(AppBase):
         before = self.tables()
         app_db.apply_schema(self.conn)
         self.assertEqual(self.tables(), before)
-        self.assertEqual(before, ["account", "admins", "api_keys", "editorial_feedback_applications",
+        self.assertEqual(before, ["account", "admins", "api_keys", "editorial_approval_batch_items",
+                                  "editorial_approval_batches", "editorial_feedback_applications",
                                   "editorial_feedback_sample_applications", "editorial_feedback_samples",
                                   "editorial_review_annotations", "editorial_review_edits", "editorial_reviews",
                                   "questions", "session", "submissions", "subscriptions", "topic_votes", "user",
