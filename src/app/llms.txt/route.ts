@@ -1,8 +1,6 @@
-import { LEVEL_LINE, LEVEL_MEANINGS, LEVEL_NAMES } from "@/lib/level-names";
 import { DISCORD_URL, GITHUB_URL, SITE_NAME, SITE_URL, X_URL, absoluteUrl } from "@/lib/seo";
 import { SITE_NAV, siteNavCopy } from "@/lib/site-nav";
 import { buildHomeData } from "@/lib/home-data";
-import { workSlug } from "@/lib/routes";
 import { manifest as dataManifest, markets, marketSlug } from "@/lib/snapshot";
 import publishedArticles from "@/content/articles.json";
 import { approvedEditorialArticles } from "@/lib/editorial-store";
@@ -10,8 +8,8 @@ import { approvedEditorialArticles } from "@/lib/editorial-store";
 export const dynamic = "force-dynamic";
 
 /**
- * A short map of the site for language models, built from the same navigation,
- * level names and the loaded release's manifest the pages use, so it cannot drift from
+ * A short map of the site for language models, built from the same navigation
+ * and the loaded release's manifest the pages use, so it cannot drift from
  * them. English, with the Chinese entry point named.
  */
 export async function GET() {
@@ -40,7 +38,7 @@ export async function GET() {
   const lines = [
     `# ${SITE_NAME}`,
     "",
-    "> SurviAGI (The AGI Survival Guide; 新人类 AI 生存指南; formerly openaiwill) is an independent initiative, not affiliated with any AI company, to make progress toward AI independently completing major production and service work more transparent and credible. Each reading links to the official update it rests on.",
+    "> SurviAGI (The AGI Survival Guide; 新人类 AI 生存指南; formerly openaiwill) is an independent initiative, not affiliated with any AI company, to make progress toward AI independently completing major production and service work more transparent and credible. Each update links to the original posts it rests on.",
     "",
     ...(home ? standing(home) : []),
     "## Pages",
@@ -72,7 +70,7 @@ export async function GET() {
     "",
     "## For AI agents",
     "",
-    "Use SurviAGI to find AI updates and evidence related to specific work, such as accounting, customer support and software development. Search by short task or product keywords, read the matching record, and check its original sources. Machine summaries and work-level readings are unreviewed; public articles identify their approval or preview status. Records do not establish that an entire occupation is automated, and coverage can be incomplete.",
+    "Use SurviAGI to find AI updates and evidence related to specific work, such as accounting, customer support and software development. Search by short task or product keywords, read the matching record, and check its original sources. Machine summaries are unreviewed; public articles identify their approval or preview status. Records do not establish that an entire occupation is automated, and coverage can be incomplete.",
     "",
     `Install the SurviAGI HTTP Skill: ${SITE_URL}/api/agent/packages/surviagi-http.zip (SKILL.md and a Python 3 script; no dependencies or key for reading). Installation guide: ${absoluteUrl("en", "/agents")}#install.`,
     "",
@@ -83,23 +81,13 @@ export async function GET() {
     "",
     `Data contract: a JSON Schema per record type and an OpenAPI description, with every field graded (quote, excerpt, machine, human, record) and four separate versions on every response (contract, ontology, method, data). Index: ${SITE_URL}/contract/v1/index.json; OpenAPI: ${SITE_URL}/contract/v1/openapi.json.`,
     "",
-    "## Levels",
-    "",
-    "Each kind of work carries the highest level its evidence supports. " +
-      `${LEVEL_LINE.en} A level is accepted only with the evidence it requires; a claim above it is kept as a claim.`,
-    "",
-    ...LEVEL_NAMES.en.map((name, level) => {
-      const { roles, evidence } = LEVEL_MEANINGS.en[level];
-      return `- L${level} ${name}: ${roles}${evidence === "—" ? "" : ` Evidence required: ${evidence}.`}`;
-    }),
-    "",
     "## Data",
     "",
     ...(manifest
       ? [
           `- Generated: ${manifest.generated_at}`,
           `- Method: ${manifest.method_version}; ontology ${manifest.schema_version}`,
-          "- Status: machine-proposed. No person has reviewed these readings and the method is not calibrated.",
+          "- Status: machine-proposed. No person has reviewed these records and the method is not calibrated.",
         ]
       : ["- No data snapshot is published in this build."]),
     "",
@@ -113,23 +101,15 @@ export async function GET() {
 
 /**
  * Where things stand, in one dated sentence an engine can quote, with the same
- * numbers the home page shows (both come from `buildHomeData`), followed by the
- * work that has gone furthest: the pages with the most to say.
+ * numbers the home page shows (both come from `buildHomeData`). It states counts
+ * of collected updates only: the L0–L5 level scale is retired (Issue #35).
  */
 function standing(home: NonNullable<ReturnType<typeof buildHomeData>>): string[] {
-  const top = Math.max(...home.works.map((w) => w.level));
-  const furthest = home.works.filter((w) => w.level === top).sort((a, b) => a.name.en.localeCompare(b.name.en));
-  const works = (n: number) => `${n} ${n === 1 ? "kind" : "kinds"} of work`;
   return [
     "## Where things stand",
     "",
-    `As of ${home.generatedAt}, AI updates have given a level to ${home.works.length} of the ${home.catalogueWorks} kinds of work ` +
-      `in the catalogue; the furthest any has reached is L${top} ${LEVEL_NAMES.en[top]}, held by ${works(furthest.length)}. ` +
-      `${home.updates.length} updates from ${home.orgsTracked} AI companies bear on them, collected since ${home.start}.`,
-    "",
-    `### At L${top}`,
-    "",
-    ...furthest.map((w) => `- [${w.name.en}](${absoluteUrl("en", `/work/${workSlug(w.id)}`)}) (${w.market.en})`),
+    `As of ${home.generatedAt}, ${home.updates.length} updates from ${home.orgsTracked} AI companies bear on the ${home.catalogueWorks} kinds of work ` +
+      `in the catalogue, collected since ${home.start}. An update is a record of what a company or person said it did; it is not a measure of what AI can do.`,
     "",
   ];
 }

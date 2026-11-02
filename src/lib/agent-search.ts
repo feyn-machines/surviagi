@@ -26,6 +26,19 @@ import {
 export const RECORD_TYPES = ["update", "question", "evidence", "article"] as const;
 export type RecordType = (typeof RECORD_TYPES)[number];
 
+/**
+ * What a search covers when `types` is not given. Evidence readings carry the L0–L5 level scale, which is being
+ * retired (Issue #35), so they are returned only when asked for by name.
+ */
+export const DEFAULT_RECORD_TYPES: readonly RecordType[] = ["update", "question", "article"];
+
+/** Sent with every evidence reading until the type is removed: one contract minor version after this one. */
+export const EVIDENCE_DEPRECATION = {
+  since: "contract 1.1.0",
+  reason: "The L0–L5 level scale is retired; level, claimed_level and evidence_tier no longer describe a conclusion. Observations replace evidence readings.",
+  issue: "https://github.com/feyn-machines/surviagi/issues/35",
+} as const;
+
 export const MAX_QUERY = 200;
 export const MAX_RESULTS = 20;
 export const DEFAULT_RESULTS = 8;
@@ -36,7 +49,7 @@ const DETAIL_ROWS = 30;
 export const CONTENT_KINDS = {
   machine_summary: "Written by our pipeline from the source posts; not the source's own words.",
   post_quote: "Words copied from the original post, possibly shortened.",
-  machine_reading: "A level proposed by our judge for one kind of work; not reviewed by a person.",
+  machine_reading: "Deprecated: a level proposed by our judge for one kind of work, from the retired L0–L5 scale; not reviewed by a person.",
   editorial_article: "A public bilingual editorial article. Its status says whether the exact revision is a preview or approved.",
 } as const;
 
@@ -144,7 +157,7 @@ function buildDocs(): Doc[] {
       id: evidenceId(r),
       type: "evidence",
       title: `${work.label_en} ← ${update.title}`,
-      snippet: clip(`L${r.level ?? "?"} (${r.evidence_tier}) · ${work.market_en} · ${update.summary || update.title}`),
+      snippet: clip(`${work.market_en} · ${update.summary || update.title}`),
       content: "machine_reading",
       date: update.occurred_at,
       organization: update.org_name,
@@ -226,7 +239,7 @@ export function rankedSearch(input: SearchInput): { query: string; total: number
   const words = terms(input.query);
   const phrase = lower(input.query).trim();
   const limit = Math.min(MAX_RESULTS, Math.max(1, input.limit ?? DEFAULT_RESULTS));
-  const types = new Set(input.types ?? RECORD_TYPES);
+  const types = new Set<RecordType>(input.types ?? DEFAULT_RECORD_TYPES);
   const language = input.language ?? "en";
   const need = words.length <= 2 ? words.length : Math.ceil(words.length / 2);
   const scored: { doc: Doc; score: number }[] = [];
@@ -320,6 +333,7 @@ function readingSummary(r: EvidenceRow, language: Language) {
     claimed_level: r.observed_level,
     evidence_tier: r.evidence_tier,
     status: r.status,
+    deprecated: EVIDENCE_DEPRECATION,
   };
 }
 
@@ -373,6 +387,7 @@ function evidenceRecord(r: EvidenceRow, e: ChainEvent, language: Language) {
     url: workUrl ?? absoluteUrl(language, `/updates/${e.event_id}`),
     content: "machine_reading" as const,
     review: REVIEW,
+    deprecated: EVIDENCE_DEPRECATION,
     status: r.status,
     work: work ? { label: work.label_en, label_zh_cn: work.label_zh_cn, market: work.market_en, market_zh_cn: work.market_zh_cn } : null,
     work_url: workUrl,

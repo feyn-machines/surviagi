@@ -21,14 +21,14 @@ export const agentsCopy: Record<Language, { title: string; description: string; 
         id: "when-to-use",
         body: [
           "Ask which AI updates relate to accounting, customer support or software work; find the source behind a claim; or trace a published reading to the specific work it concerns. Search for short task or product keywords, then read the relevant records and their original sources.",
-          "Records are evidence leads, not proof that a whole job can be automated. Machine summaries and work-level readings are unreviewed; editorial articles show their own approval or preview status. Coverage can be incomplete.",
+          "Records are evidence leads, not proof that a whole job can be automated. Machine summaries are unreviewed; editorial articles show their own approval or preview status. Coverage can be incomplete.",
         ],
       },
       {
         heading: "What an agent can do",
         id: "tools",
         body: [
-          "search: find published updates, questions, evidence readings and public bilingual articles. For articles, use types=[article] and optionally status=approved or preview. A preview is public but not approved; each result includes its exact revision, sources, evidence cutoff and language-specific link.",
+          "search: find published updates, questions and public bilingual articles. Evidence readings with the retired L0–L5 levels are deprecated and returned only with types=[evidence]. For articles, use types=[article] and optionally status=approved or preview. A preview is public but not approved; each result includes its exact revision, sources, evidence cutoff and language-specific link.",
           "get_record: read an article revision's complete Markdown and publication status by its article:<slug>:v<version> id, or read an update/question/evidence record in full. Private drafts, reviewer identities and review notes are never returned.",
           "With a key: submit_question registers a research question for review, suggest_account registers an X account to monitor, and my_submissions shows their status and the quota left.",
           "The site finds and registers; it does not answer. The agent does the analysis. No query, empty search or submission starts a model, a research run or a collection here.",
@@ -46,7 +46,7 @@ export const agentsCopy: Record<Language, { title: string; description: string; 
           "https://surviagi.com/api/mcp/submit          + submit_question, suggest_account, my_submissions",
           "                                             header  Authorization: Bearer sag_…",
           "",
-          "GET  https://surviagi.com/api/agent/search?query=coding+agents&limit=5&types=update,evidence,article&status=preview",
+          "GET  https://surviagi.com/api/agent/search?query=coding+agents&limit=5&types=update,article&status=preview",
           "GET  https://surviagi.com/api/agent/record?id=ev-…",
           "POST https://surviagi.com/api/agent/questions     (key)  {question, why_it_matters, evidence_gap, leads?, related_record_ids?, request_id?}",
           "POST https://surviagi.com/api/agent/accounts      (key)  {account, kind, reason, field?, request_id?}",
@@ -116,14 +116,14 @@ export const agentsCopy: Record<Language, { title: string; description: string; 
         id: "when-to-use",
         body: [
           "想知道哪些 AI 更新涉及会计、客服或软件工作，查找某项说法的来源，或追溯一条公开读数对应的具体工作时，可以使用。先用简短的工作或产品关键词搜索，再读取相关记录和原始来源。",
-          "记录提供证据线索，不能证明整个职业已能被自动化。机器摘要和工作等级未经人工审核；文章分别标明已批准或预发布状态。覆盖可能不完整。",
+          "记录提供证据线索，不能证明整个职业已能被自动化。机器摘要未经人工审核；文章分别标明已批准或预发布状态。覆盖可能不完整。",
         ],
       },
       {
         heading: "助手能做什么",
         id: "tools",
         body: [
-          "search：搜索已发布的更新、问题、证据读数和公开双语文章。检索文章时传 types=[article]，可用 status=approved 或 preview 筛选。预发布稿公开可读但尚未批准；每条结果都带精确版本、来源、证据截止时间和对应语言的链接。",
+          "search：搜索已发布的更新、问题和公开双语文章。带已退役 L0–L5 等级的证据读数已弃用，仅在 types=[evidence] 时返回。检索文章时传 types=[article]，可用 status=approved 或 preview 筛选。预发布稿公开可读但尚未批准；每条结果都带精确版本、来源、证据截止时间和对应语言的链接。",
           "get_record：传 article:<文章 ID>:v<版本> 可读取该版文章全文和真实发布状态；也可读取更新、问题或证据详情。私有草稿、审核人身份和审核意见不会返回。",
           "有 Key 时：submit_question 登记待审核的研究问题，suggest_account 登记建议监测的 X 账号，my_submissions 查看审核状态和剩余额度。",
           "本站只负责检索和登记，不负责回答，分析由助手完成。任何查询、无结果的搜索或提交都不会在本站启动模型、研究或采集。",
@@ -141,7 +141,7 @@ export const agentsCopy: Record<Language, { title: string; description: string; 
           "https://surviagi.com/api/mcp/submit          + submit_question, suggest_account, my_submissions",
           "                                             请求头  Authorization: Bearer sag_…",
           "",
-          "GET  https://surviagi.com/api/agent/search?query=coding+agents&limit=5&types=update,evidence,article&status=preview",
+          "GET  https://surviagi.com/api/agent/search?query=coding+agents&limit=5&types=update,article&status=preview",
           "GET  https://surviagi.com/api/agent/record?id=ev-…",
           "POST https://surviagi.com/api/agent/questions     (Key)  {question, why_it_matters, evidence_gap, leads?, related_record_ids?, request_id?}",
           "POST https://surviagi.com/api/agent/accounts      (Key)  {account, kind, reason, field?, request_id?}",
@@ -176,7 +176,7 @@ export const agentsCopy: Record<Language, { title: string; description: string; 
         id: "reading",
         body: [
           "只有本站已公开的内容：与页面展示相同的更新、问题、读数以及文章的当前公开批准版或预发布版。文章批准状态按中英两个版本的发布范围如实提供。读不到任何人的提交、原始采集数据或内部审核状态。",
-          "所有摘要和等级都由机器提出、未经人工审核；每段文字都标明是我们的摘要、读数，还是来源原话的摘录。来源帖子的全文未发布，请打开来源链接查看；X Article、外链文章和 PDF 未采集。",
+          "所有摘要都由机器提出、未经人工审核；每段文字都标明是我们的摘要、读数，还是来源原话的摘录。来源帖子的全文未发布，请打开来源链接查看；X Article、外链文章和 PDF 未采集。",
           "引用时请写记录的页面地址和数据版本的生成时间。",
         ],
       },
