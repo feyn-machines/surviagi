@@ -38,6 +38,8 @@ export type DirectoryRow = {
   share: number;
   /** Tasks an update bears on. Zero means nobody has looked. */
   touched: number;
+  /** Observations mapped to the occupation; null when the release carries none. */
+  observations: number | null;
 };
 
 export type DirectoryGroup = {
@@ -48,10 +50,10 @@ export type DirectoryGroup = {
   share: number;
 };
 
-type SortKey = "share" | "tasks" | "name";
+type SortKey = "observations" | "share" | "tasks" | "name";
 type ReadKey = "all" | "read" | "unread";
 
-const SORTS: SortKey[] = ["share", "tasks", "name"];
+const SORTS: SortKey[] = ["observations", "share", "tasks", "name"];
 const READS: ReadKey[] = ["all", "read", "unread"];
 
 /** Where a share falls. Index 0 is a measured zero and stays its own band. */
@@ -82,6 +84,7 @@ const copy = bilingual({
     groupLabel: "Occupation group",
     groupAll: "All 23 groups",
     sortLabel: "Sort by",
+    sortObservations: "Observations",
     sortShare: "Touched",
     sortTasks: "Tasks",
     sortName: "Name",
@@ -94,6 +97,8 @@ const copy = bilingual({
     clear: "Clear filters",
     controls: "Find your occupation",
     colTasks: "tasks",
+    colObs: "obs.",
+    obsTitle: "{n} observations mapped to this occupation",
     colShare: "touched",
     shareNote: "The number is the share of an occupation's tasks that at least one collected update bears on. It describes what was collected, not what AI can do.",
     emptyTitle: "Nothing matches.",
@@ -120,6 +125,7 @@ const copy = bilingual({
     groupLabel: "职业组",
     groupAll: "全部 23 组",
     sortLabel: "排序",
+    sortObservations: "观察数",
     sortShare: "已触及",
     sortTasks: "任务数",
     sortName: "名称",
@@ -132,6 +138,8 @@ const copy = bilingual({
     clear: "清除筛选",
     controls: "找到你自己的职业",
     colTasks: "项任务",
+    colObs: "条",
+    obsTitle: "有 {n} 条观察映射到这个职业",
     colShare: "已触及",
     shareNote: "这个数字是该职业的任务里，至少有一条采集到的更新谈到的比例。它说的是采集到了什么，不是 AI 能做什么。",
     emptyTitle: "没有匹配的行。",
@@ -169,7 +177,9 @@ export function OccupationDirectory({
   // One group at a time: the page opens on the group furthest along, and a search looks through all of them.
   const first = useMemo(() => [...groups].sort((a, b) => b.share - a.share)[0]?.id ?? "", [groups]);
   const [group, setGroup] = useState(first);
-  const [sort, setSort] = useState<SortKey>("share");
+  // Observations lead once the release carries them (Issue #32); before that, the touched share.
+  const published = rows.some((row) => row.observations !== null);
+  const [sort, setSort] = useState<SortKey>(published ? "observations" : "share");
   const [read, setRead] = useState<ReadKey>("all");
   const [band, setBand] = useState<number | null>(null);
 
@@ -198,6 +208,7 @@ export function OccupationDirectory({
     kept.sort((a, b) => {
       if (sort === "tasks") return b.tasks - a.tasks || byText(a.label, b.label);
       if (sort === "name") return a.label.localeCompare(b.label, language);
+      if (sort === "observations") return (b.observations ?? 0) - (a.observations ?? 0) || b.share - a.share || byText(a.label, b.label);
       return b.share - a.share || b.touched - a.touched || byText(a.label, b.label);
     });
     return kept;
@@ -306,7 +317,7 @@ export function OccupationDirectory({
         <fieldset className={s.chipField}>
           <legend className={s.controlLabel}>{c.sortLabel}</legend>
           <div className={s.chips}>
-            {SORTS.map((key) => (
+            {SORTS.filter((key) => published || key !== "observations").map((key) => (
               <button
                 key={key}
                 type="button"
@@ -314,7 +325,7 @@ export function OccupationDirectory({
                 aria-pressed={sort === key}
                 onClick={() => setSort(key)}
               >
-                {key === "share" ? c.sortShare : key === "tasks" ? c.sortTasks : c.sortName}
+                {key === "observations" ? c.sortObservations : key === "share" ? c.sortShare : key === "tasks" ? c.sortTasks : c.sortName}
               </button>
             ))}
           </div>
@@ -384,8 +395,17 @@ export function OccupationDirectory({
             <ul className={s.list}>
               {members.map((member) => (
                 <li key={member.id} className={s.item}>
-                  <Link className={s.row} href={href(language, `/occupations/${member.slug}`)}>
+                  <Link className={`${s.row} ${published ? s.rowObs : ""}`} href={href(language, `/occupations/${member.slug}`)}>
                     <span className={s.name}>{member.label}</span>
+                    {member.observations === null ? null : (
+                      <span
+                        className={`${s.obs} ${member.observations === 0 ? s.obsZero : ""}`}
+                        title={c.obsTitle.replace("{n}", String(member.observations))}
+                      >
+                        {member.observations}
+                        <span className={s.unit}> {c.colObs}</span>
+                      </span>
+                    )}
                     <span className={s.tasks}>
                       {member.tasks}
                       <span className={s.unit}> {c.colTasks}</span>

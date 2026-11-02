@@ -1323,6 +1323,9 @@ test("market and occupation pages count their observations by evidence type and 
   if (!existsSync(join(SNAPSHOT_DIR, "observations.json"))) {
     const market = await (await fetch(`${site.base}/markets/accounting-audit-assurance`)).text();
     assert.ok(market.includes("This data release does not carry observations yet."));
+    for (const path of ["/markets", "/occupations"]) {
+      assert.ok((await (await fetch(`${site.base}${path}`)).text()).includes("This data release does not carry observations yet."), `${path} says the release has none`);
+    }
   }
   const dir = mkdtempSync(join(tmpdir(), "surviagi-observations-"));
   cpSync(SNAPSHOT_DIR, dir, { recursive: true });
@@ -1392,6 +1395,14 @@ test("market and occupation pages count their observations by evidence type and 
     assert.match(occ, /1 observation bears on .*: 1 production use\./);
     assert.ok(occ.includes("None of them says a person is still needed.") && !occ.includes("obs-b"));
     assert.ok((await (await fetch(`${base}${occupationPath}`)).text()).includes('id="obs-a"'));
+
+    // The list pages count the same rows once each, and each row links to its page's evidence.
+    const marketCount = new Set(work.map((w) => w.market_id)).size;
+    const markets = await (await fetch(`${base}/markets`)).text();
+    assert.ok(markets.includes(`5 observations are mapped to 2 of the ${marketCount} markets: 1 production use, 1 measurement, 1 own use, 2 vendor claim.`), "markets overview");
+    assert.ok(markets.includes(`href="${marketPath}#evidence">3</a>`), "the market row links its count to the page's evidence");
+    const occupationsPage = await (await fetch(`${base}/zh-CN/occupations`)).text();
+    assert.match(occupationsPage, /有 1 条观察映射到 \d+ 个职业中的 1 个：生产使用 1 条。/, "occupations overview");
 
     const empty = work.find((w) => ![marketId, elsewhere.market_id].includes(w.market_id)).market_id;
     const none = await (await fetch(`${base}/markets/${empty.replace(/^oaw:market:/, "")}/raw.md`)).text();

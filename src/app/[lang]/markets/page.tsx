@@ -8,6 +8,8 @@ import {
   activitiesOfMarket,
   markets,
   marketSlug,
+  observationsOfMarket,
+  observationsPublished,
   occupationsOfMarket,
   snapshotExists,
   updateCountByMarket,
@@ -19,6 +21,7 @@ import {
   Provenance,
   dataStyles as s,
 } from "@/components/data-page";
+import { ObservationOverview } from "@/components/observation-ledger";
 import { count, fill, indexCopy } from "./copy";
 import { MarketsExplorer, type MarketRow } from "./markets-explorer";
 import x from "./markets.module.css";
@@ -63,7 +66,9 @@ export default async function MarketsPage({ searchParams }: Props) {
   }
 
   const updatesOf = updateCountByMarket();
-  const rows: MarketRow[] = markets().map((market) => {
+  const published = observationsPublished();
+  const ledgers = markets().map((market) => observationsOfMarket(market.id));
+  const rows: MarketRow[] = markets().map((market, i) => {
     const activities = activitiesOfMarket(market.id);
     const name = (language === "zh-CN" ? market.zh_cn : market.en) ?? market.en;
     return {
@@ -76,6 +81,7 @@ export default async function MarketsPage({ searchParams }: Props) {
       scored: activities.filter((a) => (a.updates ?? 0) > 0).length,
       updates: updatesOf.get(market.id) ?? 0,
       occupations: occupationsOfMarket(market.id).length,
+      observations: published ? ledgers[i].length : null,
     };
   });
 
@@ -120,6 +126,8 @@ export default async function MarketsPage({ searchParams }: Props) {
           />
         </div>
       </Screen>
+
+      <ObservationOverview byPage={ledgers} kind="markets" language={language} />
 
       {rows.length === 0 ? (
         <p>{c.empty}</p>
