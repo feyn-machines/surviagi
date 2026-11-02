@@ -17,7 +17,7 @@ examples_en:
 
 ## 搜索与读取
 
-与「SurviAGI 搜索」相同：问职业或生意时先 `occupation_summary`，再按需 `query_observations`；其他问题先 `search`，再对相关结果 `get_record`；区分 `machine_summary`（摘要）、`post_quote`（原话摘录）和 `machine_reading`（机器等级），附上记录 `url` 和数据版本 `generated_at`，原文请给出 `sources` 链接。所有内容均为机器提出、未经审核。
+与「SurviAGI 搜索」相同：问职业或生意时先 `occupation_summary`，再按需 `query_observations`，问上次以来的新证据用 `changes_since`；其他问题先 `search`，再对相关结果 `get_record`；区分 `machine_summary`（摘要）、`post_quote`（原话摘录）和 `machine_reading`（机器等级），附上记录 `url` 和数据版本 `generated_at`，原文请给出 `sources` 链接。所有内容均为机器提出、未经审核。
 
 ## 提交研究问题（submit_question）
 

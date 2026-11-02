@@ -18,6 +18,7 @@ examples_en:
 当用户问到 AI 能否独立完成某类工作、某个职业或行业是否会被 AI 取代、某家 AI 公司最近发布了什么，按以下步骤使用 SurviAGI：
 
 1. 问到某个职业或某类生意（例如“AI 会取代会计吗”）时，先调用 `occupation_summary`（`occupation` 或 `market`，可传 ID 或中英文名称；名称有多个匹配时会返回候选 ID），读取按证据类型的计数、近 30/90 天条数、最有分量和反方向的观察。需要更多条目时调用 `query_observations`，按职业/赛道、组织、产品、证据类型、方向（`human_still_needed` 是反方向）和日期过滤，用 `next_cursor` 翻页。引用计数时说明它们截至 `counts.as_of`，是从采集到的帖子里机器读出的观察数，不是这份工作本身被替代的比例。
+   用户问“上次以来/最近有什么新证据”时调用 `changes_since`，`since` 传上次回答里的 `versions.data`（数据版本 ID）或日期，可加 `occupation`/`market` 只看那里的新内容。列出的观察是在那之后首次记入的，不可能在更早的版本里；更新只列那之后发生的，是下限。条目多于 `limit` 时，用 `observations.recorded.more` 给出的参数调用 `query_observations` 翻页。
 2. 调用 `search`，`query` 用用户问题里的关键词（公司、模型、工作类型、职业；中英文都可以）。需要时用 `types`（`update`、`question`、`evidence`、`article`）和 `from`/`to`（YYYY-MM-DD）缩小范围；文章可加 `status: "approved"` 或 `"preview"`。预发布稿公开但未批准；引用时说明精确 `revision_id` 和 `status`。`limit` 默认 8、最多 20。用户用中文时传 `language: "zh-CN"`，链接会指向中文页面。
 3. 对最相关的 2–5 条结果调用 `get_record`（传结果里的 `id`，包括观察 `obs-…`），读取详情和来源。
 4. 回答时：

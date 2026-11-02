@@ -20,10 +20,12 @@ python3 scripts/surviagi.py summary --occupation "会计师与审计师" [--lang
 python3 scripts/surviagi.py summary --market accounting-audit-assurance
 # 观察列表：按职业/赛道、组织、产品、证据类型、方向、日期过滤，--cursor 翻页
 python3 scripts/surviagi.py observations --occupation 13-2011.00 [--evidence-types production_use,measurement] [--directions human_still_needed] [--from 2026-10-01] [--order newest] [--limit 10] [--cursor …]
+# 自某数据版本（上次回答的 versions.data）或日期以来的新观察、新出处、新话题与主张、更新和文章；可限定职业/赛道
+python3 scripts/surviagi.py changes 2026-11-01 [--occupation "会计师与审计师"] [--limit 10]
 # 以下需要环境变量 SURVIAGI_API_KEY（在 https://surviagi.com/zh-CN/agents#keys 生成）
 python3 scripts/surviagi.py question --question "…" --why "…" --gap "…" [--leads "…"] [--related id1,id2]
 python3 scripts/surviagi.py account @name --kind person --reason "…" [--field "…"]
 python3 scripts/surviagi.py mine
 ```
 
-输出是 JSON。文章结果会标明精确 `revision_id` 和 `status`：`preview` 是公开预发布、尚未批准；`approved` 是双语当前批准版本。用 `record` 可读取全文、来源和证据截止时间。私有草稿及审核意见不会被返回。问职业或生意时先用 `summary`，计数截至 `counts.as_of`，是机器从采集帖子里读出的观察数，不是被替代的比例；观察的 `task` 是概括，数字请引用 `facts[].quote` 原文。数据记录仍需区分 `machine_summary`、`post_quote`、`machine_reading`，附 `url` 和 `release.generated_at`，原文看 `sources`。提交前先搜索，问题与理由由你整理；提交只是待审核申请，不会自动研究或采集。脚本为每次提交自动生成 `request_id`，网络失败时可用 `--request-id` 传回同一个值重试，不会重复登记。
+输出是 JSON。文章结果会标明精确 `revision_id` 和 `status`：`preview` 是公开预发布、尚未批准；`approved` 是双语当前批准版本。用 `record` 可读取全文、来源和证据截止时间。私有草稿及审核意见不会被返回。问“上次以来有什么新证据”时用 `changes`，传上次回答里的 `versions.data` 或日期；列出的都不可能在更早的版本里，更新只是下限；条目多于 `limit` 时按 `observations.recorded.more` 给出的参数用 `observations` 翻页。问职业或生意时先用 `summary`，计数截至 `counts.as_of`，是机器从采集帖子里读出的观察数，不是被替代的比例；观察的 `task` 是概括，数字请引用 `facts[].quote` 原文。数据记录仍需区分 `machine_summary`、`post_quote`、`machine_reading`，附 `url` 和 `release.generated_at`，原文看 `sources`。提交前先搜索，问题与理由由你整理；提交只是待审核申请，不会自动研究或采集。脚本为每次提交自动生成 `request_id`，网络失败时可用 `--request-id` 传回同一个值重试，不会重复登记。

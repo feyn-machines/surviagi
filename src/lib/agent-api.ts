@@ -36,6 +36,7 @@ import {
   conceptSummary,
   decodeCursor,
   DEFAULT_OBSERVATIONS,
+  DEFAULT_CHANGES,
   DIRECTIONS,
   encodeCursor,
   filterObservations,
@@ -50,7 +51,8 @@ import {
   sortObservations,
   type ObservationFilter,
 } from "./agent-observations";
-import { EDITORIAL_STATUSES, getEditorialArticleRecord, parseEditorialRevisionId, searchEditorialArticles } from "./editorial-agent";
+import { editorialChangesSince, EDITORIAL_STATUSES, getEditorialArticleRecord, parseEditorialRevisionId, searchEditorialArticles } from "./editorial-agent";
+import { CHANGES_NOTE, parseSince, releaseChanges, type Since } from "./agent-changes";
 
 /**
  * The agent tools (Issue #5), shared by the MCP endpoints and the plain HTTP API so the two cannot drift.
@@ -267,6 +269,19 @@ function dateArgs(args: Args): string | null {
   return null;
 }
 
+const SINCE_HELP = "a data release id (versions.data of an earlier answer, e.g. 20261102T081500Z-1a2b3c4d), a date YYYY-MM-DD (from its start, UTC) or a time with its offset (2026-11-02T08:00:00+08:00)";
+
+/** A moment to look after: a release id, a day or an instant. One in the future is refused. */
+function sinceArg(args: Args, name: string, required: boolean): { ok: true; value: Since | null } | { ok: false; outcome: Outcome } {
+  const given = text(args, name, 1, 64, required);
+  if (!given.ok) return { ok: false, outcome: fail(400, "invalid", `${given.message} Give ${SINCE_HELP}.`) };
+  if (given.value === null) return { ok: true, value: null };
+  const since = parseSince(given.value);
+  if (!since) return { ok: false, outcome: fail(400, "invalid", `\`${name}\` must be ${SINCE_HELP}.`) };
+  if (Date.parse(since.at) > Date.now()) return { ok: false, outcome: fail(400, "invalid", `\`${name}\` is in the future.`) };
+  return { ok: true, value: since };
+}
+
 const UNPUBLISHED = "This data release does not carry observations yet: counts are unknown, not zero.";
 
 export function runQueryObservations(args: Args): Outcome {
@@ -293,6 +308,8 @@ export function runQueryObservations(args: Args): Outcome {
   if (!reviewStates.ok) return fail(400, "invalid", reviewStates.message);
   const badDate = dateArgs(args);
   if (badDate) return fail(400, "invalid", badDate);
+  const recorded = sinceArg(args, "recorded_since", false);
+  if (!recorded.ok) return recorded.outcome;
   const order = args.order ?? "strength";
   if (typeof order !== "string" || !(ORDERS as readonly string[]).includes(order)) return fail(400, "invalid", `\`order\` must be one of: ${ORDERS.join(", ")}.`);
   let limit = DEFAULT_OBSERVATIONS;
@@ -318,6 +335,7 @@ export function runQueryObservations(args: Args): Outcome {
     organization: organization.value ?? undefined, subject: subject.value ?? undefined,
     evidenceTypes: evidenceTypes.value, directions: directions.value, outcomes: outcomes.value, reviewStates: reviewStates.value,
     from: (args.from as string | undefined) ?? null, to: (args.to as string | undefined) ?? null,
+    recordedSince: recorded.value?.at ?? null,
   };
   const published = observationsPublished();
   const rows = sortObservations(filterObservations(filter), order as (typeof ORDERS)[number]);
@@ -330,7 +348,7 @@ export function runQueryObservations(args: Args): Outcome {
       market: market.value ? candidateView(market.value, lang) : null,
       task: filter.task ?? null, organization: filter.organization ?? null, subject: filter.subject ?? null,
       evidence_types: filter.evidenceTypes ?? null, directions: filter.directions ?? null, outcomes: filter.outcomes ?? null,
-      review_states: filter.reviewStates ?? null, from: filter.from, to: filter.to, order,
+      review_states: filter.reviewStates ?? null, from: filter.from, to: filter.to, recorded_since: filter.recordedSince, order,
     },
     total: published ? rows.length : null,
     counts: published ? observationCounts(rows) : null,
@@ -354,6 +372,47 @@ export function runSummary(args: Args): Outcome {
   const concept = conceptArg(args, given[0], lang);
   if (!concept.ok) return concept.outcome;
   return ok({ ...conceptSummary(concept.value!, lang), content: OBSERVATION_CONTENT, release: releaseInfo(), versions: versionsInfo() });
+}
+
+export async function runChanges(args: Args): Promise<Outcome> {
+  const language = languageArg(args);
+  if (language === null) return fail(400, "invalid", "`language` must be en or zh-CN.");
+  const lang = language ?? "en";
+  const since = sinceArg(args, "since", true);
+  if (!since.ok) return since.outcome;
+  const occupation = conceptArg(args, "occupation", lang);
+  if (!occupation.ok) return occupation.outcome;
+  const market = conceptArg(args, "market", lang);
+  if (!market.ok) return market.outcome;
+  let limit = DEFAULT_CHANGES;
+  if (args.limit !== undefined && args.limit !== null) {
+    const n = typeof args.limit === "string" ? Number(args.limit) : args.limit;
+    if (typeof n !== "number" || !Number.isInteger(n) || n < 1 || n > MAX_OBSERVATIONS) {
+      return fail(400, "invalid", `\`limit\` must be a whole number from 1 to ${MAX_OBSERVATIONS}.`);
+    }
+    limit = n;
+  }
+  const at = since.value!;
+  const changes = releaseChanges({ since: at, occupation: occupation.value, market: market.value, limit, language: lang });
+  // Articles are not in data releases and are not mapped to occupations: only an unscoped answer reads them.
+  const scoped = !!(occupation.value || market.value);
+  let articles: Awaited<ReturnType<typeof editorialChangesSince>> | null = null;
+  if (!scoped) {
+    try {
+      articles = await editorialChangesSince(at.at, lang, limit);
+    } catch (error) {
+      console.error(`[agent] editorial changes failed: ${error instanceof Error ? error.message : "unknown error"}`);
+      return fail(503, "unavailable", "Public article reading is unavailable right now. Try again later.");
+    }
+  }
+  return ok({
+    ...changes,
+    articles,
+    content: OBSERVATION_CONTENT,
+    release: releaseInfo(),
+    versions: versionsInfo(),
+    note: `${changes.observations ? "" : `${UNPUBLISHED} `}${CHANGES_NOTE}${scoped ? " Scoped to one occupation or market: updates and articles are left out (null), as they are not mapped to it." : ""}${articles && !articles.available ? " Editorial articles are unavailable because the public article store is not configured." : ""}`,
+  }, scoped);
 }
 
 type Owner = { userId: string; keyId: string };
@@ -616,7 +675,8 @@ export const READ_TOOLS = [
         review_states: { type: "array", items: { type: "string", enum: [...REVIEW_STATES] }, description: "Only these review states." },
         from: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "Only observations said on or after this day (YYYY-MM-DD). An undated observation passes no date filter." },
         to: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "Only observations said on or before this day (YYYY-MM-DD)." },
-        order: { type: "string", enum: [...ORDERS], default: "strength", description: "strength: production use and independent measurement first, vendor claims last, as the pages list them; newest: by date." },
+        recorded_since: { type: "string", maxLength: 64, description: "Only observations first recorded in the ledger after this: a data release id, a date (from its start, UTC) or a time with offset. changes_since hands this out to page through everything new." },
+        order: { type: "string", enum: [...ORDERS], default: "strength", description: "strength: production use and independent measurement first, vendor claims last, as the pages list them; newest: by the date it was said; recorded: last recorded first." },
         limit: { type: "integer", minimum: 1, maximum: MAX_OBSERVATIONS, default: DEFAULT_OBSERVATIONS, description: "Rows per page." },
         cursor: { type: "string", maxLength: 200, description: "next_cursor from the previous page of the same query." },
         language: LANGUAGE_SCHEMA,
@@ -640,6 +700,30 @@ export const READ_TOOLS = [
         market: { type: "string", maxLength: 200, description: "A market: oaw:market:<slug>, the slug alone or its name. Give this or occupation, not both." },
         language: LANGUAGE_SCHEMA,
       },
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, openWorldHint: false, idempotentHint: true },
+  },
+  {
+    name: "changes_since",
+    title: "What is new since a release or a date",
+    description:
+      "What changed since an earlier data release (pass versions.data of an earlier answer) or a date: observations first recorded since then (counted by " +
+      "evidence type, direction and outcome, with the occupation and market pages they reach), older observations a newer source now also states, " +
+      "observations whose review state changed, topics opened and topics with new claims (counted per answer), updates that happened since, and article " +
+      "revisions written or approved since. Give occupation or market to see only what is new there (updates and articles are then left out). " +
+      "Everything listed cannot have been in the earlier release; updates are a lower bound. When more observations are new than listed, `more` gives the " +
+      "query_observations arguments that page through all of them. No key needed.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        since: { type: "string", minLength: 1, maxLength: 64, description: "A data release id (e.g. 20261102T081500Z-1a2b3c4d, from versions.data), a date YYYY-MM-DD (from its start, UTC) or a time with offset." },
+        occupation: { type: "string", maxLength: 200, description: "Only what is new for this occupation: id, O*NET code or name in English or Chinese." },
+        market: { type: "string", maxLength: 200, description: "Only what is new for this market: id, slug or name." },
+        limit: { type: "integer", minimum: 1, maximum: MAX_OBSERVATIONS, default: DEFAULT_CHANGES, description: "How many items each list shows; totals count all." },
+        language: LANGUAGE_SCHEMA,
+      },
+      required: ["since"],
       additionalProperties: false,
     },
     annotations: { readOnlyHint: true, openWorldHint: false, idempotentHint: true },
@@ -716,6 +800,8 @@ export async function runTool(request: Request, name: string, args: Args, scope:
       return runQueryObservations(args);
     case "occupation_summary":
       return runSummary(args);
+    case "changes_since":
+      return runChanges(args);
     case "submit_question":
     case "suggest_account":
     case "my_submissions":
