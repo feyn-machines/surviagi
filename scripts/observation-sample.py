@@ -48,11 +48,6 @@ def group(candidate):
     return "official" if candidate.get("official") else "others"
 
 
-def price_of(model):
-    return deepseek.PRICES["deepseek-v4-pro" if str(model or "").startswith("deepseek-v4-pro")
-                           else "deepseek-flash"]
-
-
 def priced(usage):
     """Token totals and USD of a run's calls: as billed, all at peak, all off-peak."""
     totals = Counter()
@@ -61,7 +56,7 @@ def priced(usage):
         for name in ("prompt_tokens", "prompt_cache_hit_tokens", "prompt_cache_miss_tokens",
                      "completion_tokens"):
             totals[name] += call.get(name) or 0
-        prices = price_of(call.get("model"))
+        prices = deepseek.price_of(call.get("model"))
         billed += deepseek.call_cost(call, prices, deepseek.is_peak(call["at"]))
         peak += deepseek.call_cost(call, prices, True)
         off_peak += deepseek.call_cost(call, prices, False)

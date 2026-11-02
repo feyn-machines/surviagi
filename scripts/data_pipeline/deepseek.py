@@ -387,6 +387,16 @@ PRICES = {
 PEAK_HOURS_UTC = ((1, 4), (6, 10))
 
 
+def price_of(model):
+    """The price table of the model a call was served by."""
+    return PRICES["deepseek-v4-pro" if str(model or "").startswith("deepseek-v4-pro") else "deepseek-flash"]
+
+
+def billed_usd(usage):
+    """USD of a run's calls at the rate each was billed."""
+    return sum(call_cost(call, price_of(call.get("model")), is_peak(call["at"])) for call in usage)
+
+
 def is_peak(timestamp):
     """Whether a call that ended at this Unix time was billed at the peak rate."""
     from datetime import datetime, timezone

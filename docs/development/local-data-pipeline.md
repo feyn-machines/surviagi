@@ -346,7 +346,7 @@ OAW_DATA_DATABASE=openaiwill_scratch_branch pnpm data:test
 
 ### 观察抽取的抽样与费用（2026-11-03，Issue #25）
 
-观察用单独一次 DeepSeek 调用读取：`deepseek.extract_observations`，提示词是 `observation_extraction.system_prompt()`（取值都从本体渲染），不带已知更新列表，答案只有 `observations` 列表。更新抽取的提示词和哈希不变。最初设计是在更新调用里顺带输出观察，实测不行：同一 500 条上，更新提示词单独跑两次得到 28、29 条更新，加上观察一节后只剩 17–20 条——模型把个人自用当成观察而不再记为更新，还漏掉了功能更新和市场测量。接入每日运行和写库是后续一步。
+观察用单独一次 DeepSeek 调用读取：`deepseek.extract_observations`，提示词是 `observation_extraction.system_prompt()`（取值都从本体渲染），不带已知更新列表，答案只有 `observations` 列表。更新抽取的提示词和哈希不变。最初设计是在更新调用里顺带输出观察，实测不行：同一 500 条上，更新提示词单独跑两次得到 28、29 条更新，加上观察一节后只剩 17–20 条——模型把个人自用当成观察而不再记为更新，还漏掉了功能更新和市场测量。写库与每日接入见下一节。
 
 `observation_extraction.py` 负责确定性部分：预筛（转发者、去掉链接/提及/话题后不足 40 字的帖子不读，中日韩字算两个）、核对（引用必须在帖子里找到，否则整条拒收；数值引用找不到只丢该数值；取值不在词表里拒收）、按主体+对象+工作+日期归并。工作映射到目录之前 `work_key` 为 `unmapped`。
 
@@ -366,3 +366,19 @@ feyn secret run -- pnpm data:observations:sample -- --sample-from data/observati
 | 单独调用，`-3` | 95 | 110 | $0.032 |
 
 六次运行合起来 98 帖有观察，单独调用一次覆盖 95 帖。人工随机核对单独调用的 30 条：约 24 条成立；不该算的是排行榜名次（2）、产品宕机、玩笑帖、Hello World、只有一句提示词原文。全部引用与数值都在原文里（规则保证）。外推全量 27,359 条：低谷约 $1.7，高峰约 $3.5。
+
+### 观察写库与每日抽取（2026-11-03，Issue #25）
+
+```bash
+feyn secret run -- pnpm data:extract:observations -- --window-start <ISO> --window-end <ISO> --output data/observations/runs/<run>.json
+feyn secret run -- pnpm data:extract:observations -- --all --plan-only --output data/observations/runs/<run>.json   # 回填：先数要读多少帖
+pnpm data:ingest:observations data/observations/runs/<run>.json                                                     # 重写一份已有记录（幂等）
+```
+
+一次运行先把记录写进 `data/observations/runs/<run>.json`（文件名即运行编号；含第三方原文，只留本机，目录 0700），再在一个事务里写库（迁移 047）：`observation_runs`（模型、提示词哈希、窗口、读了多少帖、费用）、`observation_reads`（每个抽取器版本读过哪些帖子，没出观察的也算；失败批次的帖子不记，留给下次）、`observations`/`observation_sources`/`observation_facts`，以及 `observation_readings`（这次运行对这条观察说了什么：模型原话的工作、主体、对象——工作映射到目录时读这里）。
+
+- 只读当前抽取器版本还没读过的帖子；`--reread` 才重读。不给窗口或采集运行时会读全部历史，必须显式加 `--all`（回填花钱，范围等负责人确认）。
+- 同一记录再写一次什么都不变；同一运行编号内容不同则拒绝。
+- 观察编号在第一次写入时固定：之后的运行再找到同一主体+对象+工作+日期，只补新的出处和数值，其余字段保持第一次写入的样子。工作映射到目录前 `work_key` 为 `unmapped`，编号用模型原话的工作算；映射后若两条变成同一条再合并并留重定向。
+- 每条出处都要有在该帖里找得到的原文：观察的引用所在帖子用它，其他帖子用出自该帖的数值引用，都没有的帖子不记为出处。帖子没写发生日期时 `occurred_on` 为空（编号仍用发帖日）。
+- `pnpm data:daily` 在 `extract-events` 之后跑 `extract-observations`（同一窗口、同两次采集运行）。这一步是可选的：失败或有失败批次只记为备注，不拦发布——观察还没有进快照。停在半路的运行若已写出记录文件，下次改为 `data:ingest:observations` 写入，不重复调用模型。
