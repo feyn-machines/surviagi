@@ -7,6 +7,7 @@ import { termNameOrRaw } from "@/components/ontology-labels";
 import { getLocale } from "@/lib/locale";
 import { breadcrumbLd, pageMetadata } from "@/lib/seo";
 import { JsonLd } from "@/components/json-ld";
+import { ObservationLedger } from "@/components/observation-ledger";
 import { siteNavCopy } from "@/lib/site-nav";
 import { href } from "@/lib/routes";
 import { indexable } from "@/lib/site-pages";
@@ -17,6 +18,7 @@ import {
   manifest,
   markets,
   marketSlug,
+  observationsOfMarket,
   occupationsOfMarket,
   occupationSlug,
 } from "@/lib/snapshot";
@@ -160,6 +162,8 @@ export default async function MarketPage({ params }: Props) {
           />
         </div>
       </Screen>
+
+      <ObservationLedger rows={observationsOfMarket(market.id)} name={name} language={language} />
 
       <Block title={c.activitiesTitle} lead={c.activitiesLead}>
         {activities.length === 0 ? (

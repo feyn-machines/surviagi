@@ -1,6 +1,7 @@
 import { count, fill } from "@/app/[lang]/markets/copy";
 import { DEFAULT_LANGUAGE, normalizeLanguage } from "@/lib/i18n";
 import { colon, link, markdownResponse } from "@/lib/markdown-copy";
+import { ledger, ledgerMarkdown } from "@/lib/observation-view";
 import { indexable } from "@/lib/site-pages";
 import { activityAnchor } from "@/lib/anchors";
 import {
@@ -8,6 +9,7 @@ import {
   manifest,
   marketSlug,
   marketsOfOccupation,
+  observationsOfOccupation,
   occupationSlug,
   occupationById,
   occupations,
@@ -71,6 +73,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
     "",
     c.lead,
     "",
+    ...ledgerMarkdown(ledger(observationsOfOccupation(id), name, language), language),
     `## ${c.activitiesTitle}`,
     "",
   ];

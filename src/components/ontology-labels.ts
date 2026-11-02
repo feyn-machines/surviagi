@@ -47,7 +47,10 @@ export type VocabularyName =
   | "affiliation_relation"
   | "post_nature"
   | "event_basis"
-  | "event_result";
+  | "event_result"
+  | "observation_actor_role"
+  | "observation_direction"
+  | "observation_review";
 
 function vocabulary(name: VocabularyName): Vocabulary | undefined {
   return labels.vocabularies[name];

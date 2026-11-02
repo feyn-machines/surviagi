@@ -6,6 +6,7 @@ import { type Language } from "@/lib/i18n";
 import { getLocale } from "@/lib/locale";
 import { breadcrumbLd, pageMetadata } from "@/lib/seo";
 import { JsonLd } from "@/components/json-ld";
+import { ObservationLedger } from "@/components/observation-ledger";
 import { siteNavCopy } from "@/lib/site-nav";
 import { indexable } from "@/lib/site-pages";
 import { activityHref, href } from "@/lib/routes";
@@ -18,6 +19,7 @@ import {
   manifest,
   marketSlug,
   marketsOfOccupation,
+  observationsOfOccupation,
   occupationById,
   occupationGroups,
   occupationMedianShare,
@@ -206,6 +208,8 @@ export default async function OccupationPage({ params }: Props) {
           note={<p>{plural(c.statLookedNote, { rest: Math.max(0, totalTasks - assessed) })}</p>}
         />
       </div>
+
+      <ObservationLedger rows={observationsOfOccupation(id)} name={name} language={language} />
 
       <Block title={c.gridTitle} lead={c.gridLead}>
         {assessed === 0 ? (
