@@ -343,3 +343,13 @@ OAW_DATA_DATABASE=openaiwill_scratch_branch pnpm data:test
 ```
 
 合并后再在日常库上应用迁移（日常运行或 `data:setup`），最后删掉克隆库。
+
+### 观察抽取的抽样与费用（2026-11-03，Issue #25）
+
+观察和更新出自同一次 DeepSeek 调用：`deepseek.system_prompt(observations=True)` 在原提示词后追加观察一节（`observation_extraction.prompt_section`，取值都从本体渲染），答案多一个 `observations` 列表。开关默认关，每日抽取的提示词和哈希不变；接入每日运行和写库是后续一步。`observation_extraction.py` 负责确定性部分：预筛（转发者、去掉链接/提及/话题后不足 40 字的帖子不读，中日韩字算两个）、核对（引用必须在帖子里找到，否则整条拒收；数值引用找不到只丢该数值；取值不在词表里拒收）、按主体+对象+工作+日期归并。工作映射到目录之前 `work_key` 为 `unmapped`。
+
+```sh
+feyn secret run -- pnpm data:observations:sample -- --size 500 --baseline   # 加 --plan-only 只数总体
+```
+
+脚本从预筛后的帖子里按种子随机抽样，用带观察的提示词抽一遍（`--baseline` 再用现行提示词抽一遍做对照），按 API 报告的缓存命中/未命中/输出 token 和 `deepseek.PRICES`（2026-11-03 读自官方价格页，高峰/低谷按调用时刻判断）计价，再按每帖成本外推到全部、近 90 天、官方号、其他作者。不写数据库；结果在 `data/observations/sample-<时间>/`（含第三方帖子原文，只留本机）。

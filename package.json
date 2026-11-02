@@ -37,6 +37,7 @@
     "data:ingest:x": "data/runtime/venv/bin/python scripts/data-pipeline.py ingest",
     "data:recover:renamed": "data/runtime/venv/bin/python scripts/recover-renamed-posts.py",
     "data:extract:events": "data/runtime/venv/bin/python scripts/data-pipeline.py extract-events",
+    "data:observations:sample": "data/runtime/venv/bin/python scripts/observation-sample.py",
     "data:search:index": "data/runtime/venv/bin/python scripts/data-pipeline.py search-index",
     "data:search": "data/runtime/venv/bin/python scripts/data-pipeline.py search",
     "data:topics:queries": "data/runtime/venv/bin/python scripts/data-pipeline.py topic-queries",
