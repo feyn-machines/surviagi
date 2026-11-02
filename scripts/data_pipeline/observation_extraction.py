@@ -25,7 +25,11 @@ import re
 from . import ontology_schema
 from .event_extraction import _iso, _slug, _text_or_none, quoted_in, resolve_org
 
-EXTRACTOR = "observation-extraction-1"
+EXTRACTOR = "observation-extraction-2"
+# -2: more posts are read as observations (a person's own use without numbers,
+# an agent doing something it was not asked to), the actor's role follows who
+# makes the subject, and a value is written without its unit. On the 500-post
+# sample of 2026-11-03, -1 found 18 and missed own-use and failure reports.
 
 ACTOR_ROLES = frozenset(ontology_schema.term_ids("observation_actor_role"))
 EVIDENCE_TYPES = frozenset(ontology_schema.term_ids("event_basis"))
@@ -73,16 +77,33 @@ def prompt_section(schema=None):
         "OBSERVATIONS. Independently of where a post ends up above, also return `observations`: what "
         "the posts show about AI doing real work that people are paid for. One observation is ONE "
         "actor using ONE AI product or model on ONE piece of work, how it came out, and on what basis. "
-        "A post gives zero, one or several; most posts give none. Return [] when none does.",
+        "A post gives zero, one or several. Return [] when none does.",
         "- It is an observation when a post says that AI did, helped with, failed at or was measured "
-        "on a concrete piece of work: a company's claim about what its product does for customers, a "
-        "named organization using it in its operations, a person reporting their own use at work, a "
-        "test by someone other than the maker, or an institution's count of adoption, spending or "
-        "employment.",
-        "- Failures, rollbacks, limits, incidents, a person still being needed, and \"tried it and it "
-        "did not work\" are observations exactly as much as successes.",
+        "on a concrete piece of work. Look for all six kinds in every post; one is not more important "
+        "than another:",
+        "  1. a company saying what its own product does on a named piece of work, e.g. \"it reconciles "
+        "two tables line by line\" (vendor_claim, or demonstration when it shows an example);",
+        "  2. a named organization using AI in its operations or a study run inside one, e.g. a "
+        "hospital, a bank, a retailer (production_use);",
+        "  3. a person reporting their own use (own_use, see below);",
+        "  4. a test or benchmark by someone other than the maker on named work, e.g. a legal or "
+        "coding benchmark, a lab study (measurement);",
+        "  5. an institution's count of adoption, spending, hiring or employment, including one quoted "
+        "by someone else (statistic);",
+        "  6. a failure, limit or incident of any of the above.",
+        "- A person who says they used an AI tool to make or do something specific - built an app, "
+        "wrote a report, made a design or a video, analysed data, handled email - IS an observation "
+        "(own_use), even with no number, even for a side project, and even when the post also gives an "
+        "opinion. Someone they name (a colleague, a spouse, a team) using it is the same, with that "
+        "person as actor.",
+        "- Failures, rollbacks, limits, incidents, an agent doing something it was not asked to (spending "
+        "money, deleting files, acting without asking), a person still being needed, and \"tried it and "
+        "it did not work\" are observations exactly as much as successes. Their direction is "
+        "human_still_needed, and an agent acting without being asked has outcome partly or failed "
+        "even when the action itself went through.",
         "- NOT an observation: a feature list with no work and no result, a price or a release date "
-        "alone, a benchmark leaderboard rank with no work named, opinion, prediction, advice, hype.",
+        "alone, a benchmark leaderboard rank with no work named, a tutorial or list of tips telling "
+        "others what they could do, a prediction, hype, or opinion about AI in general.",
         "- A relay or a retelling of someone else's result keeps the original actor; the post is "
         "only where it is written.",
         "- Several actors, subjects or pieces of work in one post are several observations. The same "
@@ -91,7 +112,9 @@ def prompt_section(schema=None):
         '- "source_ids": the given post ids it is read from (at least one)',
         '- "actor": who did it or claims it, as the post names them (a company, organization or person; '
         "the post's author when they report their own use)",
-        '- "actor_role": one of',
+        '- "actor_role": the actor\'s relation to the subject - maker whenever the actor makes the '
+        "subject, even when it uses it itself or shows a demo; an unnamed adopter retold by someone "
+        "else is still an adopter, with actor written as the post describes them. One of",
         *choices("observation_actor_role"),
         '- "subject": the AI product or model as the post names it, or null when it names none',
         '- "work": the occupation or line of work in a few plain words ("accounting", "customer '
@@ -104,7 +127,9 @@ def prompt_section(schema=None):
         '- "direction": one of',
         *choices("observation_direction"),
         '- "facts": array of {"value", "unit", "what", "baseline", "quote"} - each number the '
-        'observation rests on; "baseline" what it is compared with or null; "quote" copied EXACTLY',
+        'observation rests on; "value" the number alone ("20", "4.80", "~4"), "unit" separately '
+        '("minutes", "USD", "% per year"); "baseline" what it is compared with or null; "quote" '
+        'copied EXACTLY',
         '- "scale": users, volume, staff or coverage as the post states it, or null',
         '- "conditions": human oversight, pilot scope, region, limits or failure mode as stated, or null',
         '- "occurred_at": ISO 8601 UTC timestamp of when it happened, or null',
