@@ -5,10 +5,12 @@ import { plural } from "@/lib/plural";
 import {
   EVIDENCE_ORDER,
   byStrength,
+  coverage,
   manifest,
   observationDate,
   observationStats,
   observationsPublished,
+  sources,
   type EvidenceType,
   type ObservationRow,
   type ObservationStats,
@@ -57,6 +59,20 @@ export const ledgerCopy = bilingual({
     acrossWhy: "An observation that bears on several is counted once here and once on each of their pages.",
     markets: "markets",
     occupations: "occupations",
+    whenTitle: "When it was said",
+    whenLead: "Observations by the month they were said in public, with how many point the other way.",
+    undatedMonth: "no date",
+    againstShort: "{n} the other way",
+    whoTitle: "Who says it",
+    whoLead: "The role of the one acting in each observation, then the names that occur most.",
+    actorCount: "{n} {n|observation|observations}",
+    othersActors: "{n} other {n|name|names} with fewer.",
+    coverageTitle: "What was read, and where it leans",
+    collected: "Read from public posts on X by {accounts} watched accounts ({roles}) and from X searches; updates collected {first} to {last}.",
+    vendorShare: "{share}% of these observations rest on what the maker itself shows or says.",
+    practitionerShare: "{share}% come from individual practitioners; {n} name an organisation that adopted it.",
+    leans: "English posts and AI companies' own accounts dominate what is read, so the counts lean toward what vendors announce.",
+    absence: "A market or occupation with no observation has not been read about; that is not evidence that nothing changed.",
   },
   "zh-CN": {
     title: "证据怎么说",
@@ -89,6 +105,20 @@ export const ledgerCopy = bilingual({
     acrossWhy: "一条观察涉及几个时，这里只算一次，在它们各自的页面上各算一次。",
     markets: "赛道",
     occupations: "职业",
+    whenTitle: "什么时候说的",
+    whenLead: "按公开说出的月份计数，并列出其中反方向的条数。",
+    undatedMonth: "无日期",
+    againstShort: "反方向 {n}",
+    whoTitle: "谁说的",
+    whoLead: "每条观察里行动一方的身份，以及出现最多的名字。",
+    actorCount: "{n} 条",
+    othersActors: "另有 {n} 个名字，条数更少。",
+    coverageTitle: "读了什么，偏向哪里",
+    collected: "读自 {accounts} 个关注账号（{roles}）在 X 上的公开帖子及 X 搜索；更新采集于 {first} 至 {last}。",
+    vendorShare: "这些观察中 {share}% 依据的是出品方自己的演示或说法。",
+    practitionerShare: "{share}% 来自从业者个人；{n} 条点名了采用它的机构。",
+    leans: "读到的以英文帖子和 AI 公司自己的账号为主，所以计数偏向厂商宣布的内容。",
+    absence: "没有观察的赛道或职业只是还没读到相关内容，不说明什么都没变。",
   },
 });
 
@@ -112,7 +142,7 @@ export type Ledger =
       unlisted: number;
     };
 
-const fill = (template: string, values: Record<string, string | number>) =>
+export const fill = (template: string, values: Record<string, string | number>) =>
   Object.entries(values).reduce((text, [key, value]) => text.replaceAll(`{${key}}`, String(value)), plural(template, values));
 
 export function typeName(type: EvidenceType, language: Language): string {
@@ -124,7 +154,7 @@ export function typeMeaning(type: EvidenceType, language: Language): string | nu
 }
 
 /** "1 production use, 1 measurement" / "生产使用 1 条、测量 1 条": the types that occur, strongest first. */
-function typesLine(stats: ObservationStats, language: Language): string {
+function typesLine(stats: Pick<ObservationStats, "byType">, language: Language): string {
   return EVIDENCE_ORDER.filter((t) => stats.byType[t] > 0)
     .map((t) => (language === "zh-CN" ? `${typeName(t, language)} ${stats.byType[t]} 条` : `${stats.byType[t]} ${typeName(t, language).toLowerCase()}`))
     .join(language === "zh-CN" ? "、" : ", ");
@@ -164,15 +194,109 @@ export function ledger(rows: ObservationRow[], name: string, language: Language)
   };
 }
 
+export type Month = { month: string | null; total: number; against: number; byType: Record<EvidenceType, number> };
+export type Actor = { key: string; name: string; role: ObservationRow["actor_role"]; total: number };
+export const ACTOR_ROLES: ObservationRow["actor_role"][] = ["adopter", "practitioner", "evaluator", "researcher", "maker"];
+
 export type Overview =
   | { state: "unpublished"; title: string }
-  | { state: "some"; title: string; stats: ObservationStats; answer: string; notes: string[] };
+  | {
+      state: "some";
+      title: string;
+      stats: ObservationStats;
+      answer: string;
+      notes: string[];
+      /** Newest month first, every month between the first and the last, then the undated. */
+      months: Month[];
+      roles: Record<ObservationRow["actor_role"], number>;
+      actors: Actor[];
+      /** Names past the ones listed. */
+      otherActors: number;
+      coverage: string[];
+    };
+
+/** How many months and names the list pages show. */
+const MONTHS = 12;
+const ACTORS = 10;
+
+const byTypeOf = (rows: ObservationRow[]) => observationStats(rows, null).byType;
+
+/** Months from the newest back to the oldest dated one (at most `MONTHS`), empty ones included, then the undated. */
+function monthsOf(rows: ObservationRow[]): Month[] {
+  const dated = new Map<string, ObservationRow[]>();
+  const undated: ObservationRow[] = [];
+  for (const row of rows) {
+    const day = observationDate(row);
+    if (!day) undated.push(row);
+    else dated.set(day.slice(0, 7), [...(dated.get(day.slice(0, 7)) ?? []), row]);
+  }
+  const keys = [...dated.keys()].sort();
+  const out: Month[] = [];
+  if (keys.length > 0) {
+    let [y, m] = keys[keys.length - 1].split("-").map(Number);
+    const first = keys[0];
+    while (out.length < MONTHS) {
+      const key = `${y}-${String(m).padStart(2, "0")}`;
+      const group = dated.get(key) ?? [];
+      out.push({ month: key, total: group.length, against: group.filter((r) => r.direction === "human_still_needed").length, byType: byTypeOf(group) });
+      if (key <= first) break;
+      [y, m] = m === 1 ? [y - 1, 12] : [y, m - 1];
+    }
+  }
+  if (undated.length > 0) {
+    out.push({ month: null, total: undated.length, against: undated.filter((r) => r.direction === "human_still_needed").length, byType: byTypeOf(undated) });
+  }
+  return out;
+}
+
+function actorsOf(rows: ObservationRow[], language: Language): Actor[] {
+  const c = ledgerCopy[language];
+  const by = new Map<string, Actor>();
+  for (const row of rows) {
+    const actor = by.get(row.actor_key) ?? { key: row.actor_key, name: row.actor_name ?? c.unknownActor, role: row.actor_role, total: 0 };
+    actor.total += 1;
+    by.set(row.actor_key, actor);
+  }
+  return [...by.values()].sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+}
+
+const percent = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : 0);
+
+/**
+ * What the counts stand on: who was read, over which days, and the lean that
+ * follows. The shares are of the observations above, not of any market.
+ */
+function coverageOf(rows: ObservationRow[], language: Language): string[] {
+  const c = ledgerCopy[language];
+  const watched = sources();
+  const roleCounts = new Map<string, number>();
+  for (const s of watched) roleCounts.set(s.panel_role, (roleCounts.get(s.panel_role) ?? 0) + 1);
+  const roles = [...roleCounts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([role, n]) => (language === "zh-CN" ? `${termNameOrRaw("panel_role", role, language)} ${n}` : `${n} ${termNameOrRaw("panel_role", role, language).toLowerCase()}`))
+    .join(language === "zh-CN" ? "、" : ", ");
+  const window = coverage()?.collection_window;
+  const lines: string[] = [];
+  if (watched.length > 0 && window?.first && window.last) {
+    lines.push(fill(c.collected, { accounts: watched.length, roles, first: window.first.slice(0, 10), last: window.last.slice(0, 10) }));
+  }
+  if (rows.length > 0) {
+    const vendor = rows.filter((r) => r.evidence_type === "vendor_claim" || r.evidence_type === "demonstration").length;
+    const practitioners = rows.filter((r) => r.actor_role === "practitioner").length;
+    const adopters = rows.filter((r) => r.actor_role === "adopter").length;
+    lines.push(fill(c.vendorShare, { share: percent(vendor, rows.length) }));
+    lines.push(fill(c.practitionerShare, { share: percent(practitioners, rows.length), n: adopters }));
+  }
+  lines.push(c.leans, c.absence);
+  return lines;
+}
 
 /**
  * The same counts over a whole list page (Issue #32): every observation mapped
  * to at least one market, or one occupation, once each, and how many of them
- * have any. `byPage` holds each page's own rows, so the per-row column and this
- * total come from the same mapping.
+ * have any; then when they were said, who says them, and what was read. `byPage`
+ * holds each page's own rows, so the per-row column and this total come from
+ * the same mapping.
  */
 export function overview(byPage: ObservationRow[][], kind: "markets" | "occupations", language: Language): Overview {
   const c = ledgerCopy[language];
@@ -182,14 +306,20 @@ export function overview(byPage: ObservationRow[][], kind: "markets" | "occupati
   const rows = [...new Map(byPage.flat().map((row) => [row.observation_id, row])).values()];
   const stats = observationStats(rows, date);
   const values = { date: date?.slice(0, 10) ?? "", n: stats.total, m: byPage.filter((p) => p.length > 0).length, total: byPage.length, kind: c[kind] };
-  if (rows.length === 0) return { state: "some", title, stats, answer: fill(c.acrossNone, values), notes: [] };
+  const roles = Object.fromEntries(ACTOR_ROLES.map((r) => [r, rows.filter((row) => row.actor_role === r).length])) as Record<ObservationRow["actor_role"], number>;
+  const actors = actorsOf(rows, language);
+  const common = { state: "some" as const, title, stats, months: monthsOf(rows), roles, actors: actors.slice(0, ACTORS), otherActors: Math.max(0, actors.length - ACTORS), coverage: coverageOf(rows, language) };
+  if (rows.length === 0) return { ...common, answer: fill(c.acrossNone, values), notes: [] };
   return {
-    state: "some",
-    title,
-    stats,
+    ...common,
     answer: fill(c.across, { ...values, types: typesLine(stats, language) }),
     notes: [...notesOf(stats, language), c.acrossWhy],
   };
+}
+
+/** A month's counts as one short line: "1 production use, 2 own use" / "生产使用 1 条、亲自使用 2 条". */
+export function monthTypes(month: Month, language: Language): string {
+  return typesLine(month, language);
 }
 
 /** One figure as a reader reads it: "48 % — Azure revenue growth". */

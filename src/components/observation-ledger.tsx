@@ -1,14 +1,18 @@
 import { Block } from "@/components/blueprint";
-import { termNameOrRaw } from "@/components/ontology-labels";
+import { termDefinition, termNameOrRaw } from "@/components/ontology-labels";
 import type { Language } from "@/lib/i18n";
 import {
+  ACTOR_ROLES,
   actorLine,
   figure,
+  fill,
   ledger,
   ledgerCopy,
+  monthTypes,
   overview,
   typeMeaning,
   typeName,
+  type Overview,
 } from "@/lib/observation-view";
 import { EVIDENCE_ORDER, observationDate, type ObservationRow, type ObservationStats } from "@/lib/snapshot";
 import { plural } from "@/lib/plural";
@@ -79,7 +83,8 @@ export function ObservationLedger({
 
 /**
  * The head of a list page (Issue #32): the same counts by evidence type as a
- * market or occupation page, over every observation mapped to any of them.
+ * market or occupation page, over every observation mapped to any of them,
+ * then when they were said, who says them, and what the counts stand on.
  */
 export function ObservationOverview({
   byPage,
@@ -106,9 +111,67 @@ export function ObservationOverview({
           </ul>
           <EvidenceCounts stats={view.stats} language={language} />
           <p className={l.machine}>{c.machine}</p>
+          {view.stats.total > 0 ? <Spread view={view} language={language} /> : null}
+          <h3 className={l.h3}>{c.coverageTitle}</h3>
+          <ul className={l.notes}>
+            {view.coverage.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
         </>
       )}
     </Block>
+  );
+}
+
+/** Months as bars of the same scale, then the actors' roles and the names that occur most. */
+function Spread({ view, language }: { view: Extract<Overview, { state: "some" }>; language: Language }) {
+  const c = ledgerCopy[language];
+  const peak = Math.max(...view.months.map((m) => m.total), 1);
+  return (
+    <>
+      <h3 className={l.h3}>{c.whenTitle}</h3>
+      <p className={l.sub}>{c.whenLead}</p>
+      <ol className={l.months}>
+        {view.months.map((m) => (
+          <li key={m.month ?? "undated"} className={m.total === 0 ? l.zero : undefined}>
+            <span className={l.month}>{m.month ?? c.undatedMonth}</span>
+            <span className={l.bar} aria-hidden="true">
+              <i style={{ width: `${(m.total / peak) * 100}%` }} />
+            </span>
+            <b>{m.total}</b>
+            <small>
+              {monthTypes(m, language)}
+              {m.against > 0 ? <span className={l.against}> · {fill(c.againstShort, { n: m.against })}</span> : null}
+            </small>
+          </li>
+        ))}
+      </ol>
+
+      <h3 className={l.h3}>{c.whoTitle}</h3>
+      <p className={l.sub}>{c.whoLead}</p>
+      <dl className={`${l.types} ${l.roles}`}>
+        {ACTOR_ROLES.map((role) => (
+          <div key={role} className={`${l.type} ${view.roles[role] === 0 ? l.zero : ""}`}>
+            <dt>{termNameOrRaw("observation_actor_role", role, language)}</dt>
+            <dd>
+              {view.roles[role]}
+              <small>{termDefinition("observation_actor_role", role, language)?.text}</small>
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <ol className={l.actors}>
+        {view.actors.map((a) => (
+          <li key={a.key}>
+            <span>{a.name}</span>
+            <small>{termNameOrRaw("observation_actor_role", a.role, language)}</small>
+            <b>{fill(c.actorCount, { n: a.total })}</b>
+          </li>
+        ))}
+      </ol>
+      {view.otherActors > 0 ? <p className={l.sub}>{fill(c.othersActors, { n: view.otherActors })}</p> : null}
+    </>
   );
 }
 

@@ -1417,6 +1417,17 @@ test("market and occupation pages count their observations by evidence type and 
     const markets = await (await fetch(`${base}/markets`)).text();
     assert.ok(markets.includes(`5 observations are mapped to 2 of the ${marketCount} markets: 1 production use, 1 measurement, 1 own use, 2 vendor claim.`), "markets overview");
     assert.ok(markets.includes(`href="${marketPath}#evidence">3</a>`), "the market row links its count to the page's evidence");
+    // When they were said (every month back to the oldest, then the undated), who says them, and what was read.
+    for (const month of [day(1), day(60)].map((d) => d.slice(0, 7))) assert.ok(markets.includes(`>${month}</span>`), `markets list month ${month}`);
+    assert.match(markets, />no date<\/span>.*?<b>2<\/b>/s, "the two undated observations in their own row");
+    assert.match(markets, /<dt>Adopter<\/dt><dd>5<small>/, "the actors' roles counted");
+    assert.match(markets, /<dt>Practitioner<\/dt><dd>0<small>/, "a role nobody had shows 0");
+    assert.ok(markets.includes("<span>Actor obs-a</span>") && markets.includes("1 observation</b>"), "the names that occur most");
+    for (const line of ["40% of these observations rest on what the maker itself shows or says.", "0% come from individual practitioners; 5 name an organisation that adopted it.",
+      "A market or occupation with no observation has not been read about"]) {
+      assert.ok(markets.includes(line), `markets coverage lacks ${line}`);
+    }
+    assert.ok(/读自 \d+ 个关注账号/.test(await (await fetch(`${base}/zh-CN/markets`)).text()), "Chinese coverage names the accounts read");
     const occupationsPage = await (await fetch(`${base}/zh-CN/occupations`)).text();
     assert.match(occupationsPage, /有 1 条观察映射到 \d+ 个职业中的 1 个：生产使用 1 条。/, "occupations overview");
 
