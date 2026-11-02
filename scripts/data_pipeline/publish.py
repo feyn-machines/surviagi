@@ -255,6 +255,81 @@ def topics(conn) -> list[dict]:
     return out
 
 
+def observations(conn, ontology_version: str) -> list[dict]:
+    """What someone did with AI on a piece of work, each with its sources and numbers (Issue #25).
+
+    Only the head of a merge is published: an observation found to be the same
+    as an earlier one keeps its id, and that id is listed on the head under
+    `merged_from`, so a reader holding it can follow it. The head already
+    carries the merged one's sources and facts (observation_mapping writes them
+    there). One a person rejected is not published.
+
+    `concerns` are the catalog entries the observation was put on: market work
+    items, occupations and O*NET tasks. They are machine-proposed candidates
+    (rule:work-mapping-stays-a-candidate) and say so; one rejected is dropped.
+    An observation no entry fit keeps work_key 'unmapped' and no concerns.
+    """
+    entries = {r["id"]: r for r in _rows(conn, """
+        SELECT c.id, c.kind, c.label_en, c.label_zh_cn,
+               (SELECT min(r.kind) FROM public.ontology_relations r
+                 WHERE r.ontology_version = c.ontology_version AND r.child_id = c.id
+                   AND r.kind IN ('has_work', 'has_task')) AS edge
+          FROM public.ontology_concepts c
+         WHERE c.ontology_version = %s AND c.kind IN ('work', 'occupation')""", (ontology_version,))}
+    kind_of = {"has_work": "work", "has_task": "task"}
+
+    concerns: dict[str, list] = {}
+    for r in _rows(conn, """
+            SELECT observation_id, concept_id, method, status FROM public.observation_concepts
+             WHERE status <> 'rejected' ORDER BY observation_id, concept_id"""):
+        entry = entries.get(r["concept_id"], {})
+        kind = "occupation" if entry.get("kind") == "occupation" else kind_of.get(entry.get("edge"))
+        concerns.setdefault(r["observation_id"], []).append({
+            "concept_id": r["concept_id"], "kind": kind,
+            "label_en": entry.get("label_en"), "label_zh_cn": entry.get("label_zh_cn"),
+            "method": r["method"], "status": r["status"],
+        })
+    # A head merged later into another hands its redirects on: each id points at the published end of its chain.
+    into = {r["observation_id"]: r["merged_into"]
+            for r in _rows(conn, "SELECT observation_id, merged_into FROM public.observation_merges ORDER BY observation_id")}
+    merged_from: dict[str, list] = {}
+    for oid in into:
+        head, seen = into[oid], {oid}
+        while head in into and head not in seen:
+            seen.add(head)
+            head = into[head]
+        merged_from.setdefault(head, []).append(oid)
+    sources_of: dict[str, list] = {}
+    for r in _clean(_rows(conn, """
+            SELECT observation_id, source_ref, source_type, url, source_id, quote, published_at
+              FROM public.observation_sources ORDER BY observation_id, published_at NULLS LAST, source_ref""")):
+        sources_of.setdefault(r.pop("observation_id"), []).append(r)
+    facts_of: dict[str, list] = {}
+    for r in _rows(conn, """
+            SELECT observation_id, fact_id, value, unit, what, baseline, method_note, quote
+              FROM public.observation_facts ORDER BY observation_id, fact_id"""):
+        facts_of.setdefault(r.pop("observation_id"), []).append(r)
+
+    out = _clean(_rows(conn, """
+        SELECT o.observation_id, o.actor_key, o.actor_org_id, o.actor_person_id, o.actor_name, o.actor_role,
+               o.subject_key, o.subject_product_id, o.subject_model_id, o.work_key, o.event_id, o.task,
+               o.evidence_type, o.outcome, o.direction, o.scale, o.conditions,
+               o.occurred_on::text AS occurred_on, o.announced_at, o.observed_at,
+               o.review_state, o.reviewed_at, o.extractor, o.prompt_sha256, o.model, o.schema_version,
+               o.created_at
+          FROM public.observations o
+         WHERE o.review_state <> 'human_rejected'
+           AND NOT EXISTS (SELECT 1 FROM public.observation_merges m WHERE m.observation_id = o.observation_id)
+         ORDER BY o.observation_id"""))
+    for row in out:
+        oid = row["observation_id"]
+        row["sources"] = sources_of.get(oid, [])
+        row["facts"] = facts_of.get(oid, [])
+        row["concerns"] = concerns.get(oid, [])
+        row["merged_from"] = merged_from.get(oid, [])
+    return out
+
+
 # X ids carry their own time: milliseconds since this epoch, shifted left 22 bits.
 X_EPOCH_MS = 1288834974657
 
@@ -985,7 +1060,7 @@ def build(conn, ontology_version: str | None = None) -> dict:
         "chain": chain, "markets": markets, "tasks": tasks,
         "work": work, "occupations": occupations,
         "events": events, "models": models, "sources": sources(conn),
-        "topics": topics(conn),
+        "topics": topics(conn), "observations": observations(conn, ontology_version),
         "coverage": coverage, "progress": progress,
     }
     manifest = {

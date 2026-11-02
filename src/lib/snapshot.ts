@@ -107,6 +107,41 @@ export type OccupationRow = {
   markets: { market_id: string; confidence: number | null; status: string }[];
 };
 
+/** One observation as `observations.json` carries it (contract 1.2.0, Issue #25). Only heads of merges. */
+export type ObservationRow = {
+  observation_id: string;
+  actor_key: string;
+  actor_org_id: string | null;
+  actor_person_id: string | null;
+  actor_name: string | null;
+  actor_role: "maker" | "adopter" | "practitioner" | "evaluator" | "researcher";
+  subject_key: string;
+  subject_product_id: string | null;
+  subject_model_id: string | null;
+  work_key: string;
+  event_id: string | null;
+  task: string;
+  evidence_type: "vendor_claim" | "demonstration" | "own_use" | "measurement" | "production_use" | "statistic";
+  outcome: "succeeded" | "partly" | "failed" | "not_stated";
+  direction: "ai_takes_on" | "human_still_needed" | "neutral";
+  scale: string | null;
+  conditions: string | null;
+  occurred_on: string | null;
+  announced_at: string | null;
+  observed_at: string | null;
+  review_state: "machine_proposed" | "human_confirmed" | "human_rejected";
+  reviewed_at: string | null;
+  extractor: string;
+  prompt_sha256: string | null;
+  model: string | null;
+  schema_version: string;
+  created_at: string;
+  sources: { source_ref: string; source_type: string; url: string; source_id: string | null; quote: string; published_at: string | null }[];
+  facts: { fact_id: string; value: string; unit: string | null; what: string; baseline: string | null; method_note: string | null; quote: string }[];
+  concerns: { concept_id: string; kind: "work" | "occupation" | "task" | null; label_en: string | null; label_zh_cn: string | null; method: string; status: string }[];
+  merged_from: string[];
+};
+
 /** An occupation group with its tasks summed over its occupations. */
 export type OccupationGroup = {
   id: string;
@@ -367,6 +402,8 @@ export type Payload = {
   /** Absent from a release made before Issue #35; then the chain and progress below carry the same. */
   work?: (Omit<Activity, "activity_id"> & { id: string })[];
   occupations?: OccupationRow[];
+  /** Absent from a release made before Issue #25. */
+  observations?: ObservationRow[];
   chain?: { activities: ChainActivity[]; evidence: EvidenceRow[] };
   markets?: MarketEdge[];
   progress?: LegacyProgress;

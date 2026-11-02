@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from psycopg import sql
 
-from data_pipeline import observation_mapping
+from data_pipeline import observation_mapping, publish
 from data_pipeline.collection_store import ingest_run
 from data_pipeline.db import connect, migrate
 from data_pipeline.observation_mapping import MAPPER, map_observations
@@ -163,6 +163,28 @@ class ObservationMapping(unittest.TestCase):
         self.assertEqual({r["source_id"] for r in self.conn.execute(
             "SELECT source_id FROM observation_sources WHERE observation_id = %s", (first,)).fetchall()},
             {"11", "12", "14"})
+
+        # Published: the head with its redirect, never the merged one as a row of its own (contract 1.2.0).
+        rows = {r["observation_id"]: r for r in publish.observations(self.conn, "no-catalog")}
+        self.assertEqual(set(rows), {first, poem})
+        head = rows[first]
+        self.assertEqual(head["merged_from"], [second])
+        self.assertEqual({s["source_id"] for s in head["sources"]}, {"11", "12", "14"})
+        self.assertEqual({f["value"] for f in head["facts"]}, {"60", "70"})
+        self.assertEqual([(c["concept_id"], c["status"]) for c in head["concerns"]],
+                         [("o:csr", "candidate"), ("t:answer", "candidate"), ("w:support", "candidate")])
+        self.assertEqual((rows[poem]["work_key"], rows[poem]["concerns"], rows[poem]["merged_from"]),
+                         ("unmapped", [], []))
+        json.dumps(list(rows.values()))
+
+        # A person's rejection takes the observation, or the entry, off the published record.
+        self.conn.execute("UPDATE observations SET review_state = 'human_rejected', reviewed_at = now() "
+                          "WHERE observation_id = %s", (poem,))
+        self.conn.execute("UPDATE observation_concepts SET method = 'reviewed', status = 'rejected' "
+                          "WHERE observation_id = %s AND concept_id = 't:answer'", (first,))
+        rows = {r["observation_id"]: r for r in publish.observations(self.conn, "no-catalog")}
+        self.assertEqual(set(rows), {first})
+        self.assertEqual([c["concept_id"] for c in rows[first]["concerns"]], ["o:csr", "w:support"])
 
 
 if __name__ == "__main__":

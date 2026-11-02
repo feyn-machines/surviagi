@@ -141,6 +141,14 @@ def squeeze(sql):
 # Checked in order; the first substring that matches names the query. Order
 # matters because several queries mention the same tables in subselects.
 ROUTES = (
+    # Observations: the head query names the merges table in a subselect, so it
+    # is matched before the merges query.
+    ("observation_entries", "AS edge FROM public.ontology_concepts c"),
+    ("observations", "FROM public.observations o"),
+    ("observation_concepts", "FROM public.observation_concepts"),
+    ("observation_merges", "FROM public.observation_merges ORDER BY"),
+    ("observation_sources", "FROM public.observation_sources"),
+    ("observation_facts", "FROM public.observation_facts"),
     # Topics read their own tables, and the accounts and catalog tables other
     # queries read too; each is matched on a phrase only it contains.
     ("topics", "FROM topics t"),
@@ -1072,6 +1080,25 @@ class SourcesTests(unittest.TestCase):
     def test_only_enabled_accounts_are_published(self):
         conn, _ = build(dataset())
         self.assertIn("a.panel_state = 'enabled' AND NOT a.excluded", conn.sql["source_accounts"])
+
+
+class ObservationsTests(unittest.TestCase):
+    def test_a_redirect_points_at_the_published_end_of_its_chain(self):
+        # c was merged into b, and b later into a: only a is published, and both ids lead there.
+        conn = FakeConn({
+            "observations": [{"observation_id": "obs-a"}],
+            "observation_merges": [{"observation_id": "obs-b", "merged_into": "obs-a"},
+                                   {"observation_id": "obs-c", "merged_into": "obs-b"}],
+            "observation_concepts": [{"observation_id": "obs-a", "concept_id": "w:x", "method": "ai_proposed",
+                                      "status": "candidate"}],
+            "observation_entries": [{"id": "w:x", "kind": "work", "label_en": "X", "label_zh_cn": None,
+                                     "edge": "has_work"}],
+        })
+        (row,) = publish.observations(conn, "v")
+        self.assertEqual(row["merged_from"], ["obs-b", "obs-c"])
+        self.assertEqual(row["concerns"], [{"concept_id": "w:x", "kind": "work", "label_en": "X", "label_zh_cn": None,
+                                            "method": "ai_proposed", "status": "candidate"}])
+        self.assertEqual((row["sources"], row["facts"]), ([], []))
 
 
 if __name__ == "__main__":

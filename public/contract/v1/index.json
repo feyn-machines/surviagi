@@ -1,5 +1,5 @@
 {
-  "contract_version": "1.1.0",
+  "contract_version": "1.2.0",
   "ontology_version": "2.5.0",
   "name": "SurviAGI public data contract",
   "x-name-zh-CN": "SurviAGI 公开数据契约",
@@ -164,7 +164,7 @@
       },
       "identifier": "observation_id",
       "schema": "/contract/v1/schemas/Observation.schema.json",
-      "snapshot_file": null
+      "snapshot_file": "observations.json"
     },
     {
       "name": "ObservationSource",
