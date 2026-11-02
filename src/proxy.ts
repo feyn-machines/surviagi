@@ -18,7 +18,7 @@ function isNavigation(request: NextRequest) {
  * would be wrong: occupation addresses such as /occupations/11-1011.00 contain
  * a dot. The 32-hex `.txt` is the IndexNow key file in `public/`.
  */
-const FILE_PATH = /^\/(?:og\/|figures\/|robots\.txt$|sitemap\.xml$|llms\.txt$|icon\.svg$|[0-9a-f]{32}\.txt$)/;
+const FILE_PATH = /^\/(?:og\/|contract\/|figures\/|robots\.txt$|sitemap\.xml$|llms\.txt$|icon\.svg$|[0-9a-f]{32}\.txt$)/;
 
 const REWRITTEN = "x-openaiwill-rewritten";
 // A value only this process knows. A fixed value would let any client send the header and skip

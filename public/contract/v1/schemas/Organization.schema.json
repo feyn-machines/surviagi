@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://surviagi.com/contract/v1/schemas/Organization.schema.json",
+  "title": "Organization",
+  "x-title-zh-CN": "组织",
+  "description": "A company or institution we follow. Referred to by id everywhere (rule:org-must-be-id); the registry is datasets/semantic/organizations.json.",
+  "x-description-zh-CN": "我们跟踪的公司或机构。任何地方都用 ID 引用（rule:org-must-be-id），名单在 datasets/semantic/organizations.json。",
+  "type": "object",
+  "properties": {
+    "org_id": {
+      "type": "string",
+      "description": "org:<slug>. Every reference to an organization uses it.",
+      "x-description-zh-CN": "org:<标识>。凡是指向机构的地方都用它。",
+      "x-grade": "record",
+      "x-ontology-property": "Organization.org_id"
+    },
+    "canonical_name_en": {
+      "type": "string",
+      "description": "English display name.",
+      "x-description-zh-CN": "英文显示名。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "Organization.canonical_name_en"
+    },
+    "canonical_name_zh_cn": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Chinese display name.",
+      "x-description-zh-CN": "中文显示名。",
+      "x-grade": "machine",
+      "x-ontology-property": "Organization.canonical_name_zh_cn"
+    },
+    "aliases": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Other names that resolve to this organization.",
+      "x-description-zh-CN": "解析到该机构的其他写法。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "Organization.aliases"
+    }
+  },
+  "required": [
+    "org_id",
+    "canonical_name_en",
+    "canonical_name_zh_cn",
+    "aliases"
+  ],
+  "additionalProperties": false,
+  "x-identifier": "org_id"
+}

@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://surviagi.com/contract/v1/schemas/Provider.schema.json",
+  "title": "Model provider",
+  "x-title-zh-CN": "模型提供方",
+  "description": "A platform through which a model is offered. The maker's own API is one; a cloud that serves several makers' models is another. A provider is not the model's owner.",
+  "x-description-zh-CN": "提供模型访问的平台。厂商自己的 API 是一种，转售多家模型的云平台是另一种。供应商不是模型的归属方。",
+  "type": "object",
+  "properties": {
+    "provider_id": {
+      "type": "string",
+      "description": "provider:<catalog key>.",
+      "x-description-zh-CN": "provider:<目录里的键>。",
+      "x-grade": "record",
+      "x-ontology-property": "Provider.provider_id"
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name.",
+      "x-description-zh-CN": "显示名。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "Provider.name"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "first_party",
+        "cloud"
+      ],
+      "description": "The maker's own API or a platform serving several makers.",
+      "x-description-zh-CN": "厂商自己的 API，还是提供多家模型的平台。",
+      "x-grade": "machine",
+      "x-ontology-property": "Provider.kind"
+    }
+  },
+  "required": [
+    "provider_id",
+    "name",
+    "kind"
+  ],
+  "additionalProperties": false,
+  "x-identifier": "provider_id"
+}

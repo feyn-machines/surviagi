@@ -66,6 +66,7 @@ def summarize(changes):
 
 def cmd_release(conn, args):
     payload, manifest = kg.read_snapshot(args.snapshot)
+    kg.check_contract(args.snapshot)
     started = time.monotonic()
     kg.ensure_schema(conn)
     before = kg.active_seq(conn)

@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://surviagi.com/contract/v1/schemas/Product.schema.json",
+  "title": "Product",
+  "x-title-zh-CN": "产品",
+  "description": "A thing a maker sells or offers under a name: an app, an agent, a feature, a platform, a service. It is not a model, even when it runs on one or shares its brand.",
+  "x-description-zh-CN": "出品方以某个名字销售或提供的东西：应用、智能体、功能、平台、服务。即使它跑在某个模型上、或与模型同名，也不是模型。",
+  "type": "object",
+  "properties": {
+    "product_id": {
+      "type": "string",
+      "description": "Stable id of the product: product:<maker>:<name>.",
+      "x-description-zh-CN": "产品的固定编号：product:<出品方>:<名称>。",
+      "x-grade": "record",
+      "x-ontology-property": "Product.product_id",
+      "x-since": "2.5.0"
+    },
+    "org_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The maker, when it is in the registry.",
+      "x-description-zh-CN": "出品方；在名单里时填写。",
+      "x-grade": "record",
+      "x-ontology-property": "Product.org_id",
+      "x-since": "2.5.0"
+    },
+    "owner_name": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The maker as the source writes it, for a maker outside the registry.",
+      "x-description-zh-CN": "来源里写的出品方名称，用于名单之外的出品方。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "Product.owner_name",
+      "x-since": "2.5.0"
+    },
+    "name": {
+      "type": "string",
+      "description": "The name the maker gives the product.",
+      "x-description-zh-CN": "出品方给产品起的名字。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "Product.name",
+      "x-since": "2.5.0"
+    },
+    "category": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "A few plain words for what kind of product it is.",
+      "x-description-zh-CN": "用几个白话词说明是哪类产品。",
+      "x-grade": "machine",
+      "x-ontology-property": "Product.category",
+      "x-since": "2.5.0"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the product was first recorded here.",
+      "x-description-zh-CN": "这里第一次记录该产品的时间。",
+      "x-grade": "record",
+      "x-ontology-property": "Product.created_at",
+      "x-since": "2.5.0"
+    }
+  },
+  "required": [
+    "product_id",
+    "org_id",
+    "owner_name",
+    "name",
+    "category",
+    "created_at"
+  ],
+  "additionalProperties": false,
+  "x-identifier": "product_id",
+  "x-since": "2.5.0"
+}

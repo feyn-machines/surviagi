@@ -54,6 +54,19 @@ export const agentsCopy: Record<Language, { title: string; description: string; 
         ],
       },
       {
+        heading: "Data contract",
+        id: "contract",
+        body: [
+          "Every record type has a JSON Schema generated from the ontology, and the HTTP interface has an OpenAPI description. Each field is graded: quote (original words), excerpt (taken from a source), machine (written by our pipeline, unreviewed unless the record says otherwise), human (confirmed by a person) or record (our own bookkeeping).",
+          "Every field a schema declares is always present: unknown is null, and 0, an empty string or an empty list are real values. Each response carries four separate versions: contract, ontology, method and data.",
+        ],
+        code: [
+          "https://surviagi.com/contract/v1/index.json                 entities, grades, versions",
+          "https://surviagi.com/contract/v1/openapi.json               the HTTP interface",
+          "https://surviagi.com/contract/v1/schemas/Observation.schema.json",
+        ],
+      },
+      {
         heading: "WorkBuddy and other clients",
         id: "clients",
         body: [
@@ -133,6 +146,19 @@ export const agentsCopy: Record<Language, { title: string; description: string; 
           "POST https://surviagi.com/api/agent/questions     (Key)  {question, why_it_matters, evidence_gap, leads?, related_record_ids?, request_id?}",
           "POST https://surviagi.com/api/agent/accounts      (Key)  {account, kind, reason, field?, request_id?}",
           "GET  https://surviagi.com/api/agent/submissions   (Key)",
+        ],
+      },
+      {
+        heading: "数据契约",
+        id: "contract",
+        body: [
+          "每种记录都有由本体生成的 JSON Schema，HTTP 接口有 OpenAPI 描述。每个字段都分级：quote（原文）、excerpt（取自来源）、machine（由我们的流水线写出，除非记录另有说明否则未经复核）、human（经人确认）、record（我们自己的记录）。",
+          "schema 声明的每个字段一定出现：未知是 null，0、空字符串和空列表都是真值。每个响应带四个彼此独立的版本：契约、本体、方法、数据。",
+        ],
+        code: [
+          "https://surviagi.com/contract/v1/index.json                 实体、分级、版本",
+          "https://surviagi.com/contract/v1/openapi.json               HTTP 接口",
+          "https://surviagi.com/contract/v1/schemas/Observation.schema.json",
         ],
       },
       {

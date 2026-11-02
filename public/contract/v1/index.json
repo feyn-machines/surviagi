@@ -1,0 +1,213 @@
+{
+  "contract_version": "1.0.0",
+  "ontology_version": "2.5.0",
+  "name": "SurviAGI public data contract",
+  "x-name-zh-CN": "SurviAGI 公开数据契约",
+  "versions": {
+    "contract": "This contract: field names, types and grades.",
+    "ontology": "The ontology schema the records conform to.",
+    "method": "How progress and readings were computed.",
+    "data": "The published data release the answer was read from."
+  },
+  "wire_rules": {
+    "en": [
+      "Every field a schema declares is always present. Unknown is `null`; a key is never omitted to mean unknown.",
+      "0, the empty string and the empty list are real values, never stand-ins for unknown.",
+      "Dates are ISO 8601; `date-time` values carry an offset.",
+      "A field added in a minor version is optional to read; a field is deprecated for at least one minor version before it is removed."
+    ],
+    "zh-CN": [
+      "schema 声明的每个字段都一定出现。未知是 `null`，不会用缺键表示未知。",
+      "0、空字符串、空列表都是真值，不代表未知。",
+      "日期用 ISO 8601；`date-time` 带时区偏移。",
+      "小版本新增的字段读取方可忽略；字段至少经过一个小版本的弃用期才会移除。"
+    ]
+  },
+  "grades": {
+    "quote": {
+      "en": "Original words copied from the source and checked against it.",
+      "zh-CN": "从来源原样摘抄并与来源核对过的原文。"
+    },
+    "excerpt": {
+      "en": "Shortened or reformatted from a source: names, counts and metadata as the source gives them.",
+      "zh-CN": "从来源截取或整理的内容：来源给出的名称、数量和元数据。"
+    },
+    "machine": {
+      "en": "Written or proposed by our pipeline. Not reviewed unless the record's review state says so.",
+      "zh-CN": "由我们的流水线写出或提出。除非记录的复核状态另有说明，否则未经复核。"
+    },
+    "human": {
+      "en": "Confirmed by a person on record.",
+      "zh-CN": "经记录在案的人确认。"
+    },
+    "record": {
+      "en": "Our own bookkeeping: identifiers, timestamps, versions and vocabulary states.",
+      "zh-CN": "我们自己的记录：编号、时间、版本和词表状态。"
+    }
+  },
+  "entities": [
+    {
+      "name": "Concept",
+      "title": {
+        "en": "Catalog concept (market, work, occupation)",
+        "zh-CN": "目录条目（赛道、工作、职业）"
+      },
+      "identifier": "id",
+      "schema": "/contract/v1/schemas/Concept.schema.json",
+      "snapshot_file": null
+    },
+    {
+      "name": "Organization",
+      "title": {
+        "en": "Organization",
+        "zh-CN": "组织"
+      },
+      "identifier": "org_id",
+      "schema": "/contract/v1/schemas/Organization.schema.json",
+      "snapshot_file": null
+    },
+    {
+      "name": "Person",
+      "title": {
+        "en": "Person",
+        "zh-CN": "人物"
+      },
+      "identifier": "person_id",
+      "schema": "/contract/v1/schemas/Person.schema.json",
+      "snapshot_file": null
+    },
+    {
+      "name": "SourceAccount",
+      "title": {
+        "en": "Source account",
+        "zh-CN": "来源账号"
+      },
+      "identifier": "account_key",
+      "schema": "/contract/v1/schemas/SourceAccount.schema.json",
+      "snapshot_file": "sources.json"
+    },
+    {
+      "name": "Event",
+      "title": {
+        "en": "Event",
+        "zh-CN": "事件"
+      },
+      "identifier": "event_id",
+      "schema": "/contract/v1/schemas/Event.schema.json",
+      "snapshot_file": "events.json"
+    },
+    {
+      "name": "Model",
+      "title": {
+        "en": "Model",
+        "zh-CN": "模型"
+      },
+      "identifier": "model_id",
+      "schema": "/contract/v1/schemas/Model.schema.json",
+      "snapshot_file": "models.json"
+    },
+    {
+      "name": "Provider",
+      "title": {
+        "en": "Model provider",
+        "zh-CN": "模型提供方"
+      },
+      "identifier": "provider_id",
+      "schema": "/contract/v1/schemas/Provider.schema.json",
+      "snapshot_file": null
+    },
+    {
+      "name": "Product",
+      "title": {
+        "en": "Product",
+        "zh-CN": "产品"
+      },
+      "identifier": "product_id",
+      "schema": "/contract/v1/schemas/Product.schema.json",
+      "snapshot_file": null
+    },
+    {
+      "name": "ProductAvailability",
+      "title": {
+        "en": "Product availability",
+        "zh-CN": "产品可用性"
+      },
+      "identifier": "availability_id",
+      "schema": "/contract/v1/schemas/ProductAvailability.schema.json",
+      "snapshot_file": null
+    },
+    {
+      "name": "Observation",
+      "title": {
+        "en": "Observation",
+        "zh-CN": "观察"
+      },
+      "identifier": "observation_id",
+      "schema": "/contract/v1/schemas/Observation.schema.json",
+      "snapshot_file": null
+    },
+    {
+      "name": "ObservationSource",
+      "title": {
+        "en": "Observation source",
+        "zh-CN": "观察出处"
+      },
+      "identifier": "source_ref",
+      "schema": "/contract/v1/schemas/ObservationSource.schema.json",
+      "snapshot_file": null
+    },
+    {
+      "name": "ObservationFact",
+      "title": {
+        "en": "Observation fact",
+        "zh-CN": "观察事实"
+      },
+      "identifier": "fact_id",
+      "schema": "/contract/v1/schemas/ObservationFact.schema.json",
+      "snapshot_file": null
+    },
+    {
+      "name": "Topic",
+      "title": {
+        "en": "Topic",
+        "zh-CN": "话题"
+      },
+      "identifier": "topic_id",
+      "schema": "/contract/v1/schemas/Topic.schema.json",
+      "snapshot_file": "topics.json"
+    },
+    {
+      "name": "TopicOption",
+      "title": {
+        "en": "Topic option",
+        "zh-CN": "话题答案"
+      },
+      "identifier": "option_id",
+      "schema": "/contract/v1/schemas/TopicOption.schema.json",
+      "snapshot_file": null
+    }
+  ],
+  "retired_collections": [
+    {
+      "file": "chain",
+      "reason": "Activity and level readings; retired with the L0–L5 scale (Issue #35)."
+    },
+    {
+      "file": "markets",
+      "reason": "Carries level readings per market; replaced by observations (Issue #35)."
+    },
+    {
+      "file": "tasks",
+      "reason": "Carries level readings per task; replaced by observations (Issue #35)."
+    },
+    {
+      "file": "progress",
+      "reason": "A takeover-progress figure; retired with the level scale (Issue #35)."
+    },
+    {
+      "file": "coverage",
+      "reason": "Collection-window description; moves into the manifest with observations (Issue #25)."
+    }
+  ],
+  "openapi": "/contract/v1/openapi.json"
+}

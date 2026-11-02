@@ -1202,3 +1202,35 @@ with zipfile.ZipFile(io.BytesIO(sys.stdin.buffer.read())) as z:
     assert.match(html(language, ""), /<nav[^>]*>[\s\S]*?href="(?:\/zh-CN)?\/agents"[\s\S]*?<\/nav>/);
   }
 });
+
+test("the public data contract is served and the agent responses carry its four versions", async () => {
+  const get = async (path) => {
+    const res = await fetch(`${site.base}${path}`);
+    assert.equal(res.status, 200, path);
+    assert.match(res.headers.get("content-type") ?? "", /json/, path);
+    return res.json();
+  };
+  const index = await get("/contract/v1/index.json");
+  assert.match(index.contract_version, /^\d+\.\d+\.\d+$/);
+  for (const entity of index.entities) assert.equal((await get(entity.schema)).title.length > 0, true, entity.name);
+  const api = await get(index.openapi);
+  assert.equal(api.info.version, index.contract_version);
+  const llms = body("llms.txt");
+  assert.ok(llms.includes("/contract/v1/index.json") && llms.includes("/contract/v1/openapi.json"));
+  for (const language of ["en", "zh-CN"]) assert.ok(html(language, "/agents").includes("/contract/v1/openapi.json"));
+  if (!HAS_SNAPSHOT) return;
+
+  const { default: Ajv2020 } = await import("ajv/dist/2020.js");
+  const ajv = new Ajv2020({ strict: false, validateFormats: false });
+  ajv.addSchema({ $id: "api", components: api.components });
+  const search = await get("/api/agent/search?query=model&types=update,question,evidence&limit=3");
+  const check = ajv.compile({ $ref: "api#/components/schemas/SearchResponse" });
+  assert.ok(check(search), JSON.stringify(check.errors));
+  assert.equal(search.versions.contract, index.contract_version);
+  assert.equal(search.versions.ontology, JSON.parse(readFileSync(join(SNAPSHOT_DIR, "manifest.json"), "utf8")).schema_version);
+  assert.ok(search.results.length > 0, "the sample search finds something");
+  const found = await get(`/api/agent/record?id=${encodeURIComponent(search.results[0].id)}`);
+  const checkRecord = ajv.compile({ $ref: "api#/components/schemas/RecordResponse" });
+  assert.ok(checkRecord(found), JSON.stringify(checkRecord.errors));
+  assert.deepEqual(found.versions, search.versions);
+});

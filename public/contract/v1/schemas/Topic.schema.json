@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://surviagi.com/contract/v1/schemas/Topic.schema.json",
+  "title": "Topic",
+  "x-title-zh-CN": "话题",
+  "description": "A closed question about one job or one kind of business, with two to four answers that exclude each other. It stays open while claims and updates collect under it; it carries no answer of its own.",
+  "x-description-zh-CN": "关于一个职业或一类生意的封闭问题，带两到四个互斥的答案。它一直开着，主张和更新不断归到它下面；它自己不带答案。",
+  "type": "object",
+  "properties": {
+    "topic_id": {
+      "type": "string",
+      "description": "Stable id of the topic.",
+      "x-description-zh-CN": "话题的固定编号。",
+      "x-grade": "record",
+      "x-ontology-property": "Topic.topic_id",
+      "x-since": "2.3.0"
+    },
+    "question_type": {
+      "type": "string",
+      "enum": [
+        "replacement",
+        "viability"
+      ],
+      "description": "Which kind of question it is.",
+      "x-description-zh-CN": "它是哪一类问题。",
+      "x-grade": "machine",
+      "x-ontology-property": "Topic.question_type",
+      "x-since": "2.3.0"
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "proposed",
+        "researching",
+        "dormant",
+        "merged",
+        "closed"
+      ],
+      "description": "Where the topic stands as a subject of research.",
+      "x-description-zh-CN": "话题作为研究对象所处的状态。",
+      "x-grade": "record",
+      "x-ontology-property": "Topic.state",
+      "x-since": "2.3.0"
+    },
+    "origin": {
+      "type": "string",
+      "enum": [
+        "mined",
+        "reader",
+        "editor"
+      ],
+      "description": "How the topic came to be proposed.",
+      "x-description-zh-CN": "话题是怎么被提出的。",
+      "x-grade": "record",
+      "x-ontology-property": "Topic.origin",
+      "x-since": "2.3.0"
+    },
+    "opened_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the topic was opened: the time of the post that first raised it, or of the proposal.",
+      "x-description-zh-CN": "话题提出的时间：最早提出它的帖子的发布时间，或提议的时间。",
+      "x-grade": "record",
+      "x-ontology-property": "Topic.opened_at",
+      "x-since": "2.3.0"
+    },
+    "slug": {
+      "type": "string",
+      "description": "URL-safe form of the id.",
+      "x-description-zh-CN": "编号的网址形式。",
+      "x-grade": "record",
+      "x-shape": "view"
+    },
+    "object": {
+      "type": "string",
+      "description": "What the question is about, in words.",
+      "x-description-zh-CN": "问题所涉对象的文字。",
+      "x-grade": "machine",
+      "x-shape": "view"
+    },
+    "question": {
+      "type": "object",
+      "description": "The closed question in `en` and `zh-CN`.",
+      "x-description-zh-CN": "封闭问题，含 `en` 与 `zh-CN`。",
+      "x-grade": "machine",
+      "x-shape": "view"
+    },
+    "sides": {
+      "type": "string",
+      "description": "Whether the answers split the evidence (`open` while undecided).",
+      "x-description-zh-CN": "各答案是否分化。",
+      "x-grade": "machine",
+      "x-shape": "view"
+    },
+    "about": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "The occupation or market the question concerns: id, kind, English and Chinese labels. A candidate.",
+      "x-description-zh-CN": "问题所涉的职业或赛道（候选）。",
+      "x-grade": "machine",
+      "x-shape": "view"
+    },
+    "group": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Its group: id, English and Chinese labels. A candidate.",
+      "x-description-zh-CN": "所属大类（候选）。",
+      "x-grade": "machine",
+      "x-shape": "view"
+    },
+    "latest_claim_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Publication time of the newest claim.",
+      "x-description-zh-CN": "最新一条主张的发布时间。",
+      "x-grade": "record",
+      "x-shape": "view"
+    },
+    "accounts": {
+      "type": "integer",
+      "description": "Accounts that made claims.",
+      "x-description-zh-CN": "发表主张的账号数。",
+      "x-grade": "record",
+      "x-shape": "view"
+    },
+    "posts": {
+      "type": "integer",
+      "description": "Posts that made claims.",
+      "x-description-zh-CN": "发表主张的帖子数。",
+      "x-grade": "record",
+      "x-shape": "view"
+    },
+    "options": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Answers: option id, key, position, text in both languages and tallies.",
+      "x-description-zh-CN": "各答案：编号、键、顺序、双语文本和计数。",
+      "x-grade": "machine",
+      "x-shape": "view"
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Posts arguing for an answer, each with the original quote.",
+      "x-description-zh-CN": "支持某个答案的帖子，各带原文引用。",
+      "x-grade": "quote",
+      "x-shape": "view"
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Updates weighing on an answer, with the judged sign.",
+      "x-description-zh-CN": "对某个答案有分量的更新及判定的方向。",
+      "x-grade": "machine",
+      "x-shape": "view"
+    },
+    "by_quarter": {
+      "type": "object",
+      "description": "Claims per answer per calendar quarter.",
+      "x-description-zh-CN": "按自然季度统计的各答案主张数。",
+      "x-grade": "record",
+      "x-shape": "view"
+    }
+  },
+  "required": [
+    "topic_id",
+    "question_type",
+    "state",
+    "origin",
+    "opened_at",
+    "slug",
+    "object",
+    "question",
+    "sides",
+    "about",
+    "group",
+    "latest_claim_at",
+    "accounts",
+    "posts",
+    "options",
+    "claims",
+    "evidence",
+    "by_quarter"
+  ],
+  "additionalProperties": false,
+  "x-identifier": "topic_id",
+  "x-snapshot-file": "topics.json",
+  "x-since": "2.3.0"
+}

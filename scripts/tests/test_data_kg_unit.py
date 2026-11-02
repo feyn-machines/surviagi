@@ -206,6 +206,18 @@ class RealSnapshotTest(unittest.TestCase):
             with self.assertRaises(kg.KgError):
                 kg.read_snapshot(Path(tmp))
 
+    def test_a_snapshot_must_satisfy_the_public_contract_to_be_released(self):
+        import shutil, tempfile
+        kg.check_contract(LATEST)
+        with tempfile.TemporaryDirectory() as tmp:
+            shutil.copytree(LATEST, tmp, dirs_exist_ok=True)
+            models = json.loads((Path(tmp) / "models.json").read_text())
+            models[0]["status"] = "maybe"
+            (Path(tmp) / "models.json").write_text(json.dumps(models))
+            with self.assertRaises(kg.KgError) as raised:
+                kg.check_contract(Path(tmp))
+            self.assertIn("models.json", str(raised.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

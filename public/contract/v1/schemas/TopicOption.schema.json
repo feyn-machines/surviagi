@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://surviagi.com/contract/v1/schemas/TopicOption.schema.json",
+  "title": "Topic option",
+  "x-title-zh-CN": "话题答案",
+  "description": "One answer a reader can pick for a topic. It is a position somebody argued, or the direct opposite of one, written out so the question can be answered either way.",
+  "x-description-zh-CN": "读者可以为一个话题选择的一个答案。它是某人主张过的立场，或其直接的反面，写出来是为了让问题两边都能选。",
+  "type": "object",
+  "properties": {
+    "option_id": {
+      "type": "string",
+      "description": "Stable id of the answer.",
+      "x-description-zh-CN": "选项的固定编号。",
+      "x-grade": "record",
+      "x-ontology-property": "TopicOption.option_id",
+      "x-since": "2.3.0"
+    },
+    "topic_id": {
+      "type": "string",
+      "description": "The topic the answer belongs to.",
+      "x-description-zh-CN": "选项所属的话题。",
+      "x-grade": "record",
+      "x-ontology-property": "TopicOption.topic_id",
+      "x-since": "2.3.0"
+    },
+    "position": {
+      "type": "integer",
+      "description": "Its place among the topic's answers.",
+      "x-description-zh-CN": "它在话题各选项中的顺序。",
+      "x-grade": "record",
+      "x-ontology-property": "TopicOption.position",
+      "x-since": "2.3.0"
+    },
+    "text_en": {
+      "type": "string",
+      "description": "The answer in English.",
+      "x-description-zh-CN": "选项的英文。",
+      "x-grade": "machine",
+      "x-ontology-property": "TopicOption.text_en",
+      "x-since": "2.3.0"
+    },
+    "text_zh_cn": {
+      "type": "string",
+      "description": "The answer in Simplified Chinese.",
+      "x-description-zh-CN": "选项的简体中文。",
+      "x-grade": "machine",
+      "x-ontology-property": "TopicOption.text_zh_cn",
+      "x-since": "2.3.0"
+    },
+    "retired": {
+      "type": "boolean",
+      "description": "No longer offered. An answer somebody argued or voted for is retired, never deleted.",
+      "x-description-zh-CN": "不再提供。有人主张过或投过票的选项只停用，不删除。",
+      "x-grade": "record",
+      "x-ontology-property": "TopicOption.retired",
+      "x-since": "2.3.0"
+    }
+  },
+  "required": [
+    "option_id",
+    "topic_id",
+    "position",
+    "text_en",
+    "text_zh_cn",
+    "retired"
+  ],
+  "additionalProperties": false,
+  "x-identifier": "option_id",
+  "x-since": "2.3.0"
+}

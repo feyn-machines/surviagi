@@ -1,0 +1,329 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://surviagi.com/contract/v1/schemas/Event.schema.json",
+  "title": "Event",
+  "x-title-zh-CN": "事件",
+  "description": "One deduplicated update: something an organization released, changed, measured or announced. Several posts about the same thing are one update.",
+  "x-description-zh-CN": "一条去重后的更新：某个机构发布、改动、测得或宣布的一件事。讲同一件事的多条帖子是一条更新。",
+  "type": "object",
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "Stable id of the update.",
+      "x-description-zh-CN": "更新的稳定 ID。",
+      "x-grade": "record",
+      "x-ontology-property": "Event.event_id"
+    },
+    "kind": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "product_launch",
+        "version_release",
+        "availability_change",
+        "capability_update",
+        "pricing_change",
+        "benchmark_result",
+        "third_party_recognition",
+        "production_adoption",
+        "partnership",
+        "research_result",
+        "deprecation",
+        "personnel",
+        "event_announcement",
+        "incident",
+        "policy_statement",
+        "usage_report",
+        "independent_evaluation",
+        "failure_report",
+        "market_measurement",
+        null
+      ],
+      "description": "What kind of update it is.",
+      "x-description-zh-CN": "更新的类型。",
+      "x-grade": "machine",
+      "x-ontology-property": "Event.kind"
+    },
+    "kind_vocabulary": {
+      "type": "string",
+      "description": "Which version of the kind vocabulary the row was classified under.",
+      "x-description-zh-CN": "该行是按哪个版本的类型词表分类的。",
+      "x-grade": "record",
+      "x-ontology-property": "Event.kind_vocabulary"
+    },
+    "subject_key": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The canonical name of the thing the update is about; part of its identity.",
+      "x-description-zh-CN": "更新对象的规范名，是同一性的一部分。",
+      "x-grade": "machine",
+      "x-ontology-property": "Event.subject_key"
+    },
+    "title": {
+      "type": "string",
+      "description": "A display title.",
+      "x-description-zh-CN": "显示用标题。",
+      "x-grade": "machine",
+      "x-ontology-property": "Event.title"
+    },
+    "summary": {
+      "type": "string",
+      "description": "What happened, from the source text only.",
+      "x-description-zh-CN": "发生了什么，只依据来源文本。",
+      "x-grade": "machine",
+      "x-ontology-property": "Event.summary"
+    },
+    "announced_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time",
+      "description": "When it was announced.",
+      "x-description-zh-CN": "宣布时间。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "Event.announced_at",
+      "x-key-optional": true
+    },
+    "occurred_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time",
+      "description": "When it happened.",
+      "x-description-zh-CN": "发生时间。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "Event.occurred_at"
+    },
+    "confidence": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "The extractor's confidence, 0 to 1.",
+      "x-description-zh-CN": "抽取的置信度，0 到 1。",
+      "x-grade": "machine",
+      "x-ontology-property": "Event.confidence"
+    },
+    "identity_confidence": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "high",
+        "low",
+        null
+      ],
+      "description": "How surely the subject was identified.",
+      "x-description-zh-CN": "对象识别的把握。",
+      "x-grade": "machine",
+      "x-ontology-property": "Event.identity_confidence"
+    },
+    "subject": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The product or model the update is about, as the post names it.",
+      "x-description-zh-CN": "更新所涉及的产品或模型，按帖子里的写法原样记录。",
+      "x-grade": "machine",
+      "x-ontology-property": "Event.subject",
+      "x-since": "2.2.0"
+    },
+    "basis": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "vendor_claim",
+        "demonstration",
+        "own_use",
+        "measurement",
+        "production_use",
+        "statistic",
+        null
+      ],
+      "description": "On what basis the update is known, judged by who produced the evidence in the source post.",
+      "x-description-zh-CN": "这条更新凭什么成立，按来源帖子里的证据由谁产生来判断。",
+      "x-grade": "machine",
+      "x-ontology-property": "Event.basis",
+      "x-since": "2.2.0"
+    },
+    "task": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "One plain sentence saying what concrete piece of work the AI was given. Only for usage reports, independent evaluations, failure reports and production adoption.",
+      "x-description-zh-CN": "一句话说明让 AI 做了哪件具体的事。只用于使用实录、独立测评、失败报告和生产采用。",
+      "x-grade": "machine",
+      "x-ontology-property": "Event.task",
+      "x-since": "2.2.0"
+    },
+    "result": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "succeeded",
+        "partly",
+        "failed",
+        "not_stated",
+        null
+      ],
+      "description": "How the task came out. Only for the kinds that carry a task.",
+      "x-description-zh-CN": "这件事的结果。只用于带有 task 的类型。",
+      "x-grade": "machine",
+      "x-ontology-property": "Event.result",
+      "x-since": "2.2.0"
+    },
+    "quote": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The exact sentence of the source post that states the update.",
+      "x-description-zh-CN": "来源帖子里陈述这条更新的原句。",
+      "x-grade": "quote",
+      "x-ontology-property": "Event.quote",
+      "x-since": "2.2.0"
+    },
+    "schema_version": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The schema version the update was extracted under. Empty means it was extracted before 2.2.0.",
+      "x-description-zh-CN": "这条更新按哪一版 schema 提取。为空表示早于 2.2.0。",
+      "x-grade": "record",
+      "x-ontology-property": "Event.schema_version",
+      "x-since": "2.2.0"
+    },
+    "unresolved_reason": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Why the event has no kind yet, when `kind` is null.",
+      "x-description-zh-CN": "`kind` 为空时，事件为什么还没有类型。",
+      "x-grade": "machine",
+      "x-shape": "view"
+    },
+    "primary_org_id": {
+      "type": "string",
+      "description": "The organization the event is about.",
+      "x-description-zh-CN": "事件所属的组织。",
+      "x-grade": "record",
+      "x-shape": "view"
+    },
+    "org_name": {
+      "type": "string",
+      "description": "English name of that organization.",
+      "x-description-zh-CN": "该组织的英文名。",
+      "x-grade": "excerpt",
+      "x-shape": "view"
+    },
+    "org_name_zh_cn": {
+      "type": "string",
+      "description": "Chinese name of that organization.",
+      "x-description-zh-CN": "该组织的中文名。",
+      "x-grade": "machine",
+      "x-shape": "view"
+    },
+    "facts": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "object"
+      },
+      "description": "Numbers the source states, each with the words that state it.",
+      "x-description-zh-CN": "来源给出的数字，各带出处原话。",
+      "x-grade": "quote",
+      "x-shape": "view"
+    },
+    "source_count": {
+      "type": "integer",
+      "description": "Source posts behind the event.",
+      "x-description-zh-CN": "支持该事件的来源帖子数。",
+      "x-grade": "record",
+      "x-shape": "view"
+    },
+    "source_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Addresses of the source posts.",
+      "x-description-zh-CN": "来源帖子的地址。",
+      "x-grade": "record",
+      "x-shape": "view"
+    },
+    "attention": {
+      "type": "object",
+      "description": "Engagement counts of the leading source post when read.",
+      "x-description-zh-CN": "主来源帖子被读取时的互动数。",
+      "x-grade": "excerpt",
+      "x-shape": "view"
+    },
+    "series_size": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "description": "Posts in the thread when the source is a numbered thread.",
+      "x-description-zh-CN": "来源为串文时，串内帖子数。",
+      "x-grade": "record",
+      "x-shape": "view"
+    },
+    "models": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Models the event names, with their role.",
+      "x-description-zh-CN": "事件涉及的模型及其角色。",
+      "x-grade": "machine",
+      "x-shape": "view"
+    }
+  },
+  "required": [
+    "event_id",
+    "kind",
+    "kind_vocabulary",
+    "subject_key",
+    "title",
+    "summary",
+    "occurred_at",
+    "confidence",
+    "identity_confidence",
+    "subject",
+    "basis",
+    "task",
+    "result",
+    "quote",
+    "schema_version",
+    "unresolved_reason",
+    "primary_org_id",
+    "org_name",
+    "org_name_zh_cn",
+    "facts",
+    "source_count",
+    "source_urls",
+    "attention",
+    "series_size",
+    "models"
+  ],
+  "additionalProperties": false,
+  "x-identifier": "event_id",
+  "x-snapshot-file": "events.json"
+}

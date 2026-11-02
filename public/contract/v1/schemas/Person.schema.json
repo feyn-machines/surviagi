@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://surviagi.com/contract/v1/schemas/Person.schema.json",
+  "title": "Person",
+  "x-title-zh-CN": "人物",
+  "description": "A person whose public account we may collect, with the source of their identity.",
+  "x-description-zh-CN": "我们可能采集其公开账号的一个人，带身份出处。",
+  "type": "object",
+  "properties": {
+    "person_id": {
+      "type": "string",
+      "description": "person:<hash>. Stable.",
+      "x-description-zh-CN": "person:<哈希>。稳定。",
+      "x-grade": "record",
+      "x-ontology-property": "Person.person_id"
+    },
+    "name": {
+      "type": "string",
+      "description": "The name as the identity source writes it.",
+      "x-description-zh-CN": "身份出处里的写法。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "Person.name"
+    },
+    "aliases": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Other spellings.",
+      "x-description-zh-CN": "其他写法。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "Person.aliases"
+    },
+    "identity_url": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uri",
+      "description": "Where the identity was established.",
+      "x-description-zh-CN": "身份的出处。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "Person.identity_url"
+    }
+  },
+  "required": [
+    "person_id",
+    "name",
+    "aliases",
+    "identity_url"
+  ],
+  "additionalProperties": false,
+  "x-identifier": "person_id"
+}

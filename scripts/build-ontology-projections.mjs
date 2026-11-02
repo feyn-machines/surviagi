@@ -2,9 +2,10 @@
 // Projects the ontology schema into the artefacts that must agree with it:
 // the SQL constraints for migration 006 and the bilingual site labels.
 // Nothing here is hand-maintained; editing an output is always wrong.
-import { writeFileSync, mkdirSync, readFileSync } from "node:fs";
+import { writeFileSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { buildContract, CONTRACT_PATH } from "./lib/public-contract.mjs";
 import { schema, termIds, term, sqlValueList, sqlValueListAt, validateSchema } from "./lib/ontology-schema.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -340,6 +341,13 @@ function main() {
   writeFileSync(labelsPath, JSON.stringify(siteLabels(), null, 2) + "\n");
   const groupsPath = join(root, "src", "content", "market-groups.json");
   writeFileSync(groupsPath, JSON.stringify(marketGroups(), null, 2) + "\n");
+  const contractDir = join(root, "public", ...CONTRACT_PATH.split("/"));
+  rmSync(contractDir, { recursive: true, force: true });
+  for (const [relative, text] of Object.entries(buildContract())) {
+    mkdirSync(dirname(join(contractDir, relative)), { recursive: true });
+    writeFileSync(join(contractDir, relative), text);
+  }
+  console.log(`Wrote ${contractDir}`);
   console.log(`Wrote ${sqlPath}`);
   console.log(`Wrote ${join(root, "db", "generated", "007_semantic_judge_vocabulary.sql")}`);
   console.log(`Wrote ${labelsPath}`);

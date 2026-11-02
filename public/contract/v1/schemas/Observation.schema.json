@@ -1,0 +1,337 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://surviagi.com/contract/v1/schemas/Observation.schema.json",
+  "title": "Observation",
+  "x-title-zh-CN": "观察",
+  "description": "One actor used one subject on one piece of work, how it came out, on what basis and where it is written. The unit an agent asks for. One source gives none or several; several sources for the same thing make one observation.",
+  "x-description-zh-CN": "一个主体用一个对象在一项工作上做了一件事，结果如何，依据什么，出处在哪。Agent 查询的单位。一条来源可以没有或有多条观察；同一件事的多个来源合成一条观察。",
+  "type": "object",
+  "properties": {
+    "observation_id": {
+      "type": "string",
+      "description": "Stable id: obs- and a hash of the identity fields.",
+      "x-description-zh-CN": "固定编号：obs- 加上同一性字段的哈希。",
+      "x-grade": "record",
+      "x-ontology-property": "Observation.observation_id",
+      "x-since": "2.5.0"
+    },
+    "actor_key": {
+      "type": "string",
+      "description": "Who did it, as an organization or person id; a name marked unresolved when the actor is not on record.",
+      "x-description-zh-CN": "谁做的，用组织或人物编号；主体不在库里时用名称并标为 unresolved。",
+      "x-grade": "machine",
+      "x-ontology-property": "Observation.actor_key",
+      "x-since": "2.5.0"
+    },
+    "actor_org_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The actor, when it is an organization on record.",
+      "x-description-zh-CN": "主体是库里的组织时填写。",
+      "x-grade": "record",
+      "x-ontology-property": "Observation.actor_org_id",
+      "x-since": "2.5.0"
+    },
+    "actor_person_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The actor, when it is a person on record.",
+      "x-description-zh-CN": "主体是库里的人物时填写。",
+      "x-grade": "record",
+      "x-ontology-property": "Observation.actor_person_id",
+      "x-since": "2.5.0"
+    },
+    "actor_name": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The actor as the source writes the name.",
+      "x-description-zh-CN": "来源里写的主体名称。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "Observation.actor_name",
+      "x-since": "2.5.0"
+    },
+    "actor_role": {
+      "type": "string",
+      "enum": [
+        "maker",
+        "adopter",
+        "practitioner",
+        "evaluator",
+        "researcher"
+      ],
+      "description": "What the actor is in this matter.",
+      "x-description-zh-CN": "主体在这件事里的身份。",
+      "x-grade": "machine",
+      "x-ontology-property": "Observation.actor_role",
+      "x-since": "2.5.0"
+    },
+    "subject_key": {
+      "type": "string",
+      "description": "What was used, as a product or model id, or the name as written.",
+      "x-description-zh-CN": "用的什么，用产品或模型编号，或写成来源里的名称。",
+      "x-grade": "machine",
+      "x-ontology-property": "Observation.subject_key",
+      "x-since": "2.5.0"
+    },
+    "subject_product_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The subject, when it is a product on record.",
+      "x-description-zh-CN": "对象是库里的产品时填写。",
+      "x-grade": "record",
+      "x-ontology-property": "Observation.subject_product_id",
+      "x-since": "2.5.0"
+    },
+    "subject_model_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The subject, when it is a model on record.",
+      "x-description-zh-CN": "对象是库里的模型时填写。",
+      "x-grade": "record",
+      "x-ontology-property": "Observation.subject_model_id",
+      "x-since": "2.5.0"
+    },
+    "work_key": {
+      "type": "string",
+      "description": "The piece of work, as a catalog id; unmapped when no entry fits. Which entries it concerns is the concerns relation.",
+      "x-description-zh-CN": "哪项工作，用目录编号；没有合适条目时为 unmapped。它关系到哪些条目由 concerns 关系给出。",
+      "x-grade": "machine",
+      "x-ontology-property": "Observation.work_key",
+      "x-since": "2.5.0"
+    },
+    "event_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The update the observation hangs on, when there is one.",
+      "x-description-zh-CN": "观察挂在哪条更新上，没有则为空。",
+      "x-grade": "record",
+      "x-ontology-property": "Observation.event_id",
+      "x-since": "2.5.0"
+    },
+    "task": {
+      "type": "string",
+      "description": "One plain sentence saying what was done.",
+      "x-description-zh-CN": "一句白话，说明做了什么。",
+      "x-grade": "machine",
+      "x-ontology-property": "Observation.task",
+      "x-since": "2.5.0"
+    },
+    "evidence_type": {
+      "type": "string",
+      "enum": [
+        "vendor_claim",
+        "demonstration",
+        "own_use",
+        "measurement",
+        "production_use",
+        "statistic"
+      ],
+      "description": "On what basis it is known, judged by who produced the evidence.",
+      "x-description-zh-CN": "凭什么成立，按证据由谁产生来判断。",
+      "x-grade": "machine",
+      "x-ontology-property": "Observation.evidence_type",
+      "x-since": "2.5.0"
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "succeeded",
+        "partly",
+        "failed",
+        "not_stated"
+      ],
+      "description": "How the task came out; not_stated when the source does not say.",
+      "x-description-zh-CN": "这件事的结果；来源没说则为 not_stated。",
+      "x-grade": "machine",
+      "x-ontology-property": "Observation.outcome",
+      "x-since": "2.5.0"
+    },
+    "direction": {
+      "type": "string",
+      "enum": [
+        "ai_takes_on",
+        "human_still_needed",
+        "neutral"
+      ],
+      "description": "Which way it points on the question of AI taking on work. A description of the evidence, not a verdict.",
+      "x-description-zh-CN": "对「AI 接手工作」这个问题指向哪一边。描述证据，不下结论。",
+      "x-grade": "machine",
+      "x-ontology-property": "Observation.direction",
+      "x-since": "2.5.0"
+    },
+    "scale": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "How large: users, calls, staff, share covered. Empty means the source does not say.",
+      "x-description-zh-CN": "规模有多大：用户数、调用量、员工数、覆盖比例。为空表示来源没写。",
+      "x-grade": "machine",
+      "x-ontology-property": "Observation.scale",
+      "x-since": "2.5.0"
+    },
+    "conditions": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Limits the source states: human oversight, pilot scope, region, how it failed.",
+      "x-description-zh-CN": "来源写明的条件与限制：人工监督、试点范围、地区、失败方式。",
+      "x-grade": "machine",
+      "x-ontology-property": "Observation.conditions",
+      "x-since": "2.5.0"
+    },
+    "occurred_on": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date",
+      "description": "The day it happened; null when the source does not say.",
+      "x-description-zh-CN": "发生的日期；来源没写则为空。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "Observation.occurred_on",
+      "x-since": "2.5.0"
+    },
+    "announced_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time",
+      "description": "When the earliest source published it.",
+      "x-description-zh-CN": "最早的来源发布它的时间。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "Observation.announced_at",
+      "x-since": "2.5.0"
+    },
+    "observed_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time",
+      "description": "When we collected the earliest source.",
+      "x-description-zh-CN": "我们采集到最早来源的时间。",
+      "x-grade": "record",
+      "x-ontology-property": "Observation.observed_at",
+      "x-since": "2.5.0"
+    },
+    "review_state": {
+      "type": "string",
+      "enum": [
+        "machine_proposed",
+        "human_confirmed",
+        "human_rejected"
+      ],
+      "description": "Whether a person has checked it against the source.",
+      "x-description-zh-CN": "有没有人对照来源核对过。",
+      "x-grade": "record",
+      "x-ontology-property": "Observation.review_state",
+      "x-since": "2.5.0"
+    },
+    "reviewed_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time",
+      "description": "When a person last decided; null while machine proposed.",
+      "x-description-zh-CN": "最近一次人工决定的时间；机器提出时为空。",
+      "x-grade": "record",
+      "x-ontology-property": "Observation.reviewed_at",
+      "x-since": "2.5.0"
+    },
+    "extractor": {
+      "type": "string",
+      "description": "The extractor and its version that wrote the row.",
+      "x-description-zh-CN": "写入这一行的抽取器及版本。",
+      "x-grade": "record",
+      "x-ontology-property": "Observation.extractor",
+      "x-since": "2.5.0"
+    },
+    "prompt_sha256": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Hash of the prompt it was extracted under.",
+      "x-description-zh-CN": "抽取时所用提示词的哈希。",
+      "x-grade": "record",
+      "x-ontology-property": "Observation.prompt_sha256",
+      "x-since": "2.5.0"
+    },
+    "model": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The model that read the source.",
+      "x-description-zh-CN": "读来源的模型。",
+      "x-grade": "record",
+      "x-ontology-property": "Observation.model",
+      "x-since": "2.5.0"
+    },
+    "schema_version": {
+      "type": "string",
+      "description": "The schema version the observation was written under.",
+      "x-description-zh-CN": "写入这条观察时的 schema 版本。",
+      "x-grade": "record",
+      "x-ontology-property": "Observation.schema_version",
+      "x-since": "2.5.0"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the row was written.",
+      "x-description-zh-CN": "这一行写入的时间。",
+      "x-grade": "record",
+      "x-ontology-property": "Observation.created_at",
+      "x-since": "2.5.0"
+    }
+  },
+  "required": [
+    "observation_id",
+    "actor_key",
+    "actor_org_id",
+    "actor_person_id",
+    "actor_name",
+    "actor_role",
+    "subject_key",
+    "subject_product_id",
+    "subject_model_id",
+    "work_key",
+    "event_id",
+    "task",
+    "evidence_type",
+    "outcome",
+    "direction",
+    "scale",
+    "conditions",
+    "occurred_on",
+    "announced_at",
+    "observed_at",
+    "review_state",
+    "reviewed_at",
+    "extractor",
+    "prompt_sha256",
+    "model",
+    "schema_version",
+    "created_at"
+  ],
+  "additionalProperties": false,
+  "x-identifier": "observation_id",
+  "x-since": "2.5.0"
+}
