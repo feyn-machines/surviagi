@@ -131,8 +131,15 @@ class Assembly(unittest.TestCase):
         self.assertFalse(same_fact(base, {**base, "value": "-2"}))
         self.assertFalse(same_fact(base, {**base, "unit": "hours"}))
         self.assertFalse(same_fact(base, {**base, "quote": "instead of 6"}))
+        self.assertTrue(same_fact(base, {**base, "quote": "2 days"}))
         self.assertEqual(distinct_facts([base, {**base, "value": "6"}, {**base, "value": "+2"}]),
                          [base, {**base, "value": "6"}])
+
+    def test_a_number_quoted_short_and_in_full_stands_once_with_the_full_quote(self):
+        full = {"value": "18000", "unit": "people", "quote": "it put 18,000 behind Gemini"}
+        short = {**full, "quote": "18,000"}
+        other = {**full, "value": "25000", "quote": "25,000+ people"}
+        self.assertEqual(distinct_facts([short, other, full]), [full, other])
 
     def test_different_work_by_the_same_actor_stays_apart(self):
         batches = [{"observations": [item(), item(work="auditing", task="Sample invoices for audit.")]}]
