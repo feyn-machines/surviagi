@@ -7,6 +7,7 @@ import { getLocale } from "@/lib/locale";
 import { breadcrumbLd, pageMetadata } from "@/lib/seo";
 import { JsonLd } from "@/components/json-ld";
 import { siteNavCopy } from "@/lib/site-nav";
+import { indexable } from "@/lib/site-pages";
 import { activityHref, href } from "@/lib/routes";
 import {
   activitiesOfMarket,
@@ -108,6 +109,7 @@ export async function generateMetadata({
       .replace("{name}", label)
       .replace("{tasks}", String(group.tasks))
       .replace("{reached}", String(group.touched_tasks)),
+    index: indexable.group(group),
   });
 }
 

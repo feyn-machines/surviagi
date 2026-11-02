@@ -7,6 +7,7 @@ import { getLocale } from "@/lib/locale";
 import { breadcrumbLd, pageMetadata } from "@/lib/seo";
 import { JsonLd } from "@/components/json-ld";
 import { siteNavCopy } from "@/lib/site-nav";
+import { indexable } from "@/lib/site-pages";
 import { activityHref, href } from "@/lib/routes";
 import { WorkGrid, gridCounts } from "@/components/work-grid";
 import { Bar, Block, Stat, blueprint as bp } from "@/components/blueprint";
@@ -79,7 +80,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       .replace("{tasks}", String(entry?.tasks ?? 0))
       .replace("{reached}", String(reached)),
     // An occupation no update has reached has nothing of its own to show yet.
-    index: reached > 0,
+    index: indexable.occupation(reached),
     markdown: true,
   });
 }

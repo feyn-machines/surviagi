@@ -1,6 +1,7 @@
 import { count, fill } from "@/app/[lang]/markets/copy";
 import { DEFAULT_LANGUAGE, normalizeLanguage } from "@/lib/i18n";
 import { colon, link, markdownResponse } from "@/lib/markdown-copy";
+import { indexable } from "@/lib/site-pages";
 import { activityAnchor } from "@/lib/anchors";
 import {
   activitiesOfMarket,
@@ -85,5 +86,5 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
     body.push(`- ${link(language, row.label, `/markets/${row.slug}`)}${sep}${count(row.activities)} ${fill(c.marketActivities, { n: row.activities })}`);
   }
   // An occupation no update has reached has nothing of its own to say yet; its page is left out of the index too.
-  return markdownResponse(language, `/occupations/${code}`, name, body, { index: assessed > 0 });
+  return markdownResponse(language, `/occupations/${code}`, name, body, { index: indexable.occupation(assessed) });
 }

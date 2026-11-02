@@ -1,6 +1,7 @@
 import { termNameOrRaw } from "@/components/ontology-labels";
 import { DEFAULT_LANGUAGE, normalizeLanguage } from "@/lib/i18n";
 import { colon, link, markdownResponse } from "@/lib/markdown-copy";
+import { indexable } from "@/lib/site-pages";
 import {
   activitiesOfMarket,
   activityAnchor,
@@ -80,5 +81,5 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
     body.push(`- ${link(language, occupation, `/occupations/${occupationSlug(edge.occupation_id)}`)}${sep}${c.colConfidence} ${confidence}`);
   }
 
-  return markdownResponse(language, `/markets/${id}`, name, body);
+  return markdownResponse(language, `/markets/${id}`, name, body, { index: indexable.market(market.id) });
 }

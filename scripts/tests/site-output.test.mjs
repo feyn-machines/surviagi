@@ -384,8 +384,10 @@ test("announcement chronology reaches lists, timelines, market pages and sitemap
   cpSync(SNAPSHOT_DIR, dir, { recursive: true });
   const chain = JSON.parse(readFileSync(join(dir, "chain.json"), "utf8"));
   const events = JSON.parse(readFileSync(join(dir, "events.json"), "utf8"));
-  const activity = chain.activities.find((a) => a.evidence_rows && a.level);
-  const reading = chain.evidence.find((r) => r.activity_id === activity.activity_id && r.level != null && r.observed_level != null);
+  // An update the sitemap lists, on a market that has a page.
+  const offered = new Set(events.filter(substantial).map((e) => e.event_id));
+  const reading = chain.evidence.find((r) => offered.has(r.event_id) && r.level != null && r.observed_level != null);
+  const activity = chain.activities.find((a) => a.activity_id === reading.activity_id);
   const event = chain.events.find((e) => e.event_id === reading.event_id);
   // Later than every occurrence AND the collection window, so the timeline must extend too.
   const coverage = JSON.parse(readFileSync(join(dir, "coverage.json"), "utf8"));
@@ -427,6 +429,81 @@ test("announcement chronology reaches lists, timelines, market pages and sitemap
   } finally {
     await stop(proc);
     rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// The inclusion rule of Issue #36, written out again from the published files rather than imported from the site.
+const substantial = (e) =>
+  (e.facts?.length ?? 0) > 0 || Boolean(e.task && e.result && e.result !== "not_stated") || e.source_count >= 2;
+
+test("the sitemap offers only pages with something of their own; the others answer but ask not to be indexed", { skip: !HAS_SNAPSHOT, timeout: 60000 }, async () => {
+  const read = (name) => JSON.parse(readFileSync(join(SNAPSHOT_DIR, `${name}.json`), "utf8"));
+  const events = read("events");
+  const topics = read("topics");
+  const paths = new Set([...files.get("sitemap.xml").matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname));
+  const listed = (prefix) => [...paths].filter((p) => p.startsWith(prefix) && !p.startsWith("/occupations/g/")).map((p) => p.slice(prefix.length)).sort();
+
+  // Updates: only those with an update page (it bears on some work) that state a figure, a task with its result,
+  // or have two sources. A release before Issue #35 links updates to work in its graded chain instead.
+  const withPage = new Set(events.some((e) => e.work)
+    ? events.filter((e) => e.work?.length).map((e) => e.event_id)
+    : read("chain").evidence.map((r) => r.event_id));
+  const wantUpdates = events.filter((e) => withPage.has(e.event_id) && substantial(e)).map((e) => e.event_id).sort();
+  assert.ok(wantUpdates.length > 0 && wantUpdates.length < withPage.size, "the update threshold separates nothing in this release");
+  assert.deepEqual(listed("/updates/"), wantUpdates);
+  assert.ok(!listed("/zh-CN/updates/").length, "a Chinese update address is in the sitemap");
+
+  // Topics argued by at least two accounts, in both languages.
+  const wantTopics = topics.filter((t) => t.accounts >= 2).map((t) => t.slug).sort();
+  assert.ok(wantTopics.length > 0 && wantTopics.length < topics.length, "the topic threshold separates nothing in this release");
+  assert.deepEqual(listed("/topics/"), wantTopics);
+  assert.deepEqual(listed("/zh-CN/topics/"), wantTopics);
+
+  // Markets some update bears on, when the release links updates to work directly.
+  if (events.some((e) => e.work)) {
+    const marketOf = new Map(read("work").map((w) => [w.id, w.market_id]));
+    const wantMarkets = [...new Set(events.flatMap((e) => (e.work ?? []).map((w) => marketOf.get(w.activity_id))).filter(Boolean))]
+      .map((id) => id.replace(/^oaw:market:/, "")).sort();
+    assert.deepEqual(listed("/markets/"), wantMarkets);
+    assert.deepEqual(listed("/zh-CN/markets/"), wantMarkets);
+  }
+
+  // One page each side of the update and topic thresholds: below it the page asks not to be indexed.
+  const noindex = (page) => /<meta name="robots" content="noindex, follow"\/>/.test(page);
+  const below = {
+    update: events.find((e) => withPage.has(e.event_id) && !substantial(e)).event_id,
+    topic: topics.find((t) => t.accounts < 2).slug,
+  };
+  for (const [path, offeredPage] of [
+    [`/updates/${wantUpdates[0]}`, true], [`/updates/${below.update}`, false],
+    [`/topics/${wantTopics[0]}`, true], [`/topics/${below.topic}`, false],
+  ]) {
+    const res = await fetch(`${site.base}${path}`);
+    assert.equal(res.status, 200, path);
+    assert.equal(noindex(await res.text()), !offeredPage, `${path}: robots`);
+    // The Markdown copy follows the same rule, but this preview server marks every response noindex, so its header
+    // cannot tell the two apart here.
+  }
+});
+
+test("an update page shows the figures, task and basis that earn it a place in the sitemap", { skip: !HAS_SNAPSHOT }, async () => {
+  const events = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "events.json"), "utf8"));
+  const paths = [...files.get("sitemap.xml").matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname);
+  const listed = new Set(paths.filter((p) => p.startsWith("/updates/")).map((p) => p.slice("/updates/".length)));
+  const event = events.find((e) => listed.has(e.event_id) && e.facts?.length && e.task && e.basis);
+  assert.ok(event, "no listed update with a figure, a task and a basis");
+  for (const [prefix, heading] of [["", "What it reports"], ["/zh-CN", "它报告了什么"]]) {
+    const page = await (await fetch(`${site.base}${prefix}/updates/${event.event_id}`)).text();
+    const md = await (await fetch(`${site.base}${prefix}/updates/${event.event_id}/raw.md`)).text();
+    const escaped = (text) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;");
+    assert.ok(page.includes(heading) && md.includes(`## ${heading}`), `${prefix}: no ${heading}`);
+    for (const text of [event.task, event.facts[0].what]) {
+      assert.ok(page.includes(escaped(text)), `${prefix}: the page lacks ${text}`);
+      assert.ok(md.includes(text), `${prefix}: the Markdown copy lacks ${text}`);
+    }
+    // A quote that reached us HTML-escaped is shown as the post shows it, not escaped twice.
+    const quote = event.facts[0].quote.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&").replace(/\s+/g, " ");
+    assert.ok(md.includes(quote), `${prefix}: the Markdown copy lacks the quote ${quote}`);
   }
 });
 
@@ -746,7 +823,8 @@ test("a detail page's lastmod is when its newest dated evidence happened, never 
     assert.equal(lastmod, want ? second(want) : undefined, loc);
   }
   assert.ok(checked > 0, "no detail page in the sitemap");
-  assert.ok(checked > dated, "every detail page is dated, so the undated case went untested");
+  // Since Issue #36 a detail page is listed only with evidence of its own, so an undated one is rare; when there is
+  // one, the loop above has checked that it carries no lastmod.
   assert.ok(dated > 0, "no detail page carries the date of its evidence");
 });
 

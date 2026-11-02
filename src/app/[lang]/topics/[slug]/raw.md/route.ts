@@ -1,5 +1,6 @@
 import { DEFAULT_LANGUAGE, normalizeLanguage } from "@/lib/i18n";
 import { colon, link, markdownResponse } from "@/lib/markdown-copy";
+import { indexable } from "@/lib/site-pages";
 import { linkedEvents, manifest, topicBySlug } from "@/lib/snapshot";
 import { answerSentence, copy } from "../copy";
 
@@ -44,5 +45,5 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
       body.push(`- @${claim.handle} · ${claim.published_at.slice(0, 10)}${sep}${said}${claim.url ? ` · [${source}](${claim.url})` : ""}`);
     }
   }
-  return markdownResponse(language, `/topics/${topic.slug}`, topic.question[language], body);
+  return markdownResponse(language, `/topics/${topic.slug}`, topic.question[language], body, { index: indexable.topic(topic) });
 }

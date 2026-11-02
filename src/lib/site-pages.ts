@@ -11,25 +11,46 @@ import {
   occupationGroups,
   occupations,
   topics,
+  updateCountByMarket,
+  type EventRow,
+  type OccupationGroup,
+  type Topic,
 } from "./snapshot";
 
 /** Pages that exist whatever the snapshot holds. */
 export const FIXED_PATHS = ["/", "/markets", "/occupations", "/topics", "/updates", "/voices", "/articles", "/whitepaper", "/agents", "/privacy", "/terms"] as const;
 
 /**
- * The detail pages of the loaded data release. Each detail route looks its
- * entity up in the same release and answers 404 when it is absent, and the
- * sitemap lists exactly this list, so the sitemap cannot name a page that does
- * not exist.
+ * Which detail pages are offered to search engines (Issue #36, design 2026-11-02 §8.6). A page that misses its
+ * threshold still answers, but asks not to be indexed and stays out of the sitemap: a search engine judges a site by
+ * its pages, and hundreds of near-identical short ones made it set most of them aside.
+ *
+ * Until observations are published (#25), "has evidence" for a market or an occupation means an update bears on it.
+ * Every catalog label has its Chinese form, so a Chinese page is offered beside its English one; an update keeps its
+ * original words and is offered once (`UPDATE_LANGUAGES`).
  */
-export const detailPages = {
-  markets: () => markets().map((market) => marketSlug(market.id)),
-  occupations: () => occupations().map((row) => occupationSlug(row.occupation_id)),
-  /** Occupations an update has reached: the ones a search engine is told about. */
-  reachedOccupations: () => occupations().filter((row) => row.touched > 0).map((row) => occupationSlug(row.occupation_id)),
-  occupationGroups: () => occupationGroups().map((group) => groupSlug(group.id)),
-  topics: () => topics().map((topic) => ({ slug: topic.slug, latest: topic.latest_claim_at })),
-  updates: () => linkedEvents().map((e) => ({ id: e.event_id, occurredAt: updateTimestamp(e) })),
+export const indexable = {
+  /** It states a figure, says what was done and how it came out, or more than one source carries it. */
+  update: (e: Pick<EventRow, "facts" | "task" | "result" | "source_count">) =>
+    (e.facts?.length ?? 0) > 0 || Boolean(e.task && e.result && e.result !== "not_stated") || e.source_count >= 2,
+  /** At least two accounts argue it, so it is a question people disagree on rather than one post. */
+  topic: (t: Pick<Topic, "accounts">) => t.accounts >= 2,
+  market: (marketId: string) => (updateCountByMarket().get(marketId) ?? 0) > 0,
+  occupation: (touchedTasks: number) => touchedTasks > 0,
+  group: (g: Pick<OccupationGroup, "touched_tasks">) => g.touched_tasks > 0,
+};
+
+/**
+ * The detail pages of the loaded data release that meet `indexable`: what the sitemap names. Each detail route
+ * looks its entity up in the same release and answers 404 when it is absent, so the sitemap cannot name a page that
+ * does not exist.
+ */
+export const indexedPages = {
+  markets: () => markets().filter((market) => indexable.market(market.id)).map((market) => marketSlug(market.id)),
+  occupations: () => occupations().filter((row) => indexable.occupation(row.touched)).map((row) => occupationSlug(row.occupation_id)),
+  occupationGroups: () => occupationGroups().filter(indexable.group).map((group) => groupSlug(group.id)),
+  topics: () => topics().filter(indexable.topic).map((topic) => ({ slug: topic.slug, latest: topic.latest_claim_at })),
+  updates: () => linkedEvents().filter(indexable.update).map((e) => ({ id: e.event_id, occurredAt: updateTimestamp(e) })),
 };
 
 /** An update keeps its original words in every language, so it is listed once. */

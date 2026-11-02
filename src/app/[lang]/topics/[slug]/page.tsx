@@ -9,6 +9,7 @@ import { getLocale } from "@/lib/locale";
 import { href, marketHref, updateHref } from "@/lib/routes";
 import { breadcrumbLd, pageMetadata } from "@/lib/seo";
 import { siteNavCopy } from "@/lib/site-nav";
+import { indexable } from "@/lib/site-pages";
 import { linkedEvents, manifest, markets, occupationSlug, occupations, topicBySlug, type Topic } from "@/lib/snapshot";
 import { localizedPath } from "@/lib/i18n";
 import type { Route } from "next";
@@ -32,6 +33,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     language,
     path: `/topics/${slug}`,
     title: topic.question[language],
+    // One account's post is not yet a question people disagree on.
+    index: indexable.topic(topic),
     markdown: true,
     description: editorial?.description ?? c.describe.replace("{q}", topic.question[language]).replace("{n}", String(topic.options.length))
       .replace("{a}", String(topic.accounts)),
