@@ -14,7 +14,8 @@ again by a later run adds its new sources and facts and keeps everything else
 (rule:observation-is-one-actor-one-subject-one-work). Until the mapping pass,
 work_key is 'unmapped' and the identity takes the work as the model wrote it.
 When mapping later makes two observations the same, they are merged then, and
-the id that goes away is kept as a redirect.
+the id that goes away is kept as a redirect (observation_mapping); what a later
+run finds again under that id is written under both.
 """
 from __future__ import annotations
 
@@ -146,18 +147,31 @@ def ingest_observations(conn, path):
                    ON CONFLICT (observation_id) DO NOTHING
                    RETURNING observation_id""", row).fetchone()
             new += inserted is not None
+        # An observation merged away by the mapping pass also gives what is found
+        # again to the one it was merged into.
+        heads = {r["observation_id"]: r["merged_into"] for r in conn.execute(
+            "SELECT observation_id, merged_into FROM observation_merges WHERE observation_id = ANY(%s)",
+            ([row["observation_id"] for row in observations],)).fetchall()}
+        written_sources = sources + [
+            {**s, "observation_id": heads[s["observation_id"]],
+             "source_ref": "obs-src-" + _short_hash(heads[s["observation_id"]], s["url"])}
+            for s in sources if s["observation_id"] in heads]
+        written_facts = facts + [
+            {**f, "observation_id": heads[f["observation_id"]],
+             "fact_id": "fact-" + _short_hash(heads[f["observation_id"]], f["value"], f["unit"], f["what"], f["quote"])}
+            for f in facts if f["observation_id"] in heads]
         with conn.cursor() as cursor:
             cursor.executemany(
                 """INSERT INTO observation_sources
                    (source_ref, observation_id, source_type, url, source_id, quote, published_at)
                    VALUES (%(source_ref)s, %(observation_id)s, 'x_post', %(url)s, %(source_id)s, %(quote)s,
                     %(published_at)s)
-                   ON CONFLICT DO NOTHING""", sources)
+                   ON CONFLICT DO NOTHING""", written_sources)
             cursor.executemany(
                 """INSERT INTO observation_facts (fact_id, observation_id, value, unit, what, baseline, quote)
                    VALUES (%(fact_id)s, %(observation_id)s, %(value)s, %(unit)s, %(what)s, %(baseline)s,
                     %(quote)s)
-                   ON CONFLICT DO NOTHING""", facts)
+                   ON CONFLICT DO NOTHING""", written_facts)
             cursor.executemany(
                 """INSERT INTO observation_readings (observation_id, run_id, work, actor, subject)
                    VALUES (%(observation_id)s, %(run_id)s, %(work)s, %(actor)s, %(subject)s)""", readings)

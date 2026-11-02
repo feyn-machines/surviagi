@@ -12,7 +12,9 @@ picked up at the step that stopped, so posts are not collected or sent to a mode
 moves only once the snapshot is written.
 
 Observations (Issue #25) are read from the window's posts right after updates, in a call of their own;
-that step is optional too, and posts of a batch that failed stay unread for a later run.
+that step is optional too, and posts of a batch that failed stay unread for a later run. Then each new
+observation is put on the catalog entries it concerns and observations that turn out to be one are merged
+(`map-observations`, also optional).
 
 Topics are fed in the same run: before mining, the topics that most need another voice are searched on X
 for the window (`topic-queries` -> `crawl search` -> `topic-searched`), so mining reads those posts with the
@@ -303,6 +305,18 @@ def observation_notes(outcome: Outcome) -> list[str]:
     return notes
 
 
+def mapping_notes(outcome: Outcome) -> list[str]:
+    """What the mapping step did; an observation whose call failed is asked again by a later run."""
+    result = outcome.result
+    if "observations" not in result:
+        return []
+    notes = [f"observation mapping: {result.get('mapped', 0)} mapped, {result.get('unmapped', 0)} fit no entry,"
+             f" {result.get('merged', 0)} merged"]
+    if result.get("failed"):
+        notes.append(f"observation mapping: {result['failed']} calls failed; asked again next run")
+    return notes
+
+
 def pnpm(*args: str) -> list[str]:
     return ["pnpm", "-s", *args]
 
@@ -336,6 +350,7 @@ def steps(window: Window, root: Path = ROOT) -> list[Step]:
                                  "--output", panel_run), **crawl(panel_run)),
         Step("extract-events", extract, check=extraction_problems(root / extraction)),
         Step("extract-observations", observe, notes=observation_notes, optional=True),
+        Step("map-observations", pnpm("data:map:observations"), notes=mapping_notes, optional=True),
         Step("verify", pnpm("data:verify"), check=batch_problems, before=typesafe_preflight),
         Step("identify-models", pnpm("data:identify:models"), check=batch_problems),
         Step("route-events", pnpm("data:route:events"), check=batch_problems, before=typesafe_preflight),
