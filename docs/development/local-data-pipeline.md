@@ -329,3 +329,17 @@ pnpm data:review:record -- --file review.json --reviewer "姓名"
 当作没人看过再提一遍。`decision='rejected'` 不改 `method`——人没有提出这条边，
 只是否决了它；只有确认才会把边变成 `method='reviewed'` 的断言。
 已决定的边不会被重放的文件悄悄改写，重复评审会被报告而不是覆盖。
+
+### 观察、产品与采用（2026-11-03，本体 2.5.0，Issue #28）
+
+迁移 046 只新增表：`observations`（身份是主体、对象、工作、发生日期的哈希，`obs-` 开头）、`observation_sources`（出处与原文，不限于 X）、`observation_facts`、`observation_concepts`（关系到哪些赛道或职业，模型提出的保持候选）、`products`、`product_models`、`product_availability`、`adoptions`、`org_investments`；并把 `extracted_events.basis` 的取值加上 `statistic`。等级、阶段、闸门相关的表和旧数据原样保留，停止写入由 Issue #35 完成。本版还没有写入观察的抽取器（Issue #25）；表由 `test_data_observations_integration.py` 对着约束和一份 20 条真实来源的手工标注（本机 `data/ontology/`，不进 Git）验证过。
+
+**验证带新迁移的分支，用临时库，不要用日常库。** `migrate()` 会把分支里的新迁移记进库里；日常运行从 `main` 起，没有这个文件，会停在 “Applied migration has changed or is missing”。多数集成测试直接对日常库 `openaiwill_local` 跑 `migrate()`，所以：
+
+```sh
+# 克隆日常库（需要没有其他连接），用环境变量指向克隆
+python3 -c "import sys; sys.path.insert(0,'scripts'); from data_pipeline.db import connect; c=connect('postgres'); c.execute('CREATE DATABASE openaiwill_scratch_branch TEMPLATE openaiwill_local')"
+OAW_DATA_DATABASE=openaiwill_scratch_branch pnpm data:test
+```
+
+合并后再在日常库上应用迁移（日常运行或 `data:setup`），最后删掉克隆库。

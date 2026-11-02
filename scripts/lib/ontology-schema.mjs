@@ -106,6 +106,16 @@ export const governedColumns = {
   "topic_option_evidence.method": "relation_method",
   "topic_option_evidence.status": "relation_status",
   "topic_option_evidence.sign": "answer_evidence_sign",
+  "observations.actor_role": "observation_actor_role",
+  "observations.evidence_type": "event_basis",
+  "observations.outcome": "event_result",
+  "observations.direction": "observation_direction",
+  "observations.review_state": "observation_review",
+  "observation_sources.source_type": "observation_source_type",
+  "observation_concepts.method": "relation_method",
+  "observation_concepts.status": "relation_status",
+  "product_availability.stage": "product_stage",
+  "adoptions.stage": "adoption_stage",
 };
 
 const SQL_IDENT = /^[a-z][a-z0-9_]*$/;
