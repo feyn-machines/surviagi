@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { EntryMatches } from "@/components/entry-matches";
+import { entryMarkets } from "@/lib/entry-search";
 import { Stat } from "@/components/blueprint";
 import { Screen } from "@/components/home/reveal";
 import { getLocale } from "@/lib/locale";
@@ -65,6 +67,7 @@ export default async function MarketsPage({ searchParams }: Props) {
     );
   }
 
+  const matches = initialQuery.trim() ? entryMarkets(initialQuery) : [];
   const updatesOf = updateCountByMarket();
   const published = observationsPublished();
   const ledgers = markets().map((market) => observationsOfMarket(market.id));
@@ -96,6 +99,8 @@ export default async function MarketsPage({ searchParams }: Props) {
     <div className={s.page}>
       <JsonLd data={datasetLd(language, { name: c.title, description: c.lead, path: "/markets" })} />
       <PageHeader eyebrow={c.eyebrow} title={c.title} lead={c.lead} />
+
+      <EntryMatches query={initialQuery} matches={matches} kind="markets" language={language} />
 
       <Screen className={x.stats}>
         <div className={x.rise}>
@@ -132,7 +137,8 @@ export default async function MarketsPage({ searchParams }: Props) {
       {rows.length === 0 ? (
         <p>{c.empty}</p>
       ) : (
-        <MarketsExplorer rows={rows} language={language} initialQuery={initialQuery} />
+        // Once the matches answer the query, the list below is the whole list again.
+        <MarketsExplorer rows={rows} language={language} initialQuery={matches.length ? "" : initialQuery} />
       )}
 
       <Provenance language={language} />

@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { EntryMatches } from "@/components/entry-matches";
+import { entryOccupations } from "@/lib/entry-search";
 import { bilingual } from "@/lib/i18n";
 import { getLocale } from "@/lib/locale";
 import { datasetLd, pageMetadata } from "@/lib/seo";
@@ -73,6 +75,7 @@ export default async function Occupations({ searchParams }: Props) {
   const c = copy[language];
   if (!snapshotExists()) return <NoSnapshot language={language} />;
 
+  const matches = initialQuery.trim() ? entryOccupations(initialQuery) : [];
   const published = observationsPublished();
   const ledgers = occupations().map((entry) => observationsOfOccupation(entry.occupation_id));
   const rows: DirectoryRow[] = occupations().map((entry, i) => {
@@ -115,6 +118,8 @@ export default async function Occupations({ searchParams }: Props) {
       <h1 className={s.title}>{c.title}</h1>
       <p className={s.pageLead}>{c.lead}</p>
 
+      <EntryMatches query={initialQuery} matches={matches} kind="occupations" language={language} />
+
       <div className={s.stats}>
         <Stat
           label={c.statTotalLabel}
@@ -144,7 +149,8 @@ export default async function Occupations({ searchParams }: Props) {
         rows={rows}
         groups={groups}
         language={language}
-        initialQuery={initialQuery}
+        // Once the matches answer the query, the list below is the whole list again.
+        initialQuery={matches.length ? "" : initialQuery}
       />
     </div>
   );
