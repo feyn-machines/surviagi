@@ -33,7 +33,7 @@ from datetime import datetime, timezone
 from secrets import token_hex
 
 from . import deepseek, embedding
-from .observation_store import _short_hash
+from .observation_store import _short_hash, new_facts
 from .pipeline import digest
 
 MAPPER = "observation-mapping-1"
@@ -272,7 +272,8 @@ def merge(conn, run_id):
 
 def merge_one(conn, head, member, run_id):
     """Write the member's sources, facts and entries under the head as well, and
-    record the member's id as a redirect to the head. The member's rows stay."""
+    record the member's id as a redirect to the head. The member's rows stay; a
+    number the head already has in another form is not copied."""
     for source in conn.execute("SELECT * FROM observation_sources WHERE observation_id = %s", (member,)).fetchall():
         conn.execute(
             """INSERT INTO observation_sources (source_ref, observation_id, source_type, url, source_id, quote,
@@ -280,7 +281,9 @@ def merge_one(conn, head, member, run_id):
                VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING""",
             ("obs-src-" + _short_hash(head, source["url"]), head, source["source_type"], source["url"],
              source["source_id"], source["quote"], source["published_at"]))
-    for fact in conn.execute("SELECT * FROM observation_facts WHERE observation_id = %s", (member,)).fetchall():
+    facts = conn.execute(
+        "SELECT * FROM observation_facts WHERE observation_id = %s ORDER BY fact_id", (member,)).fetchall()
+    for fact in new_facts(conn, [{**fact, "observation_id": head} for fact in facts]):
         conn.execute(
             """INSERT INTO observation_facts (fact_id, observation_id, value, unit, what, baseline, method_note, quote)
                VALUES (%s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING""",

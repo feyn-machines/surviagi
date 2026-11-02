@@ -24,7 +24,7 @@ import json
 from pathlib import Path
 
 from . import ontology_schema
-from .observation_extraction import EXTRACTOR, assemble_observations
+from .observation_extraction import EXTRACTOR, assemble_observations, same_fact
 from .pipeline import digest
 
 
@@ -97,6 +97,23 @@ def build_rows(doc, run_id):
     return observations, sources, facts, readings, unquoted
 
 
+def new_facts(conn, facts):
+    """The facts not yet stored under their observation in any form: a number
+    found again as "+32" where "32" is stored is not written a second time."""
+    stored = {}
+    for row in conn.execute(
+            "SELECT observation_id, value, unit, quote FROM observation_facts WHERE observation_id = ANY(%s)",
+            (sorted({f["observation_id"] for f in facts}),)).fetchall():
+        stored.setdefault(row["observation_id"], []).append(row)
+    kept = []
+    for fact in facts:
+        known = stored.setdefault(fact["observation_id"], [])
+        if not any(same_fact(fact, other) for other in known):
+            kept.append(fact)
+            known.append(fact)
+    return kept
+
+
 def ingest_observations(conn, path):
     """Write one run document. The same document again is a no-op; the same run
     id with other content is refused."""
@@ -160,6 +177,7 @@ def ingest_observations(conn, path):
             {**f, "observation_id": heads[f["observation_id"]],
              "fact_id": "fact-" + _short_hash(heads[f["observation_id"]], f["value"], f["unit"], f["what"], f["quote"])}
             for f in facts if f["observation_id"] in heads]
+        written_facts = new_facts(conn, written_facts)
         with conn.cursor() as cursor:
             cursor.executemany(
                 """INSERT INTO observation_sources

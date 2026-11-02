@@ -175,9 +175,46 @@ def _facts(raw, texts):
         fact = {"value": value, "unit": _text_or_none(item.get("unit")), "what": what,
                 "baseline": _text_or_none(item.get("baseline")), "quote": item["quote"].strip(),
                 "source_id": source_id}
-        if fact not in kept:
-            kept.append(fact)
+        kept = distinct_facts(kept + [fact])
     return kept, refused
+
+
+# One number told twice in different forms is one fact: "+32" and "32", "1,200"
+# and "1200", "32%" and "32" in "%", when the same words carry it. A sign
+# other than plus, or two different units, keeps them apart.
+_SPACES = re.compile(r"\s+")
+_DIGIT_COMMA = re.compile(r"(?<=\d),(?=\d{3}\b)")
+
+
+def _fact_form(fact):
+    value = _DIGIT_COMMA.sub("", _SPACES.sub("", fact["value"]).lower()).lstrip("+")
+    unit = _SPACES.sub(" ", (fact.get("unit") or "").strip().lower()) or None
+    if value.endswith("%") and len(value) > 1:
+        value, unit = value[:-1], unit or "%"
+    return value, unit, _SPACES.sub(" ", fact["quote"].strip().lower())
+
+
+def same_fact(a, b):
+    value_a, unit_a, quote_a = _fact_form(a)
+    value_b, unit_b, quote_b = _fact_form(b)
+    return value_a == value_b and quote_a == quote_b and (unit_a is None or unit_b is None or unit_a == unit_b)
+
+
+def distinct_facts(facts):
+    """Facts in their order, each number once: of two forms of one, the one that
+    says more (unit, baseline, method) stands, else the earlier."""
+    kept = []
+    for fact in facts:
+        twin = next((i for i, k in enumerate(kept) if same_fact(k, fact)), None)
+        if twin is None:
+            kept.append(fact)
+        elif _filled(fact) > _filled(kept[twin]):
+            kept[twin] = fact
+    return kept
+
+
+def _filled(fact):
+    return sum(fact.get(name) is not None for name in ("unit", "baseline", "method_note"))
 
 
 def check_observation(raw, by_id):
@@ -231,7 +268,8 @@ def assemble_observations(candidates, batches):
 
     Until the mapping pass gives a catalog entry, the identity takes the work as
     the model wrote it, so two different pieces of work by one actor on one day
-    stay two observations. Merging keeps every source and every fact.
+    stay two observations. Merging keeps every source and every fact, a number
+    told twice in two forms once.
     """
     by_id = {c["source_id"]: c for c in candidates}
     merged, refused = {}, {}
@@ -250,7 +288,7 @@ def assemble_observations(candidates, batches):
                 continue
             known = {s["source_id"] for s in current["sources"]}
             current["sources"] += [s for s in observation["sources"] if s["source_id"] not in known]
-            current["facts"] += [f for f in observation["facts"] if f not in current["facts"]]
+            current["facts"] = distinct_facts(current["facts"] + observation["facts"])
             current["refused_facts"] += observation["refused_facts"]
             current["occurred_stated"] = current["occurred_stated"] or observation["occurred_stated"]
     return list(merged.values()), refused

@@ -11,7 +11,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from data_pipeline import deepseek  # noqa: E402
 from data_pipeline.observation_extraction import (  # noqa: E402
-    ACTOR_ROLES, DIRECTIONS, assemble_observations, observation_id, prefilter, system_prompt)
+    ACTOR_ROLES, DIRECTIONS, assemble_observations, distinct_facts, observation_id, prefilter, same_fact,
+    system_prompt)
 
 TEXT = ("We moved month-end close to the agent. Reconciliation now takes 2 days instead of 6, "
         "but a person still signs off every entry.")
@@ -112,6 +113,26 @@ class Assembly(unittest.TestCase):
         batches = [{"observations": [item()]}, {"observations": [item(source_ids=["2"])]}]
         [obs], _ = assemble_observations(posts, batches)
         self.assertEqual([s["source_id"] for s in obs["sources"]], ["1", "2"])
+
+    def test_one_number_told_twice_in_two_forms_is_one_fact(self):
+        quote = "Reconciliation now takes 2 days instead of 6"
+        plain = {"value": "2", "unit": None, "what": "days to reconcile", "baseline": None, "quote": quote}
+        fuller = {"value": "+2", "unit": "days", "what": "time to reconcile", "baseline": "6 days", "quote": quote}
+        batches = [{"observations": [item(facts=[plain])]}, {"observations": [item(facts=[fuller, plain])]}]
+        [obs], _ = assemble_observations([post()], batches)
+        self.assertEqual([(f["value"], f["unit"]) for f in obs["facts"]], [("+2", "days")])
+
+    def test_a_sign_a_unit_or_other_words_keep_numbers_apart(self):
+        quote = "takes 2 days instead of 6"
+        base = {"value": "2", "unit": "days", "quote": quote}
+        self.assertTrue(same_fact(base, {**base, "value": " 2 ", "unit": "Days"}))
+        self.assertTrue(same_fact({**base, "value": "1,200"}, {**base, "value": "1200"}))
+        self.assertTrue(same_fact({**base, "value": "32%", "unit": None}, {**base, "value": "32", "unit": "%"}))
+        self.assertFalse(same_fact(base, {**base, "value": "-2"}))
+        self.assertFalse(same_fact(base, {**base, "unit": "hours"}))
+        self.assertFalse(same_fact(base, {**base, "quote": "instead of 6"}))
+        self.assertEqual(distinct_facts([base, {**base, "value": "6"}, {**base, "value": "+2"}]),
+                         [base, {**base, "value": "6"}])
 
     def test_different_work_by_the_same_actor_stays_apart(self):
         batches = [{"observations": [item(), item(work="auditing", task="Sample invoices for audit.")]}]

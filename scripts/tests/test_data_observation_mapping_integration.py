@@ -1,8 +1,9 @@
 """Mapping observations to catalog entries in a real PostgreSQL: candidates written,
 an observation that fits nothing stays unmapped, the same fact read in other words
 merged into the earlier id with a redirect, and what a later run finds again under a
-merged id also written under the one it stands under. The model and the embedding
-are stand-ins; the catalog is a small one."""
+merged id also written under the one it stands under; a number told again in
+another form is written and published once. The model and the embedding are
+stand-ins; the catalog is a small one."""
 import json
 import sys
 import tempfile
@@ -26,6 +27,7 @@ from test_data_event_extraction_integration import crawler_run, seed_org_registr
 
 LAUNCH = "Our support agent now answers 60% of tickets on its own, and a person reviews every refund."
 FOLLOW_UP = "Update on the support agent: it now resolves 70% of tickets without a person."
+GAIN = "Our support agent gains +32 on support tickets this month, and solves 40 more each day."
 CHAT = "We asked the support agent for a poem about Mondays and it wrote a lovely one."
 META = {"model": "deepseek-flash", "prompt_sha256": "a" * 64, "params": {"limit": None},
         "window": None, "started_at": "2026-11-03T00:00:00+00:00", "finished_at": "2026-11-03T00:01:00+00:00"}
@@ -185,6 +187,54 @@ class ObservationMapping(unittest.TestCase):
         rows = {r["observation_id"]: r for r in publish.observations(self.conn, "no-catalog")}
         self.assertEqual(set(rows), {first})
         self.assertEqual([c["concept_id"] for c in rows[first]["concerns"]], ["o:csr", "w:support"])
+
+    def test_numbers_told_again_in_another_form_are_one_fact(self):
+        # Runs after the mapping test, which counts every observation in the database.
+        ingest_run(self.conn, self.seed("21", "22"))
+
+        def gain(source_id, work, value, unit, quote="gains +32 on support tickets"):
+            # Another subject, so these do not merge with the mapping test's observations.
+            observation = {**item(source_id, work, "Answer support tickets.", "gains +32 on support tickets"),
+                           "subject": "Ticket Bot"}
+            observation["facts"] = [{"value": value, "unit": unit, "what": "gain on tickets", "baseline": None,
+                                     "quote": quote}]
+            return observation
+
+        self.write("observations-e", [post("21", GAIN)], [gain("21", "ticket desk", "+32", None)])
+        first = self.oid("21")
+        # Found again under its own id: "32 points" is the "+32" already there.
+        found = self.write("observations-f", [post("21", GAIN)], [gain("21", "ticket desk", "32", "points")])
+        self.assertEqual(found["found_again"], 1)
+        facts = self.conn.execute("SELECT value FROM observation_facts WHERE observation_id = %s", (first,)).fetchall()
+        self.assertEqual([f["value"] for f in facts], ["+32"])
+
+        # Merged: the member's "32" is not copied, its other number is.
+        self.write("observations-g", [post("22", GAIN)], [
+            {**gain("22", "help line", "32", None),
+             "facts": [{"value": "32", "unit": None, "what": "gain", "baseline": None,
+                        "quote": "gains +32 on support tickets"},
+                       {"value": "40", "unit": "tickets a day", "what": "more solved", "baseline": None,
+                        "quote": "solves 40 more each day"}]}])
+        second = self.oid("22")
+        self.map()
+        head = self.one("SELECT merged_into FROM observation_merges WHERE observation_id IN (%s, %s)",
+                        first, second)["merged_into"]
+        self.assertEqual({f["value"] for f in self.conn.execute(
+            "SELECT value FROM observation_facts WHERE observation_id = %s", (head,)).fetchall()},
+            {"40", "+32" if head == first else "32"})
+
+        # A row written before forms were compared is published once, the fuller form standing.
+        self.conn.execute(
+            """INSERT INTO observation_facts (fact_id, observation_id, value, unit, what, quote)
+               VALUES ('fact-old-form', %s, '32', 'points', 'gain', 'gains +32 on support tickets')""", (head,))
+        published = {r["observation_id"]: r for r in publish.observations(self.conn, "no-catalog")}[head]
+        self.assertEqual(sorted((f["value"], f["unit"]) for f in published["facts"]),
+                         [("32", "points"), ("40", "tickets a day")])
+
+    def seed(self, *source_ids):
+        path = self.tmp / f"seed-{'-'.join(source_ids)}.json"
+        path.write_text(json.dumps(crawler_run(list(source_ids), path.stem)))
+        return path
 
 
 if __name__ == "__main__":
