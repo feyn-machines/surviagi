@@ -188,6 +188,11 @@ def main():
     observe.add_argument('--plan-only', action='store_true', help='Count what would be read; no calls')
     ingest_observations = sub.add_parser('ingest-observations', help='Write an observation run record again')
     ingest_observations.add_argument('run', type=Path)
+    map_observations = sub.add_parser('map-observations',
+                                      help='Say which work items, occupations and tasks each observation is about')
+    map_observations.add_argument('--limit', type=int)
+    map_observations.add_argument('--workers', type=int, default=8, help='Calls sent at once')
+    map_observations.add_argument('--plan-only', action='store_true', help='Count what would be mapped; no calls')
     topics = sub.add_parser('mine-topics', help='Read a window of posts for claims and place them under topics')
     topics.add_argument('--output', required=True, type=Path,
                         help='The record of this run; its file name is the run id')
@@ -457,6 +462,14 @@ def main():
             migrate(conn)
             print(json.dumps(topic_evidence.run(conn, since=args.since, limit=args.limit, note=args.note,
                                                 progress=lambda line: print(line, flush=True)), ensure_ascii=False))
+        elif args.command == 'map-observations':
+            from data_pipeline import deepseek, observation_mapping
+            deepseek.load_env(ROOT)
+            migrate(conn)
+            print(json.dumps(observation_mapping.map_observations(
+                conn, limit=args.limit, workers=args.workers, plan_only=args.plan_only,
+                progress=lambda done, total: print(f'  observation {done}/{total}', file=sys.stderr, flush=True)),
+                ensure_ascii=False))
         elif args.command == 'measure-markets':
             from data_pipeline import deepseek, market_measures
             deepseek.load_env(ROOT)

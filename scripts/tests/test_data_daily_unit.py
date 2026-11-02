@@ -187,7 +187,8 @@ class RunTest(DailyCase):
         runner = FakeRunner()
         with mock.patch.object(daily, "typesafe_preflight", blocked):
             self.assertEqual(self.make(runner).main(["--promote"]), 1)
-        self.assertEqual(runner.ran, ["crawl-official", "crawl-panel", "extract-events", "extract-observations"])
+        self.assertEqual(runner.ran, ["crawl-official", "crawl-panel", "extract-events", "extract-observations",
+                                      "map-observations"])
         self.assertIn("pending", self.saved())
 
     def test_partly_failed_extraction_is_read_from_its_output_file(self):
@@ -221,6 +222,14 @@ class RunTest(DailyCase):
         self.assertEqual(self.make(runner).main(["--promote"]), 0)
         self.assertTrue(any("observations: 3 new, 1 found again from 75 posts" in line for line in self.lines))
         self.assertTrue(any("1 batches failed; their posts stay unread" in line for line in self.lines))
+
+    def test_failed_mapping_calls_are_a_note_and_the_window_goes_live(self):
+        said = json.dumps({"observations": 5, "mapped": 3, "unmapped": 1, "failed": 1, "merged": 1})
+        runner = FakeRunner({"map-observations": (0, said)})
+        self.assertEqual(self.make(runner).main(["--promote"]), 0)
+        self.assertIn("data:promote", runner.ran)
+        self.assertTrue(any("observation mapping: 3 mapped, 1 fit no entry, 1 merged" in line for line in self.lines))
+        self.assertTrue(any("1 calls failed; asked again next run" in line for line in self.lines))
 
     def test_an_observation_record_left_by_a_stopped_run_is_ingested_not_read_again(self):
         window = daily.Window(LAST_END, daily.last_full_hour(NOW))
