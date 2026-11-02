@@ -13,13 +13,15 @@ export function outcomeResponse(outcome: Outcome, cacheable: boolean): Response 
   return Response.json({ error: outcome.error, message: outcome.message, ...(outcome.extra ?? {}) }, { status: outcome.status, headers: NO_STORE_HEADERS });
 }
 
-/** Query parameters as tool arguments; `types` may repeat or be comma-separated. */
+const LISTS = new Set(["types", "evidence_types", "directions", "outcomes", "review_states"]);
+
+/** Query parameters as tool arguments; a list may repeat or be comma-separated. */
 export function queryArgs(request: Request): Record<string, unknown> {
   const params = new URL(request.url).searchParams;
   const args: Record<string, unknown> = {};
   for (const key of new Set(params.keys())) {
     const values = params.getAll(key);
-    args[key] = key === "types" ? values.join(",") : values[values.length - 1];
+    args[key] = LISTS.has(key) ? values.join(",") : values[values.length - 1];
   }
   return args;
 }

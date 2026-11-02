@@ -2,10 +2,10 @@
 name: surviagi-search
 display_name: SurviAGI 搜索
 display_name_en: SurviAGI Search
-description: Search and cite SurviAGI's published records of AI progress (updates, questions, evidence, bilingual editorial articles) through the SurviAGI MCP tools.
-description_zh: 通过 SurviAGI 的 MCP 工具搜索并引用已发布的 AI 进展记录（更新、问题、证据和双语文章）。
-description_en: Search and cite SurviAGI's published records of AI progress (updates, questions, evidence and bilingual editorial articles) through the SurviAGI MCP tools.
-version: 1.1.0
+description: Search and cite SurviAGI's published records of AI progress (updates, questions, observations with per-occupation statistics, bilingual editorial articles) through the SurviAGI MCP tools.
+description_zh: 通过 SurviAGI 的 MCP 工具搜索并引用已发布的 AI 进展记录（更新、问题、观察及按职业的统计、双语文章）。
+description_en: Search and cite SurviAGI's published records of AI progress (updates, questions, observations with per-occupation statistics, and bilingual editorial articles) through the SurviAGI MCP tools.
+version: 1.2.0
 author: SurviAGI
 examples_zh:
   - AI 编程助手最近有哪些官方更新？
@@ -17,14 +17,16 @@ examples_en:
 
 当用户问到 AI 能否独立完成某类工作、某个职业或行业是否会被 AI 取代、某家 AI 公司最近发布了什么，按以下步骤使用 SurviAGI：
 
-1. 调用 `search`，`query` 用用户问题里的关键词（公司、模型、工作类型、职业；中英文都可以）。需要时用 `types`（`update`、`question`、`evidence`、`article`）和 `from`/`to`（YYYY-MM-DD）缩小范围；文章可加 `status: "approved"` 或 `"preview"`。预发布稿公开但未批准；引用时说明精确 `revision_id` 和 `status`。`limit` 默认 8、最多 20。用户用中文时传 `language: "zh-CN"`，链接会指向中文页面。
-2. 对最相关的 2–5 条结果调用 `get_record`（传结果里的 `id`），读取详情、来源和读数。
-3. 回答时：
+1. 问到某个职业或某类生意（例如“AI 会取代会计吗”）时，先调用 `occupation_summary`（`occupation` 或 `market`，可传 ID 或中英文名称；名称有多个匹配时会返回候选 ID），读取按证据类型的计数、近 30/90 天条数、最有分量和反方向的观察。需要更多条目时调用 `query_observations`，按职业/赛道、组织、产品、证据类型、方向（`human_still_needed` 是反方向）和日期过滤，用 `next_cursor` 翻页。引用计数时说明它们截至 `counts.as_of`，是从采集到的帖子里机器读出的观察数，不是这份工作本身被替代的比例。
+2. 调用 `search`，`query` 用用户问题里的关键词（公司、模型、工作类型、职业；中英文都可以）。需要时用 `types`（`update`、`question`、`evidence`、`article`）和 `from`/`to`（YYYY-MM-DD）缩小范围；文章可加 `status: "approved"` 或 `"preview"`。预发布稿公开但未批准；引用时说明精确 `revision_id` 和 `status`。`limit` 默认 8、最多 20。用户用中文时传 `language: "zh-CN"`，链接会指向中文页面。
+3. 对最相关的 2–5 条结果调用 `get_record`（传结果里的 `id`，包括观察 `obs-…`），读取详情和来源。
+4. 回答时：
    - 对文章用其实际 `status`：`approved` 表示双语当前批准版，`preview` 表示公开预发布但未批准，`approved_historical` 表示仍可读取的历史批准版本。审核通过不代表事实本身已被第三方证实。
    - 对数据记录区分文字性质：`machine_summary` 是 SurviAGI 根据来源写的摘要，不是原话；`post_quote` 是帖子原话摘录；`machine_reading` 是机器给出的等级。这些数据记录是 `machine_proposed_unreviewed`。
-   - 等级看 `level`（证据层级允许的等级），`claimed_level` 是封顶前的判断，二者不同时要说明。
+   - 观察的 `task` 是机器写的概括；`facts[].quote` 与 `sources[].quote` 是原文摘录，引用数字时用原文。证据类型的分量不同：生产使用、测量、统计强于出品方自述和演示。
+   - `evidence` 记录（L0–L5 等级）已弃用，不要用等级作结论。
    - 每条结论附上记录的 `url`；文章同时引用 `revision_id`、`status`、`evidence_cutoff` 与 `sources`。文章完整 Markdown 可由 `get_record` 读取。来源帖子全文不在 SurviAGI 中（`original_text.available` 为 false），不要把摘要说成原文。
    - 说清楚记录没有覆盖什么。搜索无结果不代表没有进展，只代表 SurviAGI 尚未收录。
-4. 本连接器只读，不能提交。用户想把问题交给 SurviAGI 研究或推荐账号时，告诉用户安装「SurviAGI 搜索与提交」连接器并在 https://surviagi.com/zh-CN/agents#keys 生成 API Key。
+5. 本连接器只读，不能提交。用户想把问题交给 SurviAGI 研究或推荐账号时，告诉用户安装「SurviAGI 搜索与提交」连接器并在 https://surviagi.com/zh-CN/agents#keys 生成 API Key。
 
 SurviAGI 只负责检索；分析和结论由你完成，并应保持审慎。

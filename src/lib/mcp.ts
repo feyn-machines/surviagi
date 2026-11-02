@@ -27,7 +27,8 @@ const rpcError = (id: Id, code: number, message: string, status = 200) =>
 function instructions(scope: Scope) {
   const lines = [
     `${SITE_NAME} (${SITE_URL}) tracks progress toward AI independently completing major production and service work, from official updates.`,
-    "Use search, then get_record for detail. Every level and summary is machine-proposed and unreviewed; cite the record url with the release's generated_at, and quote the original sources, not our summaries.",
+    "Use search, then get_record for detail. For what AI has actually done in an occupation or a kind of business, use occupation_summary for its counts by evidence type and query_observations to list and filter the observations behind them.",
+    "Every summary and observation is machine-proposed and unreviewed unless its review state says otherwise; cite the record url with the release's generated_at, and quote the original sources, not our summaries.",
     "The site retrieves and registers; it does not answer. Analysis and conclusions are yours, and must say what the records do not cover.",
   ];
   if (scope === "submit") {

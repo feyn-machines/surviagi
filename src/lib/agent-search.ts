@@ -2,6 +2,7 @@ import contract from "../../public/contract/v1/index.json";
 import type { Language } from "./i18n";
 import { absoluteUrl } from "./seo";
 import { workSlug } from "./routes";
+import { OBSERVATION_ID, observationRecord } from "./agent-observations";
 import {
   activityAnchor,
   activityById,
@@ -299,7 +300,7 @@ const ID_QUESTION = /^topic:[a-z_]+:[a-z0-9-]*:[0-9a-f]{8}$/;
 
 /** True for the shape of an id `search` hands out; says nothing about whether the release holds it. */
 export function isRecordId(id: string): boolean {
-  return ID_UPDATE.test(id) || ID_EVIDENCE.test(id) || ID_QUESTION.test(id);
+  return ID_UPDATE.test(id) || ID_EVIDENCE.test(id) || ID_QUESTION.test(id) || OBSERVATION_ID.test(id);
 }
 
 function updateRecord(e: LinkedEvent, language: Language) {
@@ -419,6 +420,10 @@ export function record(id: string, language: Language = "en") {
   if (ID_QUESTION.test(id)) {
     const t = topics().find((row) => row.topic_id === id);
     return t ? { ...questionRecord(t, language), release, versions } : null;
+  }
+  if (OBSERVATION_ID.test(id)) {
+    const o = observationRecord(id, language);
+    return o ? { ...o, release, versions } : null;
   }
   const parts = ID_EVIDENCE.exec(id);
   if (parts) {

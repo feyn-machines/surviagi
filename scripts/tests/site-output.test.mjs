@@ -1044,7 +1044,7 @@ test("MCP: a client initializes with no key, and the public endpoint lists only 
   assert.equal(old.body.result.protocolVersion, "2025-06-18");
   assert.equal((await rpc("/api/mcp", { jsonrpc: "2.0", method: "notifications/initialized" })).status, 202);
   const tools = (await rpc("/api/mcp", { jsonrpc: "2.0", id: 3, method: "tools/list" })).body.result.tools;
-  assert.deepEqual(tools.map((t) => t.name), ["search", "get_record"]);
+  assert.deepEqual(tools.map((t) => t.name), ["search", "get_record", "query_observations", "occupation_summary"]);
   assert.deepEqual(tools[0].inputSchema.properties.types.items.enum, ["update", "question", "evidence", "article"]);
   assert.deepEqual(tools[0].inputSchema.properties.status.enum, ["approved", "preview"]);
   for (const t of tools) {
@@ -1137,7 +1137,7 @@ test("MCP: bad arguments and unknown ids are tool errors the agent can read, and
 
 test("MCP submit endpoint without the user database: reading works, submitting is unavailable", async () => {
   const tools = (await rpc("/api/mcp/submit", { jsonrpc: "2.0", id: 1, method: "tools/list" })).body.result.tools;
-  assert.equal(tools.length, 5);
+  assert.equal(tools.length, 7);
   assert.equal((await tool("search", { query: "model" }, "/api/mcp/submit")).isError, undefined);
   const refused = await tool("submit_question", { question: "x" }, "/api/mcp/submit");
   assert.equal(refused.isError, true);
@@ -1301,6 +1301,16 @@ test("the public data contract is served and the agent responses carry its four 
   const checkRecord = ajv.compile({ $ref: "api#/components/schemas/RecordResponse" });
   assert.ok(checkRecord(found), JSON.stringify(checkRecord.errors));
   assert.deepEqual(found.versions, search.versions);
+  const summary = await get("/api/agent/summary?market=accounting-audit-assurance");
+  const checkSummary = ajv.compile({ $ref: "api#/components/schemas/SummaryResponse" });
+  assert.ok(checkSummary(summary), JSON.stringify(checkSummary.errors));
+  const list = await get("/api/agent/observations?limit=2");
+  const checkList = ajv.compile({ $ref: "api#/components/schemas/ObservationsResponse" });
+  assert.ok(checkList(list), JSON.stringify(checkList.errors));
+  // A release without observations says the counts are unknown, not zero.
+  if (!existsSync(join(SNAPSHOT_DIR, "observations.json"))) {
+    assert.deepEqual([summary.state, summary.counts, list.published, list.total, list.counts], ["unpublished", null, false, null, null]);
+  }
 });
 
 // Issue #32: observations counted by evidence type on market and occupation pages, the same on the page and its copy.
@@ -1344,6 +1354,7 @@ test("market and occupation pages count their observations by evidence type and 
     row("obs-b", { evidence_type: "measurement", direction: "human_still_needed", outcome: "failed", announced_at: day(60), concerns: [concern(first.id, "work")] }),
     row("obs-c", { evidence_type: "vendor_claim", concerns: [concern(second.id, "work")] }),
     row("obs-d", { evidence_type: "own_use", announced_at: day(1), concerns: [concern(elsewhere.id, "work")] }),
+    row("obs-1111111111111111", { evidence_type: "vendor_claim", direction: "neutral", merged_from: ["obs-0000000000000001"], concerns: [concern(elsewhere.id, "work")] }),
   ]));
   const { base, proc } = await startServer({ SNAPSHOT_DIR: dir });
   try {
@@ -1373,6 +1384,67 @@ test("market and occupation pages count their observations by evidence type and 
     const empty = work.find((w) => ![marketId, elsewhere.market_id].includes(w.market_id)).market_id;
     const none = await (await fetch(`${base}/markets/${empty.replace(/^oaw:market:/, "")}/raw.md`)).text();
     assert.ok(none.includes("No observation has been mapped here yet."));
+
+    // Issue #29: the agent tools state the page's numbers, read from the same rows.
+    const api = async (path) => {
+      const res = await fetch(`${base}${path}`);
+      return { status: res.status, body: await res.json() };
+    };
+    const pageCounts = (copy) => Object.fromEntries([...copy.matchAll(/^- (Production use|Measurement|Statistic|Own use|Demonstration|Vendor claim): (\d+)$/gm)]
+      .map(([, label, n]) => [label.toLowerCase().replace(" ", "_"), Number(n)]));
+    const market = (await api(`/api/agent/summary?market=${marketId}`)).body;
+    assert.equal(market.state, "some");
+    assert.deepEqual(market.counts.by_evidence_type, pageCounts(md));
+    assert.deepEqual([market.counts.total, market.counts.against, market.counts.last_30_days, market.counts.last_90_days, market.counts.undated], [3, 1, 1, 2, 1]);
+    assert.deepEqual(market.strongest.map((o) => o.id), ["obs-a", "obs-c"]);
+    assert.deepEqual(market.other_way.map((o) => o.id), ["obs-b"]);
+    assert.equal(market.url, `https://surviagi.com${marketPath}`);
+    const bySlug = (await api(`/api/agent/summary?market=${marketId.replace(/^oaw:market:/, "")}&language=zh-CN`)).body;
+    assert.deepEqual(bySlug.counts, market.counts);
+    assert.equal(bySlug.url, `https://surviagi.com/zh-CN${marketPath}`);
+    const job = (await api(`/api/agent/summary?occupation=${encodeURIComponent(occupation.label_en)}`)).body;
+    assert.equal(job.id, occupation.id);
+    assert.deepEqual(job.counts.by_evidence_type, pageCounts(occ));
+    assert.equal(job.counts.total, 1);
+    assert.equal((await api("/api/agent/summary")).status, 400);
+    assert.equal((await api(`/api/agent/summary?market=${marketId}&occupation=${occupation.id}`)).status, 400);
+    const unknown = await api("/api/agent/summary?occupation=zzzz-no-such-job");
+    assert.deepEqual([unknown.status, unknown.body.error, unknown.body.candidates], [404, "not_found", []]);
+
+    const all = (await api(`/api/agent/observations?market=${marketId}`)).body;
+    assert.deepEqual(all.counts, market.counts);
+    assert.deepEqual(all.results.map((o) => o.id), ["obs-a", "obs-b", "obs-c"], "strength order: production use, measurement, vendor claim");
+    const newest = (await api(`/api/agent/observations?market=${marketId}&order=newest`)).body;
+    assert.deepEqual(newest.results.map((o) => o.id), ["obs-a", "obs-b", "obs-c"], "undated last");
+    const against = (await api(`/api/agent/observations?directions=human_still_needed`)).body;
+    assert.deepEqual([against.total, against.results[0].id, against.results[0].outcome], [1, "obs-b", "failed"]);
+    const typed = (await api(`/api/agent/observations?evidence_types=production_use&evidence_types=own_use`)).body;
+    assert.deepEqual(typed.results.map((o) => o.id).sort(), ["obs-a", "obs-d"]);
+    const dated = (await api(`/api/agent/observations?from=${day(10).slice(0, 10)}`)).body;
+    assert.deepEqual(dated.results.map((o) => o.id).sort(), ["obs-a", "obs-d"], "an undated observation passes no date filter");
+    assert.equal((await api(`/api/agent/observations?organization=x:obs-d`)).body.total, 1);
+    const first = (await api(`/api/agent/observations?limit=3`)).body;
+    assert.deepEqual([first.total, first.results.length, typeof first.next_cursor], [5, 3, "string"]);
+    const rest = (await api(`/api/agent/observations?limit=3&cursor=${first.next_cursor}`)).body;
+    assert.deepEqual([rest.results.length, rest.next_cursor], [2, null]);
+    assert.equal(new Set([...first.results, ...rest.results].map((o) => o.id)).size, 5);
+    assert.equal((await api(`/api/agent/observations?cursor=nonsense`)).status, 400);
+    assert.equal((await api(`/api/agent/observations?evidence_types=rumour`)).status, 400);
+    const a = all.results[0];
+    assert.deepEqual(a.facts, [{ value: "48", unit: "%", what: "share of tickets closed", quote: "FIGURE obs-a" }]);
+    assert.equal(a.url, `https://surviagi.com${occupationPath}#obs-a`);
+
+    const record = (await api("/api/agent/record?id=obs-1111111111111111")).body;
+    assert.deepEqual([record.id, record.type, record.evidence_type, record.sources[0].quote, record.merged_into], ["obs-1111111111111111", "observation", "vendor_claim", "QUOTE obs-1111111111111111", undefined]);
+    assert.deepEqual(record.pages.map((p) => [p.kind, p.id]), [["market", elsewhere.market_id]]);
+    assert.equal((await api("/api/agent/record?id=obs-2222222222222222")).status, 404);
+    const merged = (await api("/api/agent/record?id=obs-0000000000000001")).body;
+    assert.deepEqual([merged.id, merged.merged_into, merged.requested_id], ["obs-1111111111111111", "obs-1111111111111111", "obs-0000000000000001"]);
+    const viaMcp = await (await fetch(`${base}/api/mcp`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "occupation_summary", arguments: { market: marketId } } }),
+    })).json();
+    assert.deepEqual(viaMcp.result.structuredContent.counts, market.counts, "MCP and HTTP answer alike");
   } finally {
     await stop(proc);
     rmSync(dir, { recursive: true, force: true });
