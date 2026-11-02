@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev -p 3456",
     "build": "next build",
+    "search:eval": "node scripts/search-eval.mjs",
     "site:test": "node --test scripts/tests/site-output.test.mjs scripts/tests/app-store.test.mjs scripts/tests/app-signed-in.test.mjs",
     "start": "next start -p 3456",
     "lint": "eslint",

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "SurviAGI agent API",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "description": "Read-only access to published SurviAGI records and key-gated submissions. Every record is machine-proposed unless its review state says otherwise; cite the source URLs, not our summaries. Entity field names, types and grades are in the JSON Schemas listed under `x-entities`.",
     "x-ontology-version": "2.5.0"
   },
@@ -82,7 +82,7 @@
       "get": {
         "operationId": "search",
         "summary": "Search published records.",
-        "description": "Ranks updates, topics, evidence readings and public articles against the query. A search that finds nothing starts no research.",
+        "description": "Ranks updates, topics, observations, evidence readings and public articles against the query. A search that finds nothing starts no research.",
         "parameters": [
           {
             "name": "query",
@@ -115,6 +115,7 @@
                 "enum": [
                   "update",
                   "question",
+                  "observation",
                   "evidence",
                   "article"
                 ]
@@ -122,7 +123,7 @@
             },
             "style": "form",
             "explode": false,
-            "description": "Comma-separated record types. Default all."
+            "description": "Comma-separated record types. Default: update, question, observation and article; evidence (deprecated) only when named."
           },
           {
             "name": "status",
@@ -800,6 +801,7 @@
             "enum": [
               "update",
               "question",
+              "observation",
               "evidence",
               "article"
             ]
@@ -809,6 +811,36 @@
           },
           "snippet": {
             "type": "string"
+          },
+          "title_language": {
+            "type": "string",
+            "enum": [
+              "en",
+              "zh-CN"
+            ],
+            "description": "The language the title and snippet are written in. Chinese only where the record has its own Chinese text; nothing is machine-translated for the answer."
+          },
+          "matched": {
+            "type": "array",
+            "description": "Why the record matched: each field that held query terms, with those terms. A Chinese query can match an English record through the names in both languages it carries (`work`, `concerns`, `about`).",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string"
+                },
+                "terms": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "field",
+                "terms"
+              ]
+            }
           },
           "content": {
             "type": "string",
@@ -860,6 +892,8 @@
           "type",
           "title",
           "snippet",
+          "title_language",
+          "matched",
           "content",
           "date",
           "organization",

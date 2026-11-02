@@ -69,6 +69,9 @@ export type EditorialSearchResult = {
   approval_scope: { required_languages: Language[]; approved_languages: Language[] | null };
   current_pointers: { approved_revision_id: string | null; preview_revision_id: string | null };
   superseded_by_revision_id: string | null;
+  /** An article is read in the language asked for: its title and snippet are in that language. */
+  title_language: Language;
+  matched: { field: string; terms: string[] }[];
 };
 
 export type RankedEditorialResult = { result: EditorialSearchResult; score: number };
@@ -96,18 +99,19 @@ export async function searchEditorialArticles(input: {
     if (input.from && day < input.from) continue;
     if (input.to && day > input.to) continue;
     const fields = [
-      { text: normalize(article.title), weight: 5 },
-      { text: normalize(article.summary), weight: 3 },
-      { text: normalize(article.markdown), weight: 1 },
+      { name: "title", text: normalize(article.title), weight: 5 },
+      { name: "summary", text: normalize(article.summary), weight: 3 },
+      { name: "body", text: normalize(article.markdown), weight: 1 },
     ];
     let matched = 0;
     let score = 0;
+    const found = new Map<string, string[]>();
     for (const word of words) {
-      let best = 0;
-      for (const field of fields) if (field.weight > best && field.text.includes(word)) best = field.weight;
-      if (best > 0) {
+      const best = fields.find((field) => field.text.includes(word));
+      if (best) {
         matched += 1;
-        score += best;
+        score += best.weight;
+        found.set(best.name, [...(found.get(best.name) ?? []), word]);
       }
     }
     if (matched < need) continue;
@@ -148,6 +152,8 @@ export async function searchEditorialArticles(input: {
           preview_revision_id: article.currentPreviewRevisionId,
         },
         superseded_by_revision_id: article.supersededByRevisionId,
+        title_language: input.language,
+        matched: fields.filter((f) => found.has(f.name)).map((f) => ({ field: f.name, terms: found.get(f.name)! })),
       },
     });
   }

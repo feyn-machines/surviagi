@@ -13,7 +13,7 @@
 import { schema, termIds, validateSchema } from "./ontology-schema.mjs";
 
 /** The contract's own version. Moves independently of the ontology, the method and the data. */
-export const CONTRACT_VERSION = "1.4.0";
+export const CONTRACT_VERSION = "1.5.0";
 export const CONTRACT_PATH = "contract/v1";
 
 /**
@@ -390,11 +390,11 @@ export function openApi(entityNames) {
         get: {
           operationId: "search",
           summary: "Search published records.",
-          description: "Ranks updates, topics, evidence readings and public articles against the query. A search that finds nothing starts no research.",
+          description: "Ranks updates, topics, observations, evidence readings and public articles against the query. A search that finds nothing starts no research.",
           parameters: [
             { name: "query", in: "query", required: true, schema: { type: "string", minLength: 1, maxLength: 200 }, description: "What to look for, in English or Chinese. `q` is accepted as an alias." },
             { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 20, default: 8 } },
-            { name: "types", in: "query", schema: { type: "array", items: { type: "string", enum: ["update", "question", "evidence", "article"] } }, style: "form", explode: false, description: "Comma-separated record types. Default all." },
+            { name: "types", in: "query", schema: { type: "array", items: { type: "string", enum: ["update", "question", "observation", "evidence", "article"] } }, style: "form", explode: false, description: "Comma-separated record types. Default: update, question, observation and article; evidence (deprecated) only when named." },
             { name: "status", in: "query", schema: { type: "string", enum: ["approved", "preview"] }, description: "For articles only." },
             { name: "from", in: "query", schema: { type: "string", format: "date" } },
             { name: "to", in: "query", schema: { type: "string", format: "date" } },
@@ -479,9 +479,15 @@ export function openApi(entityNames) {
           description: "One hit. Article hits carry extra revision fields (status, version, evidence cutoff).",
           properties: {
             id: S("string"),
-            type: S("string", { enum: ["update", "question", "evidence", "article"] }),
+            type: S("string", { enum: ["update", "question", "observation", "evidence", "article"] }),
             title: S("string"),
             snippet: S("string"),
+            title_language: S("string", { enum: ["en", "zh-CN"], description: "The language the title and snippet are written in. Chinese only where the record has its own Chinese text; nothing is machine-translated for the answer." }),
+            matched: {
+              type: "array",
+              description: "Why the record matched: each field that held query terms, with those terms. A Chinese query can match an English record through the names in both languages it carries (`work`, `concerns`, `about`).",
+              items: { type: "object", properties: { field: S("string"), terms: { type: "array", items: S("string") } }, required: ["field", "terms"] },
+            },
             content: S("string", { description: "What kind of text the snippet is; see `content_kinds`.", enum: ["machine_summary", "post_quote", "machine_reading", "editorial_article"] }),
             review: S("string", { description: "Review state of the record. `machine_proposed_unreviewed` until a person confirms." }),
             date: NULLABLE_DESC("string", "The record's own date."),
@@ -490,7 +496,7 @@ export function openApi(entityNames) {
             markdown_url: S("string", { format: "uri" }),
             sources: { type: "array", items: S("string", { format: "uri" }), description: "Addresses of the original sources." },
           },
-          required: ["id", "type", "title", "snippet", "content", "date", "organization", "url", "markdown_url", "sources"],
+          required: ["id", "type", "title", "snippet", "title_language", "matched", "content", "date", "organization", "url", "markdown_url", "sources"],
         },
         SearchResponse: {
           type: "object",

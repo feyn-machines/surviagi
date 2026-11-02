@@ -1,0 +1,30 @@
+{
+  "about": "Agent search evaluation set (Issue #30). Questions a reader or an agent asks without naming SurviAGI, in English and Chinese, each with the occupations or markets a useful answer is about. A result counts as a hit when the record bears on one of them: an observation mapped to it, an update linked to work of a market that serves it, or a question about it. `pnpm search:eval` reports the share of questions with a hit in the first k results.",
+  "k": 5,
+  "questions": [
+    { "id": "accounting-en", "language": "en", "query": "Will AI replace accountants?", "expect": ["oaw:occupation:13-2011.00", "oaw:market:accounting-bookkeeping", "oaw:market:accounting-audit-assurance"] },
+    { "id": "accounting-zh", "language": "zh-CN", "query": "AI 会取代会计吗", "expect": ["oaw:occupation:13-2011.00", "oaw:market:accounting-bookkeeping", "oaw:market:accounting-audit-assurance"] },
+    { "id": "bookkeeping-en", "language": "en", "query": "AI bookkeeping and financial statements", "expect": ["oaw:market:accounting-bookkeeping"] },
+    { "id": "bookkeeping-zh", "language": "zh-CN", "query": "记账 财务报表 AI", "expect": ["oaw:market:accounting-bookkeeping"] },
+    { "id": "tax-en", "language": "en", "query": "AI tax filing", "expect": ["oaw:occupation:13-2082.00", "oaw:market:accounting-tax-compliance"] },
+    { "id": "tax-zh", "language": "zh-CN", "query": "报税", "expect": ["oaw:occupation:13-2082.00", "oaw:market:accounting-tax-compliance"] },
+    { "id": "support-en", "language": "en", "query": "AI customer service agents resolving tickets", "expect": ["oaw:occupation:43-4051.00", "oaw:market:business-services-customer-operations"] },
+    { "id": "support-zh", "language": "zh-CN", "query": "客服会被 AI 取代吗", "expect": ["oaw:occupation:43-4051.00", "oaw:market:business-services-customer-operations"] },
+    { "id": "software-en", "language": "en", "query": "Do coding agents replace software developers?", "expect": ["oaw:occupation:15-1252.00", "oaw:occupation:15-1251.00", "oaw:market:software-application-code"] },
+    { "id": "software-zh", "language": "zh-CN", "query": "程序员会被取代吗", "expect": ["oaw:occupation:15-1252.00", "oaw:occupation:15-1251.00", "oaw:market:software-application-code"] },
+    { "id": "testing-en", "language": "en", "query": "AI software testing", "expect": ["oaw:occupation:15-1253.00", "oaw:market:software-software-testing"] },
+    { "id": "testing-zh", "language": "zh-CN", "query": "软件测试", "expect": ["oaw:occupation:15-1253.00", "oaw:market:software-software-testing"] },
+    { "id": "legal-en", "language": "en", "query": "AI contract review for lawyers", "expect": ["oaw:occupation:23-1011.00", "oaw:occupation:23-2011.00", "oaw:market:legal-contract-review"] },
+    { "id": "legal-zh", "language": "zh-CN", "query": "律师 合同审查", "expect": ["oaw:occupation:23-1011.00", "oaw:occupation:23-2011.00", "oaw:market:legal-contract-review"] },
+    { "id": "translation-en", "language": "en", "query": "Are translators still needed?", "expect": ["oaw:occupation:27-3091.00"] },
+    { "id": "translation-zh", "language": "zh-CN", "query": "翻译还有前途吗", "expect": ["oaw:occupation:27-3091.00"] },
+    { "id": "design-en", "language": "en", "query": "graphic designers and AI image tools", "expect": ["oaw:occupation:27-1024.00", "oaw:market:marketing-creative-brand-design"] },
+    { "id": "design-zh", "language": "zh-CN", "query": "平面设计师", "expect": ["oaw:occupation:27-1024.00", "oaw:market:marketing-creative-brand-design"] },
+    { "id": "radiology-en", "language": "en", "query": "AI reading radiology scans", "expect": ["oaw:occupation:29-1224.00"] },
+    { "id": "radiology-zh", "language": "zh-CN", "query": "放射科医生 AI 读片", "expect": ["oaw:occupation:29-1224.00"] },
+    { "id": "writing-en", "language": "en", "query": "AI writing marketing copy", "expect": ["oaw:occupation:27-3043.00", "oaw:occupation:13-1161.00"] },
+    { "id": "writing-zh", "language": "zh-CN", "query": "AI 写营销文案", "expect": ["oaw:occupation:27-3043.00", "oaw:occupation:13-1161.00"] },
+    { "id": "data-science-en", "language": "en", "query": "data scientists automated analysis", "expect": ["oaw:occupation:15-2051.00", "oaw:market:software-data-systems"] },
+    { "id": "data-science-zh", "language": "zh-CN", "query": "数据科学家", "expect": ["oaw:occupation:15-2051.00", "oaw:market:software-data-systems"] }
+  ]
+}
