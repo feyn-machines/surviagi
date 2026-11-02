@@ -11,6 +11,9 @@ directory `data/daily/<tag>/` with one log per step and a `done` list: a run tha
 picked up at the step that stopped, so posts are not collected or sent to a model twice. The cursor
 moves only once the snapshot is written.
 
+Observations (Issue #25) are read from the window's posts right after updates, in a call of their own;
+that step is optional too, and posts of a batch that failed stay unread for a later run.
+
 Topics are fed in the same run: before mining, the topics that most need another voice are searched on X
 for the window (`topic-queries` -> `crawl search` -> `topic-searched`), so mining reads those posts with the
 panel's; after the brief, `data:topics:health --issues` checks that topics are still growing and keeps the
@@ -288,6 +291,18 @@ def health_notes(outcome: Outcome) -> list[str]:
     return found + done
 
 
+def observation_notes(outcome: Outcome) -> list[str]:
+    """What the observation step wrote; a failed batch is a note, its posts are read by a later run."""
+    result = outcome.result
+    if "observations" not in result:
+        return []
+    notes = [f"observations: {result.get('new_observations', 0)} new, {result.get('found_again', 0)} found again"
+             f" from {result.get('read', 0)} posts"]
+    if result.get("failed_batches"):
+        notes.append(f"observations: {len(result['failed_batches'])} batches failed; their posts stay unread")
+    return notes
+
+
 def pnpm(*args: str) -> list[str]:
     return ["pnpm", "-s", *args]
 
@@ -308,12 +323,19 @@ def steps(window: Window, root: Path = ROOT) -> list[Step]:
     extract = (pnpm("data:ingest:events", extraction) if (root / extraction).exists() else
                pnpm("data:extract:events", "--collection-run", official, "--collection-run", panel,
                     "--window-start", start, "--window-end", end, "--output", extraction))
+    # Observations are read in a call of their own (Issue #25); a run that stopped after writing its
+    # record is ingested from it. Nothing published reads them yet, so the window does not wait on them.
+    observations = f"data/observations/runs/observations-{tag}.json"
+    observe = (pnpm("data:ingest:observations", observations) if (root / observations).exists() else
+               pnpm("data:extract:observations", "--collection-run", official, "--collection-run", panel,
+                    "--window-start", start, "--window-end", end, "--output", observations))
     return [
         Step("crawl-official", pnpm("crawl", "timeline", "--targets", "official", "--start", start, "--end", end,
                                     "--output", official_run), **crawl(official_run)),
         Step("crawl-panel", pnpm("crawl", "timeline", "--targets", "panel", "--start", start, "--end", end,
                                  "--output", panel_run), **crawl(panel_run)),
         Step("extract-events", extract, check=extraction_problems(root / extraction)),
+        Step("extract-observations", observe, notes=observation_notes, optional=True),
         Step("verify", pnpm("data:verify"), check=batch_problems, before=typesafe_preflight),
         Step("identify-models", pnpm("data:identify:models"), check=batch_problems),
         Step("route-events", pnpm("data:route:events"), check=batch_problems, before=typesafe_preflight),

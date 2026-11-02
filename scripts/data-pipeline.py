@@ -72,6 +72,57 @@ def run_event_extraction(conn, args):
     print(json.dumps({'output': str(out), **result}, ensure_ascii=False, indent=2, default=json_default))
 
 
+def run_observation_extraction(conn, args):
+    """Read posts for observations in a call of their own and write what holds (Issue #25).
+
+    Only posts this extractor version has not read yet, unless --reread. Without a
+    window or a collection run this reads the whole history, which costs money, so
+    it has to be asked for with --all.
+    """
+    from data_pipeline import deepseek
+    from data_pipeline.event_extraction import load_candidates
+    from data_pipeline.observation_extraction import prefilter
+    from data_pipeline.observation_store import build_run, ingest_observations, read_source_ids
+    deepseek.load_env(ROOT)
+    out = args.output
+    if out.exists():
+        raise ValueError(f'Output already exists (observation runs are immutable): {out}')
+    window = {'start': args.window_start, 'end': args.window_end} if (args.window_start or args.window_end) else None
+    if not (window or args.collection_run or args.all):
+        raise ValueError('Give a window or a collection run; reading the whole history needs --all')
+    migrate(conn)
+    posts = load_candidates(conn, window=window, collection_run_ids=args.collection_run or None)
+    done = set() if args.reread else read_source_ids(conn)
+    candidates = [c for c in posts if not prefilter(c) and c['source_id'] not in done]
+    candidates = candidates[:args.limit] if args.limit else candidates
+    plan = {'posts': len(posts), 'already_read': sum(c['source_id'] in done for c in posts),
+            'prefiltered': sum(1 for c in posts if prefilter(c)), 'to_read': len(candidates)}
+    if args.plan_only or not candidates:
+        print(json.dumps({'plan_only': args.plan_only, **plan}, ensure_ascii=False))
+        return
+    cfg = deepseek.config_from_env()
+    started = datetime.now(timezone.utc).isoformat()
+    print(f'Reading {len(candidates)} posts for observations via {cfg["model"]} (batch {args.batch_size})...',
+          file=sys.stderr)
+    usage = []
+    batches, failures = deepseek.extract_observations(
+        candidates, cfg, batch_size=args.batch_size, workers=args.workers, usage=usage,
+        progress=lambda done, total, n: print(f'  batch {done}/{total}: {n} observations', file=sys.stderr))
+    if failures and len(failures) == len(batches):
+        raise ValueError(f'Every observation batch failed; first error: {failures[0]["error"]}')
+    meta = {'model': cfg['model'], 'prompt_sha256': deepseek.observation_prompt_sha256(),
+            'params': {'limit': args.limit, 'reread': args.reread, 'all': args.all,
+                       'collection_run_ids': args.collection_run or [], 'plan': plan,
+                       'usd_billed': round(deepseek.billed_usd(usage), 4)},
+            'window': window, 'started_at': started, 'finished_at': datetime.now(timezone.utc).isoformat()}
+    doc = build_run(candidates, batches, failures, args.batch_size, meta)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.parent.chmod(0o700)
+    save(out, doc)
+    result = ingest_observations(conn, out)
+    print(json.dumps({'output': str(out), **result}, ensure_ascii=False, indent=2, default=json_default))
+
+
 
 # The four mapping passes share one shape: one subject, a few hundred candidate
 # options, a checkpoint per subject decided. Registering them from a table keeps
@@ -124,6 +175,19 @@ def main():
                          help='Whose posts to read: official company accounts, the panel, authors found by search, or all')
     extract.add_argument('--workers', type=int, default=4, help='Batches sent at once')
     extract.add_argument('--plan-only', action='store_true')
+    observe = sub.add_parser('extract-observations', help='Read posts for observations and write what holds')
+    observe.add_argument('--output', required=True, type=Path, help='The record of this run; its file name is the run id')
+    observe.add_argument('--window-start')
+    observe.add_argument('--window-end')
+    observe.add_argument('--collection-run', action='append')
+    observe.add_argument('--all', action='store_true', help='Read every post not read yet (the backfill)')
+    observe.add_argument('--reread', action='store_true', help='Read posts again that this extractor already read')
+    observe.add_argument('--limit', type=int)
+    observe.add_argument('--batch-size', type=int, default=25)
+    observe.add_argument('--workers', type=int, default=4, help='Batches sent at once')
+    observe.add_argument('--plan-only', action='store_true', help='Count what would be read; no calls')
+    ingest_observations = sub.add_parser('ingest-observations', help='Write an observation run record again')
+    ingest_observations.add_argument('run', type=Path)
     topics = sub.add_parser('mine-topics', help='Read a window of posts for claims and place them under topics')
     topics.add_argument('--output', required=True, type=Path,
                         help='The record of this run; its file name is the run id')
@@ -329,6 +393,13 @@ def main():
             print(json.dumps(result, ensure_ascii=False, indent=2, default=json_default))
         elif args.command == 'extract-events':
             run_event_extraction(conn, args)
+        elif args.command == 'extract-observations':
+            run_observation_extraction(conn, args)
+        elif args.command == 'ingest-observations':
+            from data_pipeline.observation_store import ingest_observations
+            migrate(conn)
+            print(json.dumps(ingest_observations(conn, args.run), ensure_ascii=False, indent=2,
+                             default=json_default))
         elif args.command == 'mine-topics':
             from data_pipeline import deepseek, topic_mining
             deepseek.load_env(ROOT)

@@ -187,7 +187,7 @@ class RunTest(DailyCase):
         runner = FakeRunner()
         with mock.patch.object(daily, "typesafe_preflight", blocked):
             self.assertEqual(self.make(runner).main(["--promote"]), 1)
-        self.assertEqual(runner.ran, ["crawl-official", "crawl-panel", "extract-events"])
+        self.assertEqual(runner.ran, ["crawl-official", "crawl-panel", "extract-events", "extract-observations"])
         self.assertIn("pending", self.saved())
 
     def test_partly_failed_extraction_is_read_from_its_output_file(self):
@@ -207,6 +207,30 @@ class RunTest(DailyCase):
         extraction.write_text("{}")
         argv = {s.name: s.argv for s in daily.steps(daily.Window(LAST_END, daily.last_full_hour(NOW)), self.tmp)}["extract-events"]
         self.assertEqual(argv[:3], ["pnpm", "-s", "data:ingest:events"])
+
+    def test_observations_that_fail_are_a_note_and_the_window_goes_live(self):
+        runner = FakeRunner({"extract-observations": (1, "")})
+        self.assertEqual(self.make(runner).main(["--promote"]), 0)
+        self.assertIn("data:promote", runner.ran)
+        self.assertTrue(any("extract-observations failed (exit 1)" in line for line in self.lines))
+
+    def test_failed_observation_batches_are_a_note_not_a_hold(self):
+        said = json.dumps({"observations": 4, "new_observations": 3, "found_again": 1, "read": 75,
+                           "failed_batches": [{"batch": 2, "error": "timeout"}]})
+        runner = FakeRunner({"extract-observations": (0, said)})
+        self.assertEqual(self.make(runner).main(["--promote"]), 0)
+        self.assertTrue(any("observations: 3 new, 1 found again from 75 posts" in line for line in self.lines))
+        self.assertTrue(any("1 batches failed; their posts stay unread" in line for line in self.lines))
+
+    def test_an_observation_record_left_by_a_stopped_run_is_ingested_not_read_again(self):
+        window = daily.Window(LAST_END, daily.last_full_hour(NOW))
+        argv = {s.name: s.argv for s in daily.steps(window, self.tmp)}["extract-observations"]
+        self.assertEqual(argv[:3], ["pnpm", "-s", "data:extract:observations"])
+        record = self.tmp / "data" / "observations" / "runs" / f"observations-{window.tag}.json"
+        record.parent.mkdir(parents=True)
+        record.write_text("{}")
+        argv = {s.name: s.argv for s in daily.steps(window, self.tmp)}["extract-observations"]
+        self.assertEqual(argv, ["pnpm", "-s", "data:ingest:observations", f"data/observations/runs/{record.name}"])
 
     def test_the_release_is_retried_when_the_connection_drops(self):
         answers = iter([(1, ""), (0, "release r imported and verified")])

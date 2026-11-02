@@ -15,7 +15,8 @@ A quote the post does not contain refuses the observation, and a fact whose
 quote is not there is dropped (rule:observation-quotes-are-found-in-the-source).
 Work stays the model's own words here: mapping it to catalog entries is a later
 pass (rule:work-mapping-stays-a-candidate), so `work_key` is 'unmapped' and the
-identity uses the words until that pass runs. Nothing here writes the database.
+identity uses the words until that pass runs. Nothing here writes the database:
+`observation_store` does.
 """
 from __future__ import annotations
 
@@ -204,6 +205,9 @@ def check_observation(raw, by_id):
         occurred = _iso(raw.get("occurred_at")) if raw.get("occurred_at") else None
     except ValueError:
         occurred = None
+    # The identity needs a day; when the post gives none, the day it was
+    # published stands in, and the stored occurred_on stays null.
+    stated = occurred is not None
     if occurred is None:
         occurred = min(post["published_at"] for post in posts)
     subject = _text_or_none(raw.get("subject"))
@@ -214,7 +218,7 @@ def check_observation(raw, by_id):
         "evidence_type": raw["evidence_type"], "outcome": raw["outcome"], "direction": raw["direction"],
         "facts": facts, "refused_facts": refused_facts,
         "scale": _text_or_none(raw.get("scale")), "conditions": _text_or_none(raw.get("conditions")),
-        "occurred_on": occurred.date().isoformat(),
+        "occurred_on": occurred.date().isoformat(), "occurred_stated": stated,
         "sources": [{"source_id": post["source_id"], "url": post.get("url"),
                      "published_at": post["published_at"],
                      "quote": quote if post["source_id"] == quoted else None} for post in posts],
@@ -248,4 +252,5 @@ def assemble_observations(candidates, batches):
             current["sources"] += [s for s in observation["sources"] if s["source_id"] not in known]
             current["facts"] += [f for f in observation["facts"] if f not in current["facts"]]
             current["refused_facts"] += observation["refused_facts"]
+            current["occurred_stated"] = current["occurred_stated"] or observation["occurred_stated"]
     return list(merged.values()), refused
