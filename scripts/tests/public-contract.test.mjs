@@ -58,7 +58,7 @@ test("zero is a value and null is unknown, in the optional fields of a topic vie
     event_id: "ev-1", kind: null, kind_vocabulary: "event_kind-2.2.0", subject_key: null, title: "t", summary: "s", occurred_at: null,
     confidence: 0, identity_confidence: "high", subject: null, basis: null, task: null, result: null, quote: null, schema_version: null,
     unresolved_reason: "no kind", primary_org_id: "org:x", org_name: "X", org_name_zh_cn: "X", facts: null, source_count: 0, source_urls: [],
-    attention: {}, series_size: null, models: [],
+    attention: {}, series_size: null, models: [], work: [],
   };
   assert.ok(events(row), JSON.stringify(events.errors));
   assert.ok(!events({ ...row, confidence: undefined }), "unknown confidence must be null, not absent");
@@ -69,7 +69,7 @@ test("a snapshot directory is checked row by row", () => {
   const dir = mkdtempSync(join(tmpdir(), "contract-"));
   try {
     writeFileSync(join(dir, "manifest.json"), JSON.stringify({ counts: { models: 1 } }));
-    for (const name of ["events", "sources", "topics"]) writeFileSync(join(dir, `${name}.json`), "[]");
+    for (const name of ["events", "sources", "topics", "work", "occupations"]) writeFileSync(join(dir, `${name}.json`), "[]");
     const model = { model_id: "m", org_id: null, level: "release", parent_model_id: null, name: "n", version: null, variant: null, status: "confirmed", released_at: null, owner: null, owner_zh_cn: null, events: 0 };
     writeFileSync(join(dir, "models.json"), JSON.stringify([model]));
     assert.deepEqual(checkSnapshot(dir), []);

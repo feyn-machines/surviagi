@@ -5,14 +5,14 @@ import { workSlug } from "./routes";
 import {
   activityAnchor,
   activityById,
-  chainEvents,
+  linkedEvents,
   dataRelease,
   events,
-  evidence,
+  legacyEvidence,
   manifest,
   marketSlug,
   topics,
-  type ChainEvent,
+  type LinkedEvent,
   type EventRow,
   type EvidenceRow,
   type Topic,
@@ -112,8 +112,8 @@ function workPath(activityId: string): string | null {
 function buildDocs(): Doc[] {
   const rows = new Map<string, EventRow>(events().map((e) => [e.event_id, e]));
   const docs: Doc[] = [];
-  const updates = new Map<string, ChainEvent>();
-  for (const e of chainEvents()) {
+  const updates = new Map<string, LinkedEvent>();
+  for (const e of linkedEvents()) {
     updates.set(e.event_id, e);
     const more = rows.get(e.event_id);
     docs.push({
@@ -151,7 +151,7 @@ function buildDocs(): Doc[] {
       ],
     });
   }
-  for (const r of evidence()) {
+  for (const r of legacyEvidence()) {
     const update = updates.get(r.event_id);
     const work = activityById(r.activity_id);
     if (!update || !work) continue;
@@ -302,9 +302,9 @@ export function isRecordId(id: string): boolean {
   return ID_UPDATE.test(id) || ID_EVIDENCE.test(id) || ID_QUESTION.test(id);
 }
 
-function updateRecord(e: ChainEvent, language: Language) {
+function updateRecord(e: LinkedEvent, language: Language) {
   const more = events().find((row) => row.event_id === e.event_id);
-  const readings = evidence().filter((r) => r.event_id === e.event_id);
+  const readings = legacyEvidence().filter((r) => r.event_id === e.event_id);
   return {
     id: e.event_id,
     type: "update" as const,
@@ -379,7 +379,7 @@ function questionRecord(t: Topic, language: Language) {
   };
 }
 
-function evidenceRecord(r: EvidenceRow, e: ChainEvent, language: Language) {
+function evidenceRecord(r: EvidenceRow, e: LinkedEvent, language: Language) {
   const work = activityById(r.activity_id);
   const workUrl = workPath(r.activity_id) ? absoluteUrl(language, workPath(r.activity_id)!) : null;
   return {
@@ -413,7 +413,7 @@ export function record(id: string, language: Language = "en") {
   const release = releaseInfo();
   const versions = versionsInfo();
   if (ID_UPDATE.test(id)) {
-    const e = chainEvents().find((row) => row.event_id === id);
+    const e = linkedEvents().find((row) => row.event_id === id);
     return e ? { ...updateRecord(e, language), release, versions } : null;
   }
   if (ID_QUESTION.test(id)) {
@@ -422,8 +422,8 @@ export function record(id: string, language: Language = "en") {
   }
   const parts = ID_EVIDENCE.exec(id);
   if (parts) {
-    const e = chainEvents().find((row) => row.event_id === parts[1]);
-    const r = evidence().find((row) => row.event_id === parts[1] && workSlug(row.activity_id) === parts[2]);
+    const e = linkedEvents().find((row) => row.event_id === parts[1]);
+    const r = legacyEvidence().find((row) => row.event_id === parts[1] && workSlug(row.activity_id) === parts[2]);
     return e && r ? { ...evidenceRecord(r, e, language), release, versions } : null;
   }
   return null;

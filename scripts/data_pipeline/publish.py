@@ -891,6 +891,73 @@ def build(conn, ontology_version: str | None = None) -> dict:
         "gate_edges": gate_edges,
     }
 
+    # --- without levels (Issue #35) --------------------------------------------
+    #
+    # The same catalogue and the same update-to-work links as the chain and the
+    # progress document, with nothing graded: which work an update speaks of, and
+    # how many of an occupation's tasks some collected update reaches. The pages
+    # read these; chain, markets, tasks and progress stay published until the
+    # code that reads them is gone from the live site, and then stop.
+    #
+    # "Touched" counts a task when any activity covering it has a link. The
+    # progress document counted a task only when EVERY covering activity had a
+    # level (its minimum), which is the takeover reading and not what the pages
+    # now say; so these counts are higher, and they are the ones that match the
+    # words "at least one collected update speaks of it".
+    published_events = {e["event_id"] for e in events}
+    linked: dict[str, dict[str, list]] = {}
+    for row in evidence:
+        if row["evidence_sign"] != "positive" or row["event_id"] not in published_events:
+            continue
+        linked.setdefault(row["event_id"], {})[row["activity_id"]] = [
+            {k: c[k] for k in ("source_id", "account_key", "handle", "url", "posted_at", "post_nature")}
+            for c in confirmed.get((row["event_id"], row["activity_id"]), [])
+        ]
+    for event in events:
+        event["work"] = [{"activity_id": activity_id, "confirmations": posts}
+                         for activity_id, posts in sorted(linked.get(event["event_id"], {}).items())]
+
+    updates_of: dict[str, int] = {}
+    for by_activity in linked.values():
+        for activity_id in by_activity:
+            updates_of[activity_id] = updates_of.get(activity_id, 0) + 1
+    work = [
+        {
+            "id": a["activity_id"], "kind": "work",
+            "label_en": a["label_en"], "label_zh_cn": a["label_zh_cn"],
+            "market_id": a["market_id"], "market_en": a["market_en"], "market_zh_cn": a["market_zh_cn"],
+            "tasks": a["tasks"], "updates": updates_of.get(a["activity_id"], 0),
+        }
+        for a in activities
+    ]
+
+    touched_tasks = {edge["task_id"] for edge in tasks if updates_of.get(edge["activity_id"])}
+    tasks_of: dict[str, set] = {}
+    for row in _rows(conn, """
+            SELECT r.parent_id AS occupation_id, r.child_id AS task_id
+              FROM public.ontology_relations r
+              JOIN public.ontology_concepts w
+                ON w.ontology_version = r.ontology_version AND w.id = r.child_id AND w.kind = 'work'
+             WHERE r.kind = 'has_task' AND r.ontology_version = %s""", (ontology_version,)):
+        tasks_of.setdefault(row["occupation_id"], set()).add(row["task_id"])
+    served: dict[str, list] = {}
+    for edge in markets:
+        served.setdefault(edge["occupation_id"], []).append(
+            {"market_id": edge["market_id"], "confidence": edge["confidence"], "status": edge["status"]})
+    occupations = []
+    for occupation_id in sorted(occupation_labels):
+        group_id = occupation_group.get(occupation_id)
+        group = group_labels.get(group_id, {}) if group_id else {}
+        own = tasks_of.get(occupation_id, set())
+        occupations.append({
+            "id": occupation_id, "kind": "occupation",
+            "label_en": occupation_labels[occupation_id]["label_en"],
+            "label_zh_cn": occupation_labels[occupation_id]["label_zh_cn"],
+            "group_id": group_id, "group_en": group.get("label_en"), "group_zh_cn": group.get("label_zh_cn"),
+            "tasks": len(own), "touched_tasks": len(own & touched_tasks),
+            "markets": served.get(occupation_id, []),
+        })
+
     generated_at = datetime.now(timezone.utc)
 
     # The model field of an update (migration 032). An update that was read and
@@ -916,6 +983,7 @@ def build(conn, ontology_version: str | None = None) -> dict:
 
     payload = {
         "chain": chain, "markets": markets, "tasks": tasks,
+        "work": work, "occupations": occupations,
         "events": events, "models": models, "sources": sources(conn),
         "topics": topics(conn),
         "coverage": coverage, "progress": progress,

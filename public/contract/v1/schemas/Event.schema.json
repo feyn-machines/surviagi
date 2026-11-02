@@ -294,6 +294,16 @@
       "x-description-zh-CN": "事件涉及的模型及其角色。",
       "x-grade": "machine",
       "x-shape": "view"
+    },
+    "work": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Kinds of work a judge linked the event to (`activity_id`), each with posts by others that said the same (`confirmations`; recorded, not verified). 1.1.0.",
+      "x-description-zh-CN": "判定与该事件相关的工作（`activity_id`），各带别人也这么说的帖子（`confirmations`；只记录不核实）。1.1.0 新增。",
+      "x-grade": "machine",
+      "x-shape": "view"
     }
   },
   "required": [
@@ -321,7 +331,8 @@
     "source_urls",
     "attention",
     "series_size",
-    "models"
+    "models",
+    "work"
   ],
   "additionalProperties": false,
   "x-identifier": "event_id",

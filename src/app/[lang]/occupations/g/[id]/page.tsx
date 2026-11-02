@@ -10,12 +10,12 @@ import { siteNavCopy } from "@/lib/site-nav";
 import { activityHref, href } from "@/lib/routes";
 import {
   activitiesOfMarket,
-  assessedCount,
   marketsOfOccupation,
+  occupationGroups,
   occupationSlug,
-  progress,
+  occupations,
   groupFromSlug,
-  readings,
+  links,
   events,
   manifest,
   touchedShare,
@@ -107,7 +107,7 @@ export async function generateMetadata({
     description: copy[language].metaDescription
       .replace("{name}", label)
       .replace("{tasks}", String(group.tasks))
-      .replace("{reached}", String(assessedCount(group.by_stage))),
+      .replace("{reached}", String(group.touched_tasks)),
   });
 }
 
@@ -121,26 +121,26 @@ export default async function OccupationGroup({ params }: { params: Promise<{ id
 
   const label =
     (language === "zh-CN" ? group.label_zh_cn : group.label_en) ?? group.label_en ?? id;
-  const here = share(group.by_stage, group.tasks);
+  const here = share(group.touched_tasks, group.tasks);
 
-  const allShares = Object.values(progress()?.groups ?? {})
-    .map((g) => share(g.by_stage, g.tasks))
+  const allShares = occupationGroups()
+    .map((g) => share(g.touched_tasks, g.tasks))
     .sort((a, b) => a - b);
   const median = allShares.length ? allShares[Math.floor(allShares.length / 2)] : 0;
 
   // The occupations that make up this sector, drawn the same way one level down.
-  const members: MemberRow[] = Object.entries(progress()?.occupations ?? {})
-    .filter(([, entry]) => entry.group_id === group.id)
-    .map(([occupationId, entry]) => ({
-      id: occupationId,
+  const members: MemberRow[] = occupations()
+    .filter((entry) => entry.group_id === group.id)
+    .map((entry) => ({
+      id: entry.occupation_id,
       label:
         (language === "zh-CN" ? entry.label_zh_cn : entry.label_en) ??
         entry.label_en ??
-        occupationId,
+        entry.occupation_id,
       tasks: entry.tasks,
-      counts: gridCounts(entry.by_stage),
-      assessed: assessedCount(entry.by_stage),
-      href: href(language, `/occupations/${occupationSlug(occupationId)}`),
+      counts: gridCounts(entry.touched, entry.tasks),
+      assessed: entry.touched,
+      href: href(language, `/occupations/${occupationSlug(entry.occupation_id)}`),
     }));
 
   // Both ends of the spread are occupations something was read about. An
@@ -163,10 +163,10 @@ export default async function OccupationGroup({ params }: { params: Promise<{ id
   );
   const drives = [...marketIds]
     .flatMap((marketId) => activitiesOfMarket(marketId))
-    .filter((activity) => (activity.evidence_rows ?? 0) > 0)
-    .sort((a, b) => (b.evidence_rows ?? 0) - (a.evidence_rows ?? 0) || b.tasks - a.tasks)
+    .filter((activity) => (activity.updates ?? 0) > 0)
+    .sort((a, b) => (b.updates ?? 0) - (a.updates ?? 0) || b.tasks - a.tasks)
     .slice(0, 12);
-  const mostUpdates = Math.max(1, ...drives.map((activity) => activity.evidence_rows ?? 0));
+  const mostUpdates = Math.max(1, ...drives.map((activity) => activity.updates ?? 0));
   const activityIds = new Set(
     [...marketIds].flatMap((marketId) =>
       activitiesOfMarket(marketId).map((a) => a.activity_id),
@@ -177,8 +177,7 @@ export default async function OccupationGroup({ params }: { params: Promise<{ id
     events().map((row) => [row.event_id, row.source_urls?.[0] ?? null]),
   );
   const byEvent = new Map<string, TimelineMark>();
-  // The chain stores positive readings only, so there is no sign to filter on.
-  for (const row of readings()) {
+  for (const row of links()) {
     if (!activityIds.has(row.activity_id)) continue;
     if (!row.occurred_at) continue;
     const name =
@@ -198,9 +197,9 @@ export default async function OccupationGroup({ params }: { params: Promise<{ id
   }
   const marks = [...byEvent.values()];
 
-  const counts = gridCounts(group.by_stage);
+  const counts = gridCounts(group.touched_tasks, group.tasks);
   const number = new Intl.NumberFormat("en-US");
-  const assessed = assessedCount(group.by_stage);
+  const assessed = group.touched_tasks;
 
   return (
     <div className={`${s.page} ${bp.canvas}`}>
@@ -274,10 +273,10 @@ export default async function OccupationGroup({ params }: { params: Promise<{ id
                       activity.label_en}
                   </span>
                   <span className={s.driveMeter}>
-                    <Bar share={(activity.evidence_rows ?? 0) / mostUpdates} />
+                    <Bar share={(activity.updates ?? 0) / mostUpdates} />
                   </span>
                   <span className={s.driveStage}>
-                    {activity.evidence_rows} {plural(c.updatesUnit, { n: activity.evidence_rows ?? 0 })}
+                    {activity.updates} {plural(c.updatesUnit, { n: activity.updates ?? 0 })}
                   </span>
                 </Link>
               </li>

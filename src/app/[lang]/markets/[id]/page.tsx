@@ -12,7 +12,7 @@ import { href } from "@/lib/routes";
 import {
   activitiesOfMarket,
   activityAnchor,
-  evidenceForActivity,
+  linksOfWork,
   manifest,
   markets,
   marketSlug,
@@ -79,7 +79,7 @@ export default async function MarketPage({ params }: Props) {
     anchor: activityAnchor(activity.activity_id, market.id),
     name: (language === "zh-CN" ? activity.label_zh_cn : activity.label_en) ?? activity.label_en,
     tasks: activity.tasks,
-    updates: evidenceForActivity(activity.activity_id).flatMap((row, index): UpdateView[] => [
+    updates: linksOfWork(activity.activity_id).flatMap((row, index): UpdateView[] => [
       {
         key: `${row.event_id}-${index}`,
         eventId: row.event_id,

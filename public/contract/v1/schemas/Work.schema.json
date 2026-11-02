@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://surviagi.com/contract/v1/schemas/Work.schema.json",
+  "title": "Kind of work in a market",
+  "x-title-zh-CN": "赛道里的工作",
+  "description": "A sealed, identified entry of the world catalog: a market group, market, work, occupation group or occupation. The whole id is its identity.",
+  "x-description-zh-CN": "世界目录里一个封存的、有标识的条目：赛道组、赛道、工作、职业大类或职业。整个 ID 就是它的身份。",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "The whole id is the identity; it is never rebuilt from a label or a path.",
+      "x-description-zh-CN": "整个 ID 是身份，不根据名称或路径重新生成。",
+      "x-grade": "record",
+      "x-ontology-property": "Concept.id"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "market_group",
+        "market",
+        "work",
+        "occupation_group",
+        "occupation"
+      ],
+      "description": "Which concept class the entry is. Decides the type; never guessed from the id.",
+      "x-description-zh-CN": "条目属于哪个概念类。类型由它决定，不从 ID 里猜。",
+      "x-grade": "record",
+      "x-ontology-property": "Concept.kind"
+    },
+    "label_en": {
+      "type": "string",
+      "description": "English name.",
+      "x-description-zh-CN": "英文名。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "Concept.label_en"
+    },
+    "label_zh_cn": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Simplified Chinese name.",
+      "x-description-zh-CN": "简体中文名。",
+      "x-grade": "machine",
+      "x-ontology-property": "Concept.label_zh_cn"
+    },
+    "market_id": {
+      "type": "string",
+      "description": "The market the work belongs to.",
+      "x-description-zh-CN": "这项工作所属的赛道。",
+      "x-grade": "record",
+      "x-shape": "view"
+    },
+    "market_en": {
+      "type": "string",
+      "description": "English name of that market.",
+      "x-description-zh-CN": "该赛道的英文名。",
+      "x-grade": "excerpt",
+      "x-shape": "view"
+    },
+    "market_zh_cn": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Chinese name of that market.",
+      "x-description-zh-CN": "该赛道的中文名。",
+      "x-grade": "machine",
+      "x-shape": "view"
+    },
+    "tasks": {
+      "type": "integer",
+      "description": "Occupation tasks the work is proposed to cover (machine-proposed edges).",
+      "x-description-zh-CN": "这项工作被提议覆盖的职业任务数（机器提出的边）。",
+      "x-grade": "machine",
+      "x-shape": "view"
+    },
+    "updates": {
+      "type": "integer",
+      "description": "Published updates a judge linked to this work. 0 means none, not unknown.",
+      "x-description-zh-CN": "被判定与这项工作相关的已发布更新数。0 表示没有。",
+      "x-grade": "machine",
+      "x-shape": "view"
+    }
+  },
+  "required": [
+    "id",
+    "kind",
+    "label_en",
+    "label_zh_cn",
+    "market_id",
+    "market_en",
+    "market_zh_cn",
+    "tasks",
+    "updates"
+  ],
+  "additionalProperties": false,
+  "x-identifier": "id",
+  "x-snapshot-file": "work.json"
+}

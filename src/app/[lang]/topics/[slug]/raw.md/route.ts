@@ -1,6 +1,6 @@
 import { DEFAULT_LANGUAGE, normalizeLanguage } from "@/lib/i18n";
 import { colon, link, markdownResponse } from "@/lib/markdown-copy";
-import { chainEvents, manifest, topicBySlug } from "@/lib/snapshot";
+import { linkedEvents, manifest, topicBySlug } from "@/lib/snapshot";
 import { answerSentence, copy } from "../copy";
 
 /** Rendered per request from the loaded data release, like the page. */
@@ -16,7 +16,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
   const c = copy[language];
   const sep = colon(language);
   const source = c.source.replace(/\s*↗$/, "");
-  const withPage = new Set(chainEvents().map((e) => e.event_id));
+  const withPage = new Set(linkedEvents().map((e) => e.event_id));
   const about = topic.about ? topic.about[language] ?? topic.about.en : null;
 
   const body = [

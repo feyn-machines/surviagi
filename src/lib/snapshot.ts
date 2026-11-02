@@ -1,5 +1,4 @@
 import { updateTimestamp } from "./update-date";
-import { LEVEL_NAMES } from "@/lib/level-names";
 import { activityAnchor } from "./anchors";
 
 // Re-exported so pages keep one import for everything about the snapshot,
@@ -27,29 +26,10 @@ export type Manifest = {
   caveats: Bilingual extends never ? never : { en: string[]; "zh-CN": string[] };
 };
 
-export type Gate = {
-  gate_id: string;
-  gate_type: string;
-  label_en: string;
-  label_zh_cn: string | null;
-  definition_en: string;
-  definition_zh_cn: string | null;
-  status: string | null;
-  state_rationale: string | null;
-  state_as_of: string | null;
-  source_event_id: string | null;
-  candidate_activities: number;
-  reviewed_activities: number;
-};
 
 /**
- * One activity: what a market actually does, and the only thing a judge scores.
- *
- * `level` is the highest an evidence row supports after its tier cap, or null
- * when no update has said anything about this activity. An activity held by a
- * gate reads 0 with `gated: true` — a different statement from "nobody looked",
- * which is `level: null`, and from "the evidence says AI takes no part", which
- * is a 0 with `gated: false`.
+ * One kind of work in a market: what an update lands on. Nothing is graded.
+ * `updates` counts the published updates linked to it, 0 when none is.
  */
 export type Activity = {
   activity_id: string;
@@ -58,12 +38,46 @@ export type Activity = {
   market_id: string;
   market_en: string;
   market_zh_cn: string | null;
-  level: number | null;
-  best_tier: string | null;
-  evidence_rows: number | null;
-  gated: boolean;
+  /** Occupation tasks the work is proposed to cover. */
   tasks: number;
-  gates: number;
+  updates: number;
+};
+
+/** A post by someone other than the vendor that said the same: recorded, not verified. */
+export type LinkPost = {
+  source_id: string;
+  account_key: string;
+  handle: string | null;
+  url: string | null;
+  posted_at: string | null;
+  post_nature: string;
+};
+
+/** An update a judge linked to a kind of work, with the posts that also said so. */
+export type WorkLink = {
+  activity_id: string;
+  confirmations: LinkPost[];
+};
+
+/** A link with its work and its update resolved, for rendering. */
+export type Link = WorkLink & {
+  event_id: string;
+  activity_en: string;
+  activity_zh_cn: string | null;
+  market_id: string | null;
+  title: string;
+  summary: string;
+  occurred_at: string | null;
+  announced_at?: string;
+  org_name: string | null;
+  source_urls: string[];
+};
+
+/** An update linked to at least one kind of work, with how many it reached. */
+export type LinkedEvent = Omit<EventRow, "source_urls"> & {
+  source_urls: string[];
+  activities: number;
+  markets: number;
 };
 
 /** Which occupations serve a market. Many-to-many in both directions. */
@@ -76,88 +90,36 @@ export type MarketEdge = {
   occupation_zh_cn: string | null;
 };
 
-/** Which tasks an activity covers. The edge the grid is drawn from. */
-export type TaskEdge = {
-  activity_id: string;
-  task_id: string;
-  confidence: number | null;
-  status: string;
-};
-
 /**
- * One reading, as the chain stores it: an update landed on an activity.
- *
- * `observed_level` is what the judge proposed; `level` is what survives the
- * evidence tier's cap and is the only one the site stands behind. They differ
- * for 162 of the 710 readings, so a page that shows one without the other is
- * showing the largest single effect in the method as if it were not there.
+ * One occupation of the catalog. `touched_tasks` are its tasks covered by at
+ * least one kind of work some collected update was linked to: a statement about
+ * the collection, not about what AI can do.
  */
-export type EvidenceRow = {
-  activity_id: string;
-  event_id: string;
-  evidence_tier: string;
-  observed_level: number | null;
-  level: number | null;
-  confidence: number | null;
-  rationale: string;
-  status: string;
-  /** Posts by others that confirmed this reading; absent when none did, and in releases before 2026-10-16. */
-  confirmations?: Confirmation[];
+export type OccupationRow = {
+  id: string;
+  label_en: string;
+  label_zh_cn: string | null;
+  group_id: string | null;
+  group_en: string | null;
+  group_zh_cn: string | null;
+  tasks: number;
+  touched_tasks: number;
+  markets: { market_id: string; confidence: number | null; status: string }[];
 };
 
-/**
- * One post by someone other than the vendor that confirmed a reading: a hands-on
- * test, an independent evaluation. It counts toward the activity's level under its
- * own tier and the cap of its kind of post, so it can carry a level the vendor's
- * own claim could not - and a page showing that level has to show it.
- */
-export type Confirmation = {
-  source_id: string;
-  account_key: string;
-  handle: string | null;
-  url: string | null;
-  posted_at: string | null;
-  post_nature: string;
-  evidence_tier: string;
-  observed_level: number | null;
-  level: number | null;
+/** An occupation group with its tasks summed over its occupations. */
+export type OccupationGroup = {
+  id: string;
+  label_en: string | null;
+  label_zh_cn: string | null;
+  tasks: number;
+  touched_tasks: number;
 };
 
-/** A reading with its activity and its update resolved, for rendering. */
-export type Reading = EvidenceRow & {
-  activity_en: string;
-  activity_zh_cn: string | null;
-  market_id: string | null;
-  title: string;
-  summary: string;
-  occurred_at: string | null;
-  announced_at?: string;
-  org_name: string | null;
-  source_urls: string[];
-};
-
-/**
- * One update that bore on some activity, with what it reached rolled up.
- *
- * Only the 256 updates that produced a reading are here. The other 325 read as
- * updates that turned out to say nothing about work; they are on /updates,
- * because an update that landed on nothing is a result and not a gap.
- */
-export type ChainEvent = {
-  event_id: string;
-  title: string;
-  summary: string;
-  occurred_at: string | null;
-  org_name: string | null;
-  primary_org_id: string | null;
-  activities: number;
-  markets: number;
-  top_level: number | null;
-  best_tier: string | null;
-  source_urls: string[];
-  /** Only when `occurred_at` is null: the earliest source post's publication time. Older releases lack it. */
-  announced_at?: string;
-};
+/** Percent of `tasks` that at least one collected update touches. Zero tasks is zero, not a division. */
+export function touchedShare(touched: number, tasks: number): number {
+  return tasks > 0 ? Math.round((touched / tasks) * 100) : 0;
+}
 
 export type EventRow = {
   event_id: string;
@@ -180,74 +142,9 @@ export type EventRow = {
   source_urls: string[] | null;
   /** Reach of the source posts when the snapshot was taken. Never an input to a level. */
   attention?: { views: number | null; likes: number | null; provisional?: boolean } | null;
+  /** The kinds of work a judge linked it to. Absent in releases before Issue #35. */
+  work?: WorkLink[];
 };
-
-/**
- * How far AI has got, counted in distinct work items rather than in edges.
- *
- * L0-L5 plus two kinds of blank, and the blanks are not the same finding.
- * `unknown` is a task covered by an activity that has no evidence behind it, so
- * the lowest level among its activities cannot be known. `untouched` is a task
- * no activity covers at all. Neither is zero, and a chart that merges them says
- * "AI cannot do this" where the truth is "nobody has looked".
- */
-export type StageCounts = Partial<
-  Record<"0" | "1" | "2" | "3" | "4" | "5" | "unknown" | "untouched", number>
->;
-
-export type Coverage3 = "assessed" | "unknown" | "untouched";
-
-export type MarketProgress = {
-  label_en: string | null;
-  label_zh_cn: string | null;
-  tasks: number;
-  by_stage: StageCounts;
-};
-
-export type Progress = {
-  method_version: string;
-  /** Published even where empty: an absent L5 is the headline, not a gap. */
-  stages: number[];
-  /** The ladder's own words, projected from the schema's activity_level. */
-  levels: Record<string, Bilingual>;
-  /** The full sentence per rung, so no component restates the ladder. */
-  level_definitions: Record<string, Bilingual>;
-  states: Coverage3[];
-  /** What each kind of evidence is allowed to support, so an absent L3 reads. */
-  tier_caps: Record<"T1" | "T2" | "T3" | "T4", number>;
-  work_items_total: number;
-  assessed: number;
-  unknown: number;
-  untouched: number;
-  global: { stage: number | null; coverage: Coverage3; work_items: number }[];
-  /** One level up from occupations: few enough rows to compare at a glance. */
-  groups: Record<string, {
-    label_en: string | null;
-    label_zh_cn: string | null;
-    tasks: number;
-    by_stage: StageCounts;
-  }>;
-  occupations: Record<string, {
-    group_id: string | null;
-    label_en: string | null;
-    label_zh_cn: string | null;
-    tasks: number;
-    by_stage: StageCounts;
-  }>;
-  /** The market axis: kinds of work, which is what an update actually lands on. */
-  markets: Record<string, MarketProgress>;
-};
-
-/** Tasks an update has been shown to reach: any reading at all, whatever it said. */
-export function assessedCount(by: StageCounts): number {
-  return (["0", "1", "2", "3", "4", "5"] as const)
-    .reduce((sum, key) => sum + (by[key] ?? 0), 0);
-}
-
-/** Percent of `tasks` that at least one collected update touches. Zero tasks is zero, not a division. */
-export function touchedShare(by: StageCounts, tasks: number): number {
-  return tasks > 0 ? Math.round((assessedCount(by) / tasks) * 100) : 0;
-}
 
 /**
  * What was looked at, and what was not. Every number here is about the
@@ -342,29 +239,6 @@ export type Source = {
   latest: SourcePost[];
 };
 
-/**
- * One file, because the homepage reads a chain and not three tables: an update
- * produced a reading, the reading landed on an activity, the activity belongs
- * to a market and may be held by a gate. It replaces activities.json /
- * evidence.json / gates.json rather than sitting beside them - two copies of
- * the same 710 readings would eventually disagree.
- */
-type Chain = {
-  events: ChainEvent[];
-  evidence: EvidenceRow[];
-  activities: Activity[];
-  gates: Gate[];
-  gate_edges: GateEdge[];
-};
-
-/** One activity held by one gate. The counts alone could not name an example. */
-export type GateEdge = {
-  gate_id: string;
-  activity_id: string;
-  confidence: number | null;
-  status: string;
-};
-
 /** One answer a reader can pick for a topic, with who argued it and what a judge found to weigh on it. */
 export type TopicOption = {
   option_id: string;
@@ -429,19 +303,131 @@ export type Topic = {
   by_quarter: Record<string, Record<string, number>>;
 };
 
+// ------------------------------------------------------- before Issue #35 ----
+//
+// Releases made before the ungraded collections (`work`, `occupations`,
+// `Event.work`) carry the same catalogue and links inside the graded chain and
+// progress documents. They are read only to fold them into the shapes above,
+// and the deprecated Agent `evidence` record still shows their readings. All of
+// this goes when those collections stop being published.
+
+/** One reading as the chain stores it: an update landed on an activity, with the retired level. */
+export type EvidenceRow = {
+  activity_id: string;
+  event_id: string;
+  evidence_tier: string;
+  observed_level: number | null;
+  level: number | null;
+  confidence: number | null;
+  rationale: string;
+  status: string;
+  confirmations?: Confirmation[];
+};
+
+/** A confirming post as the chain stores it, with the retired level it carried. */
+export type Confirmation = LinkPost & {
+  evidence_tier: string;
+  observed_level: number | null;
+  level: number | null;
+};
+
+type ChainActivity = Omit<Activity, "updates">;
+
+type LegacyCounts = Partial<Record<string, number>>;
+
+type LegacyProgress = {
+  groups: Record<string, { label_en: string | null; label_zh_cn: string | null; tasks: number; by_stage: LegacyCounts }>;
+  occupations: Record<string, {
+    group_id: string | null;
+    label_en: string | null;
+    label_zh_cn: string | null;
+    tasks: number;
+    by_stage: LegacyCounts;
+  }>;
+};
+
 /** What one data release holds, shaped as the snapshot files and the release database both deliver it. */
 export type Payload = {
-  chain: Chain;
   manifest: Manifest;
-  markets: MarketEdge[];
-  tasks: TaskEdge[];
   events: EventRow[];
   coverage: Coverage;
-  progress: Progress;
   sources: Source[];
   /** Absent from a release made before topics were published. */
   topics?: Topic[];
+  /** Absent from a release made before Issue #35; then the chain and progress below carry the same. */
+  work?: (Omit<Activity, "activity_id"> & { id: string })[];
+  occupations?: OccupationRow[];
+  chain?: { activities: ChainActivity[]; evidence: EvidenceRow[] };
+  markets?: MarketEdge[];
+  progress?: LegacyProgress;
 };
+
+/** Tasks the old progress counted as reached: any level at all. */
+const legacyTouched = (by: LegacyCounts) =>
+  (["0", "1", "2", "3", "4", "5"] as const).reduce((sum, key) => sum + (by[key] ?? 0), 0);
+
+const strip = ({ source_id, account_key, handle, url, posted_at, post_nature }: LinkPost): LinkPost =>
+  ({ source_id, account_key, handle, url, posted_at, post_nature });
+
+/** Every update-to-work link of a release, in the order the release gives them. */
+function linksOf(data: Payload): (WorkLink & { event_id: string })[] {
+  if (data.work) {
+    return data.events.flatMap((e) => (e.work ?? []).map((w) => ({ event_id: e.event_id, ...w })));
+  }
+  const published = new Set(data.events.map((e) => e.event_id));
+  return (data.chain?.evidence ?? [])
+    .filter((row) => published.has(row.event_id))
+    .map((row) => ({ event_id: row.event_id, activity_id: row.activity_id, confirmations: (row.confirmations ?? []).map(strip) }));
+}
+
+function workOf(data: Payload, updates: Map<string, number>): Activity[] {
+  const rows: ChainActivity[] = data.work
+    ? data.work.map(({ id, ...rest }) => ({ ...rest, activity_id: id }))
+    : (data.chain?.activities ?? []).map(({ activity_id, label_en, label_zh_cn, market_id, market_en, market_zh_cn, tasks }) =>
+        ({ activity_id, label_en, label_zh_cn, market_id, market_en, market_zh_cn, tasks }));
+  return rows.map((row) => ({ ...row, updates: updates.get(row.activity_id) ?? 0 }));
+}
+
+function occupationsOf(data: Payload): { rows: OccupationRow[]; groups: OccupationGroup[] } {
+  if (data.occupations) {
+    const groups = new Map<string, OccupationGroup>();
+    for (const row of data.occupations) {
+      if (!row.group_id) continue;
+      const group = groups.get(row.group_id)
+        ?? { id: row.group_id, label_en: row.group_en, label_zh_cn: row.group_zh_cn, tasks: 0, touched_tasks: 0 };
+      group.tasks += row.tasks;
+      group.touched_tasks += row.touched_tasks;
+      groups.set(row.group_id, group);
+    }
+    return { rows: data.occupations, groups: [...groups.values()] };
+  }
+  const groups = Object.entries(data.progress?.groups ?? {}).map(([id, g]) => ({
+    id, label_en: g.label_en, label_zh_cn: g.label_zh_cn, tasks: g.tasks, touched_tasks: legacyTouched(g.by_stage),
+  }));
+  const label = new Map(groups.map((g) => [g.id, g]));
+  const served = new Map<string, OccupationRow["markets"]>();
+  for (const e of data.markets ?? []) {
+    served.set(e.occupation_id, [...(served.get(e.occupation_id) ?? []), { market_id: e.market_id, confidence: e.confidence, status: e.status }]);
+  }
+  const named = new Map((data.markets ?? []).map((e) => [e.occupation_id, e]));
+  const ids = new Set([...Object.keys(data.progress?.occupations ?? {}), ...served.keys()]);
+  const rows = [...ids].map((id): OccupationRow => {
+    const entry = data.progress?.occupations?.[id];
+    const group = entry?.group_id ? label.get(entry.group_id) : undefined;
+    return {
+      id,
+      label_en: entry?.label_en ?? named.get(id)?.occupation_en ?? id,
+      label_zh_cn: entry?.label_zh_cn ?? named.get(id)?.occupation_zh_cn ?? null,
+      group_id: entry?.group_id ?? null,
+      group_en: group?.label_en ?? null,
+      group_zh_cn: group?.label_zh_cn ?? null,
+      tasks: entry?.tasks ?? 0,
+      touched_tasks: entry ? legacyTouched(entry.by_stage) : 0,
+      markets: served.get(id) ?? [],
+    };
+  });
+  return { rows, groups };
+}
 
 export type DataRelease = {
   releaseId: string | null;
@@ -453,28 +439,63 @@ export type DataRelease = {
 type Store = {
   data: Payload | null;
   release: DataRelease;
-  chainEventById: Map<string, ChainEvent>;
-  activityIndex: Map<string, Activity>;
-  progress: Progress | null;
+  work: Activity[];
+  workById: Map<string, Activity>;
+  /** Links in release order, each resolved against its work and its update. */
+  links: Link[];
+  linkedEvents: LinkedEvent[];
+  occupations: OccupationRow[];
+  occupationById: Map<string, OccupationRow>;
+  groups: OccupationGroup[];
 };
 
 function buildStore(data: Payload | null, release: DataRelease): Store {
-  const published = data?.progress ?? null;
+  const raw = data ? linksOf(data) : [];
+  const updates = new Map<string, number>();
+  for (const id of new Set(raw.map((l) => `${l.activity_id}\n${l.event_id}`))) {
+    const activity = id.split("\n")[0];
+    updates.set(activity, (updates.get(activity) ?? 0) + 1);
+  }
+  const work = data ? workOf(data, updates) : [];
+  const workById = new Map(work.map((a) => [a.activity_id, a]));
+  const eventById = new Map((data?.events ?? []).map((e) => [e.event_id, e]));
+  const links = raw.map((l): Link => {
+    const activity = workById.get(l.activity_id);
+    const event = eventById.get(l.event_id);
+    return {
+      ...l,
+      activity_en: activity?.label_en ?? l.activity_id,
+      activity_zh_cn: activity?.label_zh_cn ?? null,
+      market_id: activity?.market_id ?? null,
+      title: event?.title ?? "",
+      summary: event?.summary ?? "",
+      occurred_at: event?.occurred_at ?? null,
+      ...(event?.announced_at ? { announced_at: event.announced_at } : {}),
+      org_name: event?.org_name ?? null,
+      source_urls: event?.source_urls ?? [],
+    };
+  });
+  const reach = new Map<string, { activities: Set<string>; markets: Set<string> }>();
+  for (const l of links) {
+    const seen = reach.get(l.event_id) ?? { activities: new Set<string>(), markets: new Set<string>() };
+    seen.activities.add(l.activity_id);
+    if (l.market_id) seen.markets.add(l.market_id);
+    reach.set(l.event_id, seen);
+  }
+  const linkedEvents = (data?.events ?? [])
+    .filter((e) => reach.has(e.event_id))
+    .map((e) => ({ ...e, source_urls: e.source_urls ?? [], activities: reach.get(e.event_id)!.activities.size, markets: reach.get(e.event_id)!.markets.size }));
+  const { rows: occupations, groups } = data ? occupationsOf(data) : { rows: [], groups: [] };
   return {
     data,
     release,
-    chainEventById: new Map((data?.chain.events ?? []).map((e) => [e.event_id, e])),
-    activityIndex: new Map((data?.chain.activities ?? []).map((a) => [a.activity_id, a])),
-    /**
-     * The snapshot still carries the earlier wording of the level names. Pages read
-     * the names from here, so the ruler is replaced once, on the way in, with v4.
-     */
-    progress: published && {
-      ...published,
-      levels: Object.fromEntries(
-        LEVEL_NAMES.en.map((en, level) => [String(level), { en, "zh-CN": LEVEL_NAMES["zh-CN"][level] }]),
-      ),
-    },
+    work,
+    workById,
+    links,
+    linkedEvents,
+    occupations,
+    occupationById: new Map(occupations.map((o) => [o.id, o])),
+    groups,
   };
 }
 
@@ -511,19 +532,32 @@ export function dataRelease(): DataRelease {
 
 export const snapshotExists = (): boolean => current().data?.manifest != null;
 export const manifest = (): Manifest | null => current().data?.manifest ?? null;
-export const activities = (): Activity[] => current().data?.chain.activities ?? [];
-export const gates = (): Gate[] => current().data?.chain.gates ?? [];
-export const evidence = (): EvidenceRow[] => current().data?.chain.evidence ?? [];
-export const chainEvents = (): ChainEvent[] => current().data?.chain.events ?? [];
-export const gateEdges = (): GateEdge[] => current().data?.chain.gate_edges ?? [];
-export const marketEdges = (): MarketEdge[] => current().data?.markets ?? [];
-export const taskEdges = (): TaskEdge[] => current().data?.tasks ?? [];
+export const activities = (): Activity[] => current().work;
 export const events = (): EventRow[] => current().data?.events ?? [];
 export const coverage = (): Coverage | null => current().data?.coverage ?? null;
-export const progress = (): Progress | null => current().progress;
 export const sources = (): Source[] => current().data?.sources ?? [];
 export const topics = (): Topic[] => current().data?.topics ?? [];
 export const topicBySlug = (slug: string): Topic | undefined => topics().find((t) => t.slug === slug);
+
+/** Every update-to-work link, resolved. */
+export const links = (): Link[] => current().links;
+
+/** The updates linked to at least one kind of work: the ones with a page of their own. */
+export const linkedEvents = (): LinkedEvent[] => current().linkedEvents;
+
+/**
+ * The retired readings, for the deprecated Agent `evidence` record only. Empty
+ * once a release no longer carries the chain.
+ */
+export const legacyEvidence = (): EvidenceRow[] => current().data?.chain?.evidence ?? [];
+
+/** Every occupation group, with its tasks and the ones an update reaches. */
+export const occupationGroups = (): OccupationGroup[] => current().groups;
+
+/** One occupation of the catalog, whether or not it has tasks. */
+export function occupationById(id: string): OccupationRow | undefined {
+  return current().occupationById.get(id);
+}
 
 /**
  * Where the middle occupation sits, so one occupation's share can be judged.
@@ -532,11 +566,7 @@ export const topicBySlug = (slug: string): Topic | undefined => topics().find((t
  * across 923 occupations is a judgement they can act on.
  */
 export function occupationMedianShare(): { occupations: number; median: number } {
-  const shares: number[] = [];
-  for (const entry of Object.values(progress()?.occupations ?? {})) {
-    if (!entry.tasks) continue;
-    shares.push((assessedCount(entry.by_stage) / entry.tasks) * 100);
-  }
+  const shares = current().occupations.filter((o) => o.tasks > 0).map((o) => (o.touched_tasks / o.tasks) * 100);
   if (!shares.length) return { occupations: 0, median: 0 };
   shares.sort((x, y) => x - y);
   const mid = Math.floor(shares.length / 2);
@@ -549,16 +579,8 @@ export function groupSlug(id: string): string {
   return id.replace(/^oaw:occupation-group:/, "");
 }
 
-export function groupFromSlug(slug: string) {
-  const entries = Object.entries(progress()?.groups ?? {});
-  const found = entries.find(([id]) => groupSlug(id) === slug);
-  return found ? { id: found[0], ...found[1] } : undefined;
-}
-
-/** Squares for one occupation, or null when it is not in the snapshot. */
-export function progressFor(occupationId: string): StageCounts | null {
-  const entry = progress()?.occupations?.[occupationId];
-  return entry ? entry.by_stage : null;
+export function groupFromSlug(slug: string): OccupationGroup | undefined {
+  return current().groups.find((group) => groupSlug(group.id) === slug);
 }
 
 /** Slug used in market URLs: oaw:market:accounting-audit-assurance -> accounting-audit-assurance */
@@ -567,26 +589,24 @@ export function marketSlug(id: string): string {
 }
 
 export function activityById(id: string): Activity | undefined {
-  return current().activityIndex.get(id);
+  return current().workById.get(id);
 }
 
 /** Every activity of one market, the ones most updates bear on first, those none reached last. */
 export function activitiesOfMarket(marketId: string): Activity[] {
   return activities()
     .filter((a) => a.market_id === marketId)
-    .sort((x, y) => (y.evidence_rows ?? 0) - (x.evidence_rows ?? 0) || x.label_en.localeCompare(y.label_en));
+    .sort((x, y) => y.updates - x.updates || x.label_en.localeCompare(y.label_en));
 }
 
 /** Updates that bear on at least one kind of work in each market, counted once per market. */
 export function updateCountByMarket(): Map<string, number> {
-  const marketOf = new Map(activities().map((a) => [a.activity_id, a.market_id]));
   const seen = new Map<string, Set<string>>();
-  for (const row of evidence()) {
-    const market = marketOf.get(row.activity_id);
-    if (!market) continue;
-    const set = seen.get(market) ?? new Set<string>();
-    set.add(row.event_id);
-    seen.set(market, set);
+  for (const link of links()) {
+    if (!link.market_id) continue;
+    const set = seen.get(link.market_id) ?? new Set<string>();
+    set.add(link.event_id);
+    seen.set(link.market_id, set);
   }
   return new Map([...seen].map(([market, events]) => [market, events.size]));
 }
@@ -602,6 +622,13 @@ export function markets(): { id: string; en: string; zh_cn: string | null; activ
   return [...seen.values()].sort((x, y) => x.en.localeCompare(y.en));
 }
 
+/** Every market-to-occupation edge, carried on the occupation rows. */
+export function marketEdges(): MarketEdge[] {
+  return current().occupations.flatMap((o) => o.markets.map((m) => ({
+    ...m, occupation_id: o.id, occupation_en: o.label_en, occupation_zh_cn: o.label_zh_cn,
+  })));
+}
+
 /** Occupations served by a market, most confident first. */
 export function occupationsOfMarket(marketId: string): MarketEdge[] {
   return marketEdges()
@@ -611,101 +638,25 @@ export function occupationsOfMarket(marketId: string): MarketEdge[] {
 
 /** Markets one occupation serves. The reverse of the edge above. */
 export function marketsOfOccupation(occupationId: string): MarketEdge[] {
-  return marketEdges().filter((e) => e.occupation_id === occupationId);
+  const o = occupationById(occupationId);
+  return (o?.markets ?? []).map((m) => ({ ...m, occupation_id: o!.id, occupation_en: o!.label_en, occupation_zh_cn: o!.label_zh_cn }));
 }
 
-/** Resolve a stored reading against its activity and its update, in the store the caller took. */
-function reading(store: Store, row: EvidenceRow): Reading {
-  const activity = store.activityIndex.get(row.activity_id);
-  const event = store.chainEventById.get(row.event_id);
-  return {
-    ...row,
-    activity_en: activity?.label_en ?? row.activity_id,
-    activity_zh_cn: activity?.label_zh_cn ?? null,
-    market_id: activity?.market_id ?? null,
-    title: event?.title ?? "",
-    summary: event?.summary ?? "",
-    occurred_at: event?.occurred_at ?? null,
-    announced_at: event?.announced_at,
-    org_name: event?.org_name ?? null,
-    source_urls: event?.source_urls ?? [],
-  };
-}
+const newestFirst = (a: Link, b: Link) => (updateTimestamp(b) ?? "").localeCompare(updateTimestamp(a) ?? "");
 
-/** The gates holding one activity. */
-export function gatesOfActivity(activityId: string): string[] {
-  return gateEdges().filter((e) => e.activity_id === activityId).map((e) => e.gate_id);
-}
-
-/** The activities one gate holds, most confident first. */
-export function activitiesOfGate(gateId: string): string[] {
-  return gateEdges().filter((e) => e.gate_id === gateId).map((e) => e.activity_id);
-}
-
-/** Every reading, joined. The chain stores positive readings only. */
-export function readings(): Reading[] {
-  const store = current();
-  return (store.data?.chain.evidence ?? []).map((row) => reading(store, row));
-}
-
-/** Readings for one activity, newest update first. */
-export function evidenceForActivity(activityId: string): Reading[] {
-  const store = current();
-  return (store.data?.chain.evidence ?? [])
-    .filter((row) => row.activity_id === activityId)
-    .map((row) => reading(store, row))
-    .sort((a, b) => (updateTimestamp(b) ?? "").localeCompare(updateTimestamp(a) ?? ""));
+/** Links of one kind of work, newest update first. */
+export function linksOfWork(activityId: string): Link[] {
+  return links().filter((l) => l.activity_id === activityId).sort(newestFirst);
 }
 
 /**
- * The readings that count toward an activity's level: those with a level of their
- * own, and those a confirmation lifted. Newest update first, as on the work page.
+ * The work an update was linked to, if any.
+ *
+ * Most updates are linked to none: an update that turned out to say nothing
+ * about work is a result, and the feed shows it per row.
  */
-export function countedReadings(activityId: string): Reading[] {
-  return evidenceForActivity(activityId).filter((r) => r.level !== null || (r.confirmations?.length ?? 0) > 0);
-}
-
-/** One rise in a work's level: the reading that first carried it there, dated by the evidence. */
-export type LevelStep = {
-  /** When the update or post appeared; null for evidence with no date, which is placed last. */
-  date: string | null;
-  from: number | null;
-  to: number;
-  reading: Reading;
-  /** Set when a post by someone else, not the update itself, carried the level. */
-  confirmation: Confirmation | null;
-};
-
-/**
- * How a work reached its level, by the date of the evidence: each reading that
- * raised the highest level so far. The level is the highest counted reading, so
- * the last step always ends where the work stands. A gate holds the level below
- * what the evidence reached; every step is held the same way, by capping at the
- * level the work stands at. These are the dates the evidence carries, not the
- * dates it was collected or published here.
- */
-export function levelSteps(activityId: string): LevelStep[] {
-  const final = activityById(activityId)?.level ?? null;
-  if (final === null) return [];
-  const seen: Omit<LevelStep, "from">[] = [];
-  for (const reading of countedReadings(activityId)) {
-    if (reading.level !== null) seen.push({ date: reading.occurred_at, to: reading.level, reading, confirmation: null });
-    for (const confirmation of reading.confirmations ?? []) {
-      if (confirmation.level !== null) seen.push({ date: confirmation.posted_at, to: confirmation.level, reading, confirmation });
-    }
-  }
-  // Oldest first; on one day the higher reading first, so a day makes one step.
-  const dated = seen.filter((s) => s.date).sort((a, b) => a.date!.localeCompare(b.date!) || b.to - a.to);
-  const undated = seen.filter((s) => !s.date).sort((a, b) => b.to - a.to);
-  const steps: LevelStep[] = [];
-  let level: number | null = null;
-  for (const candidate of [...dated, ...undated]) {
-    const to = Math.min(candidate.to, final);
-    if (level !== null && to <= level) continue;
-    steps.push({ ...candidate, from: level, to });
-    level = to;
-  }
-  return steps;
+export function linksOfEvent(eventId: string): Link[] {
+  return links().filter((l) => l.event_id === eventId);
 }
 
 export function occupationSlug(id: string): string {
@@ -713,62 +664,21 @@ export function occupationSlug(id: string): string {
 }
 
 /**
- * The evidence an update produced, if any.
- *
- * Most updates produce none: 325 of the 581 routed updates bore on no activity
- * at all. That ratio is the honest shape of this source, so the feed shows it
- * per row rather than listing only the updates that happened to land.
- */
-export function evidenceForEvent(eventId: string): Reading[] {
-  const store = current();
-  return (store.data?.chain.evidence ?? [])
-    .filter((row) => row.event_id === eventId)
-    .map((row) => reading(store, row))
-    .sort((a, b) => (b.level ?? -1) - (a.level ?? -1));
-}
-
-/** Event ids that produced at least one reading, for counting in one pass. */
-export function eventsWithEvidence(): Set<string> {
-  return new Set(chainEvents().map((row) => row.event_id));
-}
-
-/**
- * Occupations the evidence reaches, with the markets that reach them.
- *
- * This used to be folded out of `impact`, one row per capability-occupation
- * pair. The path is now occupation -> market -> activity -> task, and the task
- * counts come from the published progress rather than being recomputed here:
- * a second count of the same thing is a second answer waiting to diverge.
+ * Occupations with tasks in the catalog, with the markets they serve, the ones
+ * updates reach most first. An occupation nothing reaches still appears,
+ * because a missing row and a row of blanks say different things.
  */
 export function occupations() {
-  // One store for the whole fold, so the progress rows and the edges come from one release.
-  const store = current();
-  const served = new Map<string, MarketEdge[]>();
-  for (const edge of store.data?.markets ?? []) {
-    const list = served.get(edge.occupation_id);
-    if (list) list.push(edge);
-    else served.set(edge.occupation_id, [edge]);
-  }
-  const rows = Object.entries(store.progress?.occupations ?? {}).map(([id, entry]) => {
-    return {
-      occupation_id: id,
-      group_id: entry.group_id,
-      label_en: entry.label_en,
-      label_zh_cn: entry.label_zh_cn,
-      tasks: entry.tasks,
-      by_stage: entry.by_stage,
-      assessed: assessedCount(entry.by_stage),
-      markets: (served.get(id) ?? []).map((e) => e.market_id),
-    };
-  });
-  // Most reached first; an occupation nothing reaches still appears, because a
-  // missing row and a row of blanks say different things.
-  return rows.sort((a, b) => b.assessed - a.assessed || b.tasks - a.tasks);
-}
-
-/** One occupation's label, from the ontology row the publisher carries. */
-export function occupationLabel(id: string): { en: string; zh_cn: string | null } | undefined {
-  const entry = progress()?.occupations?.[id];
-  if (!entry?.label_en) return undefined;
-  return { en: entry.label_en, zh_cn: entry.label_zh_cn };
+  const rows = current().occupations
+    .filter((o) => o.tasks > 0)
+    .map((o) => ({
+      occupation_id: o.id,
+      group_id: o.group_id,
+      label_en: o.label_en,
+      label_zh_cn: o.label_zh_cn,
+      tasks: o.tasks,
+      touched: o.touched_tasks,
+      markets: o.markets.map((m) => m.market_id),
+    }));
+  return rows.sort((a, b) => b.touched - a.touched || b.tasks - a.tasks);
 }

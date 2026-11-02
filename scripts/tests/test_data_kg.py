@@ -41,6 +41,8 @@ def payload(extra_event=None, drop_event=None, tweak_model=False):
                   "gates": [{"gate_id": "g1", "label": "ゲート 门"}], "gate_edges": []},
         "markets": [{"market_id": "m", "occupation_id": "o1"}, {"market_id": "m", "occupation_id": "o2"}],
         "tasks": [{"task_id": "t", "confidence": 0.1}],
+        "work": [{"id": "a1", "updates": 1}],
+        "occupations": [{"id": "o1", "tasks": 2, "touched_tasks": 1}],
         "events": [dict(e, summary="s") for e in events],
         "models": models,
         "sources": [{"account_key": "k", "followers": 0}],

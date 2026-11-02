@@ -13,7 +13,7 @@
 import { schema, termIds, validateSchema } from "./ontology-schema.mjs";
 
 /** The contract's own version. Moves independently of the ontology, the method and the data. */
-export const CONTRACT_VERSION = "1.0.0";
+export const CONTRACT_VERSION = "1.1.0";
 export const CONTRACT_PATH = "contract/v1";
 
 /**
@@ -57,6 +57,33 @@ export const ENTITIES = [
     fields: {
       id: "record", kind: "record", label_en: "excerpt", label_zh_cn: "machine", origin: "record", translation_status: "record",
       scope_status: "record", scope_note: "machine", definition: "excerpt",
+    },
+  },
+  {
+    // A kind of work in a market: what an update lands on. 1.1.0, replacing the graded rows of `chain.activities`.
+    name: "Work", class: "Concept", id: "id", collection: "work", title: { en: "Kind of work in a market", "zh-CN": "赛道里的工作" },
+    fields: { id: "record", kind: "record", label_en: "excerpt", label_zh_cn: "machine" },
+    omit: ["origin", "translation_status", "scope_status", "scope_note", "definition"],
+    view: {
+      market_id: view("string", "record", "The market the work belongs to.", "这项工作所属的赛道。"),
+      market_en: view("string", "excerpt", "English name of that market.", "该赛道的英文名。"),
+      market_zh_cn: view("string", "machine", "Chinese name of that market.", "该赛道的中文名。", { nullable: true }),
+      tasks: view("integer", "machine", "Occupation tasks the work is proposed to cover (machine-proposed edges).", "这项工作被提议覆盖的职业任务数（机器提出的边）。"),
+      updates: view("integer", "machine", "Published updates a judge linked to this work. 0 means none, not unknown.", "被判定与这项工作相关的已发布更新数。0 表示没有。"),
+    },
+  },
+  {
+    // 1.1.0, replacing the graded `progress.occupations`: tasks reached, nothing graded.
+    name: "Occupation", class: "Concept", id: "id", collection: "occupations", title: { en: "Occupation", "zh-CN": "职业" },
+    fields: { id: "record", kind: "record", label_en: "excerpt", label_zh_cn: "machine" },
+    omit: ["origin", "translation_status", "scope_status", "scope_note", "definition"],
+    view: {
+      group_id: view("string", "record", "The occupation group.", "所属职业大类。", { nullable: true }),
+      group_en: view("string", "excerpt", "English name of the group.", "大类的英文名。", { nullable: true }),
+      group_zh_cn: view("string", "machine", "Chinese name of the group.", "大类的中文名。", { nullable: true }),
+      tasks: view("integer", "excerpt", "Tasks of the occupation in the catalog (O*NET).", "目录（O*NET）中该职业的任务数。"),
+      touched_tasks: view("integer", "machine", "Tasks covered by at least one kind of work that a published update was linked to. Says what was collected, not what AI can do.", "至少被一项有已发布更新关联的工作覆盖的任务数。说的是采集到了什么，不是 AI 能做什么。"),
+      markets: view("array", "machine", "Markets the occupation serves: market id, confidence and status of the machine-proposed edge.", "该职业服务的赛道：赛道编号及机器提出的边的置信度与状态。"),
     },
   },
   {
@@ -112,6 +139,7 @@ export const ENTITIES = [
       attention: view("object", "excerpt", "Engagement counts of the leading source post when read.", "主来源帖子被读取时的互动数。"),
       series_size: view("integer", "record", "Posts in the thread when the source is a numbered thread.", "来源为串文时，串内帖子数。", { nullable: true }),
       models: view("array", "machine", "Models the event names, with their role.", "事件涉及的模型及其角色。"),
+      work: view("array", "machine", "Kinds of work a judge linked the event to (`activity_id`), each with posts by others that said the same (`confirmations`; recorded, not verified). 1.1.0.", "判定与该事件相关的工作（`activity_id`），各带别人也这么说的帖子（`confirmations`；只记录不核实）。1.1.0 新增。"),
     },
   },
   {
@@ -188,10 +216,10 @@ export const ENTITIES = [
 
 /** Snapshot files that stay out of the contract: level readings, retired by Issue #35. */
 export const RETIRED_COLLECTIONS = [
-  { file: "chain", reason: "Activity and level readings; retired with the L0–L5 scale (Issue #35)." },
-  { file: "markets", reason: "Carries level readings per market; replaced by observations (Issue #35)." },
-  { file: "tasks", reason: "Carries level readings per task; replaced by observations (Issue #35)." },
-  { file: "progress", reason: "A takeover-progress figure; retired with the level scale (Issue #35)." },
+  { file: "chain", reason: "Activity and level readings; retired with the L0–L5 scale (Issue #35). Ungraded links are `Event.work`, the work itself `work.json`." },
+  { file: "markets", reason: "Market-to-occupation edges; carried on `occupations.json` rows since 1.1.0 (Issue #35)." },
+  { file: "tasks", reason: "Work-to-task edges; folded into counts on `work.json` and `occupations.json` since 1.1.0 (Issue #35)." },
+  { file: "progress", reason: "A takeover-progress figure; retired with the level scale (Issue #35). Ungraded task counts are on `occupations.json`." },
   { file: "coverage", reason: "Collection-window description; moves into the manifest with observations (Issue #25)." },
 ];
 

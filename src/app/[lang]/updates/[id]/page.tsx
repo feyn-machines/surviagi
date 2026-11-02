@@ -11,7 +11,7 @@ import { siteNavCopy } from "@/lib/site-nav";
 import { UPDATE_LANGUAGES } from "@/lib/site-pages";
 import { copy, updateDate } from "./copy";
 import { activityHref, href, marketHref } from "@/lib/routes";
-import { activityById, chainEvents, events as allEvents, evidenceForEvent } from "@/lib/snapshot";
+import { activityById, linkedEvents, events as allEvents, linksOfEvent } from "@/lib/snapshot";
 
 /** Rendered per request from the loaded data release, never at build time. */
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ export const dynamic = "force-dynamic";
  */
 
 type Props = { params: Promise<{ id: string }> };
-const find = (id: string) => chainEvents().find((e) => e.event_id === id);
+const find = (id: string) => linkedEvents().find((e) => e.event_id === id);
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { language } = await getLocale();
@@ -48,7 +48,7 @@ export default async function UpdatePage({ params }: Props) {
   const zh = language === "zh-CN";
   const more = allEvents().find((e) => e.event_id === update.event_id);
   const kind = vocabularyTerm("event_kind", more?.kind);
-  const rows = evidenceForEvent(update.event_id)
+  const rows = linksOfEvent(update.event_id)
     .map((r) => {
       const work = activityById(r.activity_id);
       return {

@@ -3,9 +3,9 @@ import type { Metadata } from "next";
 import { getLocale } from "@/lib/locale";
 import { pageMetadata } from "@/lib/seo";
 import {
-  chainEvents,
+  linkedEvents,
   coverage,
-  evidence,
+  links,
   events,
   activityById,
   snapshotExists,
@@ -167,9 +167,9 @@ export default async function UpdatesPage() {
     );
   }
 
-  const landed = new Map(chainEvents().map((e) => [e.event_id, e]));
+  const landed = new Map(linkedEvents().map((e) => [e.event_id, e]));
   const readingsByEvent = new Map<string, UpdateRow["readings"]>();
-  for (const row of evidence()) {
+  for (const row of links()) {
     const activity = activityById(row.activity_id);
     const list = readingsByEvent.get(row.event_id) ?? [];
     list.push({

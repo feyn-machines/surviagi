@@ -4,10 +4,10 @@ import { getLocale } from "@/lib/locale";
 import { datasetLd, pageMetadata } from "@/lib/seo";
 import { JsonLd } from "@/components/json-ld";
 import {
-  assessedCount,
   groupSlug,
+  occupationGroups,
   occupationSlug,
-  progress,
+  occupations,
   snapshotExists,
   touchedShare,
 } from "@/lib/snapshot";
@@ -68,10 +68,10 @@ export default async function Occupations({ searchParams }: Props) {
   const initialQuery = typeof q === "string" ? q.slice(0, 100) : "";
   const { language } = await getLocale();
   const c = copy[language];
-  const data = progress();
-  if (!snapshotExists() || !data) return <NoSnapshot language={language} />;
+  if (!snapshotExists()) return <NoSnapshot language={language} />;
 
-  const rows: DirectoryRow[] = Object.entries(data.occupations).map(([id, entry]) => {
+  const rows: DirectoryRow[] = occupations().map((entry) => {
+    const id = entry.occupation_id;
     const en = entry.label_en ?? id;
     const zh = entry.label_zh_cn ?? "";
     return {
@@ -83,17 +83,17 @@ export default async function Occupations({ searchParams }: Props) {
       search: `${en} ${zh}`.toLowerCase(),
       groupId: entry.group_id ?? "",
       tasks: entry.tasks,
-      share: touchedShare(entry.by_stage, entry.tasks),
-      assessed: assessedCount(entry.by_stage),
+      share: touchedShare(entry.touched, entry.tasks),
+      touched: entry.touched,
     };
   });
 
-  const groups: DirectoryGroup[] = Object.entries(data.groups).map(([id, group]) => ({
-    id,
-    slug: groupSlug(id),
-    label: (language === "zh-CN" ? group.label_zh_cn : group.label_en) ?? group.label_en ?? id,
+  const groups: DirectoryGroup[] = occupationGroups().map((group) => ({
+    id: group.id,
+    slug: groupSlug(group.id),
+    label: (language === "zh-CN" ? group.label_zh_cn : group.label_en) ?? group.label_en ?? group.id,
     tasks: group.tasks,
-    share: touchedShare(group.by_stage, group.tasks),
+    share: touchedShare(group.touched_tasks, group.tasks),
   }));
   groups.sort((a, b) => a.label.localeCompare(b.label));
 

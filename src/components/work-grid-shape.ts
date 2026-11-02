@@ -20,16 +20,9 @@ export const DRAW_ORDER: StageKey[] = ["touched", "untouched"];
 
 export type WorkGridCounts = Partial<Record<StageKey, number>>;
 
-/**
- * The published per-task counts folded into the two states drawn here.
- *
- * A task covered only by work no update speaks of is untouched like one nothing
- * covers: both mean no collected update reaches it, and that says something
- * about the collection, not about the job.
- */
-export function gridCounts(by: Partial<Record<string, number>>): WorkGridCounts {
-  const touched = (["0", "1", "2", "3", "4", "5"] as const).reduce((sum, key) => sum + (by[key] ?? 0), 0);
-  return { touched, untouched: (by.unknown ?? 0) + (by.untouched ?? 0) };
+/** An occupation's or a group's tasks, split into the two states drawn here. */
+export function gridCounts(touched: number, tasks: number): WorkGridCounts {
+  return { touched, untouched: Math.max(0, tasks - touched) };
 }
 
 /**

@@ -9,7 +9,7 @@ import { getLocale } from "@/lib/locale";
 import { href, marketHref, updateHref } from "@/lib/routes";
 import { breadcrumbLd, pageMetadata } from "@/lib/seo";
 import { siteNavCopy } from "@/lib/site-nav";
-import { chainEvents, manifest, markets, occupationSlug, occupations, topicBySlug, type Topic } from "@/lib/snapshot";
+import { linkedEvents, manifest, markets, occupationSlug, occupations, topicBySlug, type Topic } from "@/lib/snapshot";
 import { localizedPath } from "@/lib/i18n";
 import type { Route } from "next";
 import s from "../topics.module.css";
@@ -60,7 +60,7 @@ export default async function TopicPage({ params }: Props) {
   if (!topic) notFound();
   const editorial = topicEditorial(topic.slug, language);
 
-  const withPage = new Set(chainEvents().map((e) => e.event_id));
+  const withPage = new Set(linkedEvents().map((e) => e.event_id));
   const about = topic.about;
   const aboutLink = aboutHref(topic, language);
   const aboutName = about ? about[language] ?? about.en : null;

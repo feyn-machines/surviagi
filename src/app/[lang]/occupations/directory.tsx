@@ -37,7 +37,7 @@ export type DirectoryRow = {
   /** Rounded share of this occupation's tasks a collected update bears on. */
   share: number;
   /** Tasks an update bears on. Zero means nobody has looked. */
-  assessed: number;
+  touched: number;
 };
 
 export type DirectoryGroup = {
@@ -189,8 +189,8 @@ export function OccupationDirectory({
   const shown = useMemo(() => {
     const kept = rows.filter((row) => {
       if (!needle && group && row.groupId !== group) return false;
-      if (read === "read" && row.assessed === 0) return false;
-      if (read === "unread" && row.assessed > 0) return false;
+      if (read === "read" && row.touched === 0) return false;
+      if (read === "unread" && row.touched > 0) return false;
       if (band !== null && bandOf(row.share) !== band) return false;
       if (needle && !row.search.includes(needle)) return false;
       return true;
@@ -198,7 +198,7 @@ export function OccupationDirectory({
     kept.sort((a, b) => {
       if (sort === "tasks") return b.tasks - a.tasks || byText(a.label, b.label);
       if (sort === "name") return a.label.localeCompare(b.label, language);
-      return b.share - a.share || b.assessed - a.assessed || byText(a.label, b.label);
+      return b.share - a.share || b.touched - a.touched || byText(a.label, b.label);
     });
     return kept;
   }, [rows, group, read, band, needle, sort, language]);
@@ -394,7 +394,7 @@ export function OccupationDirectory({
                       {member.share > 0 ? <Bar share={member.share / 100} /> : null}
                     </span>
                     <span className={s.share}>
-                      {member.assessed === 0 ? (
+                      {member.touched === 0 ? (
                         <Blank reason={c.blank} />
                       ) : (
                         <>
