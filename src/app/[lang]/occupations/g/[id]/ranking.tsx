@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Blank, Head } from "@/components/blueprint";
-import { ProgressCompare, finishedShare, type CompareRow } from "@/components/progress-compare";
+import { ProgressCompare, touchedShareOf, type CompareRow } from "@/components/progress-compare";
 import { useSeen } from "@/components/home/reveal";
 import { bilingual, type Language } from "@/lib/i18n";
 import { byText } from "@/lib/order";
@@ -21,7 +21,7 @@ import s from "./group.module.css";
  */
 
 export type MemberRow = CompareRow<`/occupations/${string}`> & {
-  /** Tasks carrying a level at all. Zero means nobody has looked. */
+  /** Tasks an update touches. Zero means nobody has looked. */
   assessed: number;
 };
 
@@ -32,14 +32,14 @@ const SORTS: SortKey[] = ["share", "tasks", "name"];
 const copy = bilingual({
   en: {
     label: "Occupations",
-    lead: "The same hundred squares, once per occupation, ranked.",
+    lead: "The same hundred squares, once per occupation, ranked by how much an update has touched.",
     sortLabel: "Sort by",
-    sortShare: "Share",
+    sortShare: "Touched",
     sortTasks: "Tasks",
     sortName: "Name",
-    marksLabel: "Widest and narrowest",
-    top: "Widest",
-    bottom: "Narrowest",
+    marksLabel: "Most and least touched",
+    top: "Most",
+    bottom: "Least",
     spread: "{n} points apart",
     flat: "Both ends read the same.",
     unread: "{n} more have no evidence at all.",
@@ -47,14 +47,14 @@ const copy = bilingual({
   },
   "zh-CN": {
     label: "职业",
-    lead: "同样的一百格，每个职业画一遍，按占比排名。",
+    lead: "同样的一百格，每个职业画一遍，按被更新触及的比例排名。",
     sortLabel: "排序",
-    sortShare: "占比",
+    sortShare: "已触及",
     sortTasks: "任务数",
     sortName: "名称",
-    marksLabel: "最高与最低",
-    top: "最高",
-    bottom: "最低",
+    marksLabel: "触及最多与最少",
+    top: "最多",
+    bottom: "最少",
     spread: "相差 {n} 个百分点",
     flat: "两端的证据一样。",
     unread: "另有 {n} 个职业一条证据都没有。",
@@ -74,7 +74,7 @@ export function MemberRanking({
   const { ref, seen } = useSeen<HTMLDivElement>();
 
   const shares = useMemo(
-    () => new Map(rows.map((row) => [row.id, finishedShare(row.counts, row.tasks)])),
+    () => new Map(rows.map((row) => [row.id, touchedShareOf(row.counts, row.tasks)])),
     [rows],
   );
 

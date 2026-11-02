@@ -34,9 +34,9 @@ export type DirectoryRow = {
   search: string;
   groupId: string;
   tasks: number;
-  /** Rounded share of this occupation's tasks at L2 or above. */
+  /** Rounded share of this occupation's tasks a collected update bears on. */
   share: number;
-  /** Tasks carrying any level at all. Zero means nobody has looked. */
+  /** Tasks an update bears on. Zero means nobody has looked. */
   assessed: number;
 };
 
@@ -82,7 +82,7 @@ const copy = bilingual({
     groupLabel: "Occupation group",
     groupAll: "All 23 groups",
     sortLabel: "Sort by",
-    sortShare: "Share",
+    sortShare: "Touched",
     sortTasks: "Tasks",
     sortName: "Name",
     readLabel: "Evidence",
@@ -94,8 +94,8 @@ const copy = bilingual({
     clear: "Clear filters",
     controls: "Find your occupation",
     colTasks: "tasks",
-    colShare: "L2+",
-    shareNote: "L2+ is the share of an occupation's tasks at L2 or above. L2 reads: {l2}",
+    colShare: "touched",
+    shareNote: "The number is the share of an occupation's tasks that at least one collected update bears on. It describes what was collected, not what AI can do.",
     emptyTitle: "Nothing matches.",
     emptyQuery: "No job title contains “{q}”.",
     emptyRead: "Every occupation in this group has been left unread.",
@@ -120,7 +120,7 @@ const copy = bilingual({
     groupLabel: "职业组",
     groupAll: "全部 23 组",
     sortLabel: "排序",
-    sortShare: "占比",
+    sortShare: "已触及",
     sortTasks: "任务数",
     sortName: "名称",
     readLabel: "证据",
@@ -132,8 +132,8 @@ const copy = bilingual({
     clear: "清除筛选",
     controls: "找到你自己的职业",
     colTasks: "项任务",
-    colShare: "L2 以上",
-    shareNote: "L2 以上 = 该职业任务里到 L2 及以上的占比。L2 是：{l2}",
+    colShare: "已触及",
+    shareNote: "这个数字是该职业的任务里，至少有一条采集到的更新谈到的比例。它说的是采集到了什么，不是 AI 能做什么。",
     emptyTitle: "没有匹配的行。",
     emptyQuery: "没有职业名包含「{q}」。",
     emptyRead: "这一组里的职业全都没人看过。",
@@ -153,14 +153,11 @@ export function OccupationDirectory({
   rows,
   groups,
   language,
-  l2Word,
   initialQuery = "",
 }: {
   rows: DirectoryRow[];
   groups: DirectoryGroup[];
   language: Language;
-  /** The L2 rung's own word, read from the snapshot. Never written here. */
-  l2Word: string;
   /** The search the reader arrived with, e.g. from the home page. */
   initialQuery?: string;
 }) {
@@ -417,7 +414,7 @@ export function OccupationDirectory({
         </div>
       )}
 
-      <p className={s.footnote}>{c.shareNote.replace("{l2}", l2Word)}</p>
+      <p className={s.footnote}>{c.shareNote}</p>
     </div>
   );
 }

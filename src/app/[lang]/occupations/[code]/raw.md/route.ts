@@ -1,4 +1,3 @@
-import { LEVEL_NAMES } from "@/components/home/sections/levels";
 import { count, fill } from "@/app/[lang]/markets/copy";
 import { DEFAULT_LANGUAGE, normalizeLanguage } from "@/lib/i18n";
 import { colon, link, markdownResponse } from "@/lib/markdown-copy";
@@ -6,7 +5,6 @@ import { activityAnchor } from "@/lib/anchors";
 import {
   activitiesOfMarket,
   assessedCount,
-  atOrAboveL2,
   manifest,
   marketSlug,
   marketsOfOccupation,
@@ -21,7 +19,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * The occupation page as Markdown: its sentence, the kinds of work reaching it
- * that carry a level, and the markets it serves. An occupation no update has
+ * that collected updates bear on, and the markets it serves. An occupation no update has
  * reached stays out of the index here as its page does.
  */
 export async function GET(_: Request, { params }: { params: Promise<{ lang: string; code: string }> }) {
@@ -38,11 +36,10 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
   const counts = entry?.by_stage ?? {};
   const total = entry?.tasks ?? 0;
   const assessed = assessedCount(counts);
-  const levels = LEVEL_NAMES[language];
 
   const seen = new Set<string>();
   const marketRows: { label: string; slug: string; activities: number }[] = [];
-  const reached: { label: string; market: string; slug: string; level: number }[] = [];
+  const reached: { label: string; market: string; slug: string; updates: number }[] = [];
   let unread = 0;
   for (const edge of marketsOfOccupation(id)) {
     const rows = activitiesOfMarket(edge.market_id);
@@ -51,25 +48,24 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
     for (const activity of rows) {
       if (seen.has(activity.activity_id)) continue;
       seen.add(activity.activity_id);
-      if (activity.evidence_rows && activity.level) {
+      if (activity.evidence_rows) {
         reached.push({
           label: (zh ? activity.label_zh_cn : activity.label_en) ?? activity.label_en,
           market,
           slug: `${marketSlug(edge.market_id)}#${activityAnchor(activity.activity_id, edge.market_id)}`,
-          level: Math.round(activity.level),
+          updates: activity.evidence_rows,
         });
       } else unread += 1;
     }
   }
   marketRows.sort((a, b) => b.activities - a.activities || a.label.localeCompare(b.label));
-  reached.sort((a, b) => b.level - a.level || a.label.localeCompare(b.label));
+  reached.sort((a, b) => b.updates - a.updates || a.label.localeCompare(b.label));
 
   const body = [
     `> ${fill(assessed > 0 ? c.answer : c.answerNone, {
       date: manifest()?.generated_at.slice(0, 10) ?? "",
       name,
       total: count(total),
-      atL2: count(atOrAboveL2(counts)),
       assessed: count(assessed),
       rest: count(Math.max(0, total - assessed)),
     })}`,
@@ -81,7 +77,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
   ];
   if (reached.length === 0) body.push(c.gridNone);
   for (const row of reached) {
-    body.push(`- ${link(language, row.label, `/markets/${row.slug}`)}${zh ? `（${row.market}）` : ` (${row.market})`}${sep}L${row.level} ${levels[row.level]}`);
+    body.push(`- ${link(language, row.label, `/markets/${row.slug}`)}${zh ? `（${row.market}）` : ` (${row.market})`}${sep}${count(row.updates)} ${fill(c.updatesUnit, { n: row.updates })}`);
   }
   if (unread > 0) body.push("", fill(c.unread, { n: count(unread) }));
 

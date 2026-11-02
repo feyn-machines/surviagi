@@ -1,27 +1,36 @@
 /**
  * The shape of the hundred-square grid, with no data source attached.
  *
- * Split out of work-grid.tsx because that component reads the published
- * snapshot for the ladder's wording, and the snapshot reader opens files. Any
- * client component that wanted only `apportion` or `DRAW_ORDER` used to drag
+ * Split out of work-grid.tsx so a client component that wants only `apportion`
+ * or `DRAW_ORDER` does not have to import a server component. Importing the
+ * snapshot reader from the browser used to drag
  * `node:fs` into the browser bundle through that import, which fails the build
  * with an error naming the chunker rather than the import that caused it.
  *
  * Everything here is pure: same input, same squares, no I/O.
  */
 
-export type StageKey =
-  | "0" | "1" | "2" | "3" | "4" | "5" | "unknown" | "untouched";
+/** Touched: at least one collected update bears on the work. Untouched: none does. */
+export type StageKey = "touched" | "untouched";
 
-/** Lowest first. Both blanks sit at the end, in order of how little is known. */
-export const STAGE_KEYS: StageKey[] = [
-  "0", "1", "2", "3", "4", "5", "unknown", "untouched",
-];
+export const STAGE_KEYS: StageKey[] = ["touched", "untouched"];
 
-/** Highest level first: the eye lands on how far it got, then reads down. */
-export const DRAW_ORDER: StageKey[] = ["5", "4", "3", "2", "1", "0", "unknown", "untouched"];
+/** What has been touched first: the eye lands on how far the reading got, then reads down. */
+export const DRAW_ORDER: StageKey[] = ["touched", "untouched"];
 
 export type WorkGridCounts = Partial<Record<StageKey, number>>;
+
+/**
+ * The published per-task counts folded into the two states drawn here.
+ *
+ * A task covered only by work no update speaks of is untouched like one nothing
+ * covers: both mean no collected update reaches it, and that says something
+ * about the collection, not about the job.
+ */
+export function gridCounts(by: Partial<Record<string, number>>): WorkGridCounts {
+  const touched = (["0", "1", "2", "3", "4", "5"] as const).reduce((sum, key) => sum + (by[key] ?? 0), 0);
+  return { touched, untouched: (by.unknown ?? 0) + (by.untouched ?? 0) };
+}
 
 /**
  * Largest remainder, so the squares always total exactly `squares`.
