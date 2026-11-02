@@ -73,7 +73,7 @@ export default async function MarketsPage({ searchParams }: Props) {
       zh: market.zh_cn ?? market.en,
       name,
       total: activities.length,
-      scored: activities.filter((a) => (a.evidence_rows ?? 0) > 0).length,
+      scored: activities.filter((a) => (a.updates ?? 0) > 0).length,
       updates: updatesOf.get(market.id) ?? 0,
       occupations: occupationsOfMarket(market.id).length,
     };

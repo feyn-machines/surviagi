@@ -12,17 +12,16 @@ import { WorkGrid, gridCounts } from "@/components/work-grid";
 import { Bar, Block, Stat, blueprint as bp } from "@/components/blueprint";
 import {
   activitiesOfMarket,
-  assessedCount,
-  evidenceForActivity,
+  linksOfWork,
   groupSlug,
   manifest,
   marketSlug,
   marketsOfOccupation,
+  occupationById,
+  occupationGroups,
   occupationMedianShare,
   occupationSlug,
   occupations,
-  progress,
-  progressFor,
 } from "@/lib/snapshot";
 import {
   DataPageLinks,
@@ -56,7 +55,7 @@ function idForCode(code: string): string | undefined {
 }
 
 function label(id: string, language: Language) {
-  const entry = progress()?.occupations?.[id];
+  const entry = occupationById(id);
   const zh = entry?.label_zh_cn ?? null;
   const en = entry?.label_en ?? id;
   return language === "zh-CN" ? (zh ?? en) : en;
@@ -69,8 +68,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const id = idForCode(code);
   if (!id) notFound();
   const name = label(id, language);
-  const entry = progress()?.occupations?.[id];
-  const reached = entry ? assessedCount(entry.by_stage) : 0;
+  const entry = occupationById(id);
+  const reached = entry?.touched_tasks ?? 0;
   return pageMetadata({
     language,
     path: `/occupations/${code}`,
@@ -94,10 +93,9 @@ export default async function OccupationPage({ params }: Props) {
   if (!id) notFound();
 
   const name = label(id, language);
-  const counts = progressFor(id) ?? {};
-  const entry = progress()?.occupations?.[id];
+  const entry = occupationById(id);
   const totalTasks = entry?.tasks ?? 0;
-  const assessed = assessedCount(counts);
+  const assessed = entry?.touched_tasks ?? 0;
   const median = occupationMedianShare();
 
   const served = marketsOfOccupation(id);
@@ -132,7 +130,7 @@ export default async function OccupationPage({ params }: Props) {
         marketSlug: marketSlug(activity.market_id),
         href: activityHref(language, activity),
         tasks: activity.tasks,
-        updates: evidenceForActivity(activity.activity_id).flatMap((row) => [
+        updates: linksOfWork(activity.activity_id).flatMap((row) => [
           {
             key: row.event_id,
             eventId: row.event_id as string | null,
@@ -162,7 +160,7 @@ export default async function OccupationPage({ params }: Props) {
   const widest = Math.max(1, ...marketRows.map((row) => row.activities));
 
   const groupId = entry?.group_id ?? null;
-  const group = groupId ? progress()?.groups?.[groupId] : undefined;
+  const group = groupId ? occupationGroups().find((g) => g.id === groupId) : undefined;
   const trail = [
     { name: siteNavCopy[language].occupations, path: "/occupations" },
     ...(groupId && group
@@ -215,7 +213,7 @@ export default async function OccupationPage({ params }: Props) {
             <p className={s.emptyWhy}>{c.gridNoneWhy}</p>
           </div>
         ) : (
-          <WorkGrid counts={gridCounts(counts)} language={language} title={c.gridTitle} />
+          <WorkGrid counts={gridCounts(assessed, totalTasks)} language={language} title={c.gridTitle} />
         )}
       </Block>
 

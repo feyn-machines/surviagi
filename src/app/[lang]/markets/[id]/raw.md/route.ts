@@ -4,7 +4,7 @@ import { colon, link, markdownResponse } from "@/lib/markdown-copy";
 import {
   activitiesOfMarket,
   activityAnchor,
-  evidenceForActivity,
+  linksOfWork,
   manifest,
   markets,
   marketSlug,
@@ -33,7 +33,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
   const name = (zh ? market.zh_cn : market.en) ?? market.en;
   const rows = activitiesOfMarket(market.id).map((activity) => ({
     activity,
-    updates: evidenceForActivity(activity.activity_id),
+    updates: linksOfWork(activity.activity_id),
   }));
   const updateIds = new Set(rows.flatMap((row) => row.updates.map((r) => r.event_id)));
   const withUpdates = rows.filter((row) => row.updates.length > 0);

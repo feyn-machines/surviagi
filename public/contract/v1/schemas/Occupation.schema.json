@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://surviagi.com/contract/v1/schemas/Occupation.schema.json",
+  "title": "Occupation",
+  "x-title-zh-CN": "职业",
+  "description": "A sealed, identified entry of the world catalog: a market group, market, work, occupation group or occupation. The whole id is its identity.",
+  "x-description-zh-CN": "世界目录里一个封存的、有标识的条目：赛道组、赛道、工作、职业大类或职业。整个 ID 就是它的身份。",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "The whole id is the identity; it is never rebuilt from a label or a path.",
+      "x-description-zh-CN": "整个 ID 是身份，不根据名称或路径重新生成。",
+      "x-grade": "record",
+      "x-ontology-property": "Concept.id"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "market_group",
+        "market",
+        "work",
+        "occupation_group",
+        "occupation"
+      ],
+      "description": "Which concept class the entry is. Decides the type; never guessed from the id.",
+      "x-description-zh-CN": "条目属于哪个概念类。类型由它决定，不从 ID 里猜。",
+      "x-grade": "record",
+      "x-ontology-property": "Concept.kind"
+    },
+    "label_en": {
+      "type": "string",
+      "description": "English name.",
+      "x-description-zh-CN": "英文名。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "Concept.label_en"
+    },
+    "label_zh_cn": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Simplified Chinese name.",
+      "x-description-zh-CN": "简体中文名。",
+      "x-grade": "machine",
+      "x-ontology-property": "Concept.label_zh_cn"
+    },
+    "group_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The occupation group.",
+      "x-description-zh-CN": "所属职业大类。",
+      "x-grade": "record",
+      "x-shape": "view"
+    },
+    "group_en": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "English name of the group.",
+      "x-description-zh-CN": "大类的英文名。",
+      "x-grade": "excerpt",
+      "x-shape": "view"
+    },
+    "group_zh_cn": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Chinese name of the group.",
+      "x-description-zh-CN": "大类的中文名。",
+      "x-grade": "machine",
+      "x-shape": "view"
+    },
+    "tasks": {
+      "type": "integer",
+      "description": "Tasks of the occupation in the catalog (O*NET).",
+      "x-description-zh-CN": "目录（O*NET）中该职业的任务数。",
+      "x-grade": "excerpt",
+      "x-shape": "view"
+    },
+    "touched_tasks": {
+      "type": "integer",
+      "description": "Tasks covered by at least one kind of work that a published update was linked to. Says what was collected, not what AI can do.",
+      "x-description-zh-CN": "至少被一项有已发布更新关联的工作覆盖的任务数。说的是采集到了什么，不是 AI 能做什么。",
+      "x-grade": "machine",
+      "x-shape": "view"
+    },
+    "markets": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Markets the occupation serves: market id, confidence and status of the machine-proposed edge.",
+      "x-description-zh-CN": "该职业服务的赛道：赛道编号及机器提出的边的置信度与状态。",
+      "x-grade": "machine",
+      "x-shape": "view"
+    }
+  },
+  "required": [
+    "id",
+    "kind",
+    "label_en",
+    "label_zh_cn",
+    "group_id",
+    "group_en",
+    "group_zh_cn",
+    "tasks",
+    "touched_tasks",
+    "markets"
+  ],
+  "additionalProperties": false,
+  "x-identifier": "id",
+  "x-snapshot-file": "occupations.json"
+}

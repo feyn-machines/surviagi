@@ -7,7 +7,7 @@ import type { Manifest, Payload } from "./snapshot";
 export type Loaded = { payload: Payload; releaseId: string };
 
 /** The collections of a release and how each is shaped; mirrors `COLLECTIONS` in scripts/data_pipeline/kg.py. */
-const LISTS = ["markets", "tasks", "events", "models", "sources", "topics"] as const;
+const LISTS = ["markets", "tasks", "work", "occupations", "events", "models", "sources", "topics"] as const;
 const CHAIN_LISTS = ["activities", "gates", "events", "evidence", "gate_edges"] as const;
 const SINGLES = ["coverage", "progress"] as const;
 
@@ -75,16 +75,19 @@ export async function loadFromDatabase(url: string): Promise<Loaded | null> {
   for (const name of grouped.keys()) {
     if (!known.has(name)) throw new Error(`release ${release.release_id}: unknown collection ${name}`);
   }
+  // An empty collection has no rows either, so whether a release carries one at all is read off its manifest.
+  const carried = (name: string) => name in (release.manifest.counts ?? {});
   const payload = {
     chain: Object.fromEntries(CHAIN_LISTS.map((n) => [n, list(`chain.${n}`)])),
     manifest: release.manifest,
     markets: list("markets"),
-    tasks: list("tasks"),
     events: list("events"),
     coverage: single("coverage"),
-    progress: single("progress"),
+    progress: carried("progress") ? single("progress") : undefined,
     sources: list("sources"),
     topics: list("topics"),
+    work: carried("work") ? list("work") : undefined,
+    occupations: carried("occupations") ? list("occupations") : undefined,
   } as unknown as Payload;
   return { payload, releaseId: release.release_id };
 }
@@ -103,17 +106,20 @@ export function loadFromFiles(dir: string): Loaded | null {
     }
   };
   const manifest = read("manifest") as Manifest;
+  // Files a snapshot may lack: topics before they were published, the graded
+  // documents once retired, the ungraded collections before Issue #35.
+  const optional = (name: string) => (existsSync(path(name)) ? read(name) : undefined);
   const payload = {
-    chain: read("chain"),
+    chain: optional("chain"),
     manifest,
-    markets: read("markets"),
-    tasks: read("tasks"),
+    markets: optional("markets"),
     events: read("events"),
     coverage: read("coverage"),
-    progress: read("progress"),
+    progress: optional("progress"),
     sources: read("sources"),
-    // A snapshot written before topics were published has no such file.
-    topics: existsSync(path("topics")) ? read("topics") : [],
+    topics: optional("topics") ?? [],
+    work: optional("work"),
+    occupations: optional("occupations"),
   } as Payload;
   return { payload, releaseId: releaseIdOf(manifest) };
 }

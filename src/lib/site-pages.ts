@@ -1,15 +1,15 @@
 import { updateTimestamp } from "./update-date";
 import {
   activities,
-  chainEvents,
-  evidence,
+  linkedEvents,
+  links,
   groupSlug,
   marketEdges,
   markets,
   marketSlug,
   occupationSlug,
+  occupationGroups,
   occupations,
-  progress,
   topics,
 } from "./snapshot";
 
@@ -26,10 +26,10 @@ export const detailPages = {
   markets: () => markets().map((market) => marketSlug(market.id)),
   occupations: () => occupations().map((row) => occupationSlug(row.occupation_id)),
   /** Occupations an update has reached: the ones a search engine is told about. */
-  reachedOccupations: () => occupations().filter((row) => row.assessed > 0).map((row) => occupationSlug(row.occupation_id)),
-  occupationGroups: () => Object.keys(progress()?.groups ?? {}).map(groupSlug),
+  reachedOccupations: () => occupations().filter((row) => row.touched > 0).map((row) => occupationSlug(row.occupation_id)),
+  occupationGroups: () => occupationGroups().map((group) => groupSlug(group.id)),
   topics: () => topics().map((topic) => ({ slug: topic.slug, latest: topic.latest_claim_at })),
-  updates: () => chainEvents().map((e) => ({ id: e.event_id, occurredAt: updateTimestamp(e) })),
+  updates: () => linkedEvents().map((e) => ({ id: e.event_id, occurredAt: updateTimestamp(e) })),
 };
 
 /** An update keeps its original words in every language, so it is listed once. */
@@ -44,11 +44,11 @@ export const UPDATE_LANGUAGES = ["en"] as const;
  * that changed.
  */
 export function evidenceDates() {
-  const occurred = new Map(chainEvents().map((e) => [e.event_id, updateTimestamp(e)]));
+  const occurred = new Map(linkedEvents().map((e) => [e.event_id, updateTimestamp(e)]));
   const newer = (a: string | null | undefined, b: string | null | undefined) =>
     !a ? b ?? null : !b || Date.parse(a) > Date.parse(b) ? a : b;
   const work = new Map<string, string | null>();
-  for (const row of evidence()) work.set(row.activity_id, newer(work.get(row.activity_id), occurred.get(row.event_id)));
+  for (const row of links()) work.set(row.activity_id, newer(work.get(row.activity_id), occurred.get(row.event_id)));
   const market = new Map<string, string | null>();
   for (const a of activities()) market.set(a.market_id, newer(market.get(a.market_id), work.get(a.activity_id)));
   const occupation = new Map<string, string | null>();
@@ -56,8 +56,8 @@ export function evidenceDates() {
     occupation.set(edge.occupation_id, newer(occupation.get(edge.occupation_id), market.get(edge.market_id)));
   }
   const group = new Map<string, string | null>();
-  for (const [id, entry] of Object.entries(progress()?.occupations ?? {})) {
-    if (entry.group_id) group.set(entry.group_id, newer(group.get(entry.group_id), occupation.get(id)));
+  for (const row of occupations()) {
+    if (row.group_id) group.set(row.group_id, newer(group.get(row.group_id), occupation.get(row.occupation_id)));
   }
   const at = (dates: Map<string, string | null>) => (id: string) => dates.get(id) ?? undefined;
   return { work: at(work), market: at(market), occupation: at(occupation), group: at(group) };

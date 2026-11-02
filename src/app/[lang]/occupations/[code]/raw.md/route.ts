@@ -4,13 +4,12 @@ import { colon, link, markdownResponse } from "@/lib/markdown-copy";
 import { activityAnchor } from "@/lib/anchors";
 import {
   activitiesOfMarket,
-  assessedCount,
   manifest,
   marketSlug,
   marketsOfOccupation,
   occupationSlug,
+  occupationById,
   occupations,
-  progress,
 } from "@/lib/snapshot";
 import { copy } from "../copy";
 
@@ -31,11 +30,10 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
   const sep = colon(language);
   const c = copy[language];
   const zh = language === "zh-CN";
-  const entry = progress()?.occupations?.[id];
+  const entry = occupationById(id);
   const name = (zh ? (entry?.label_zh_cn ?? entry?.label_en) : entry?.label_en) ?? id;
-  const counts = entry?.by_stage ?? {};
   const total = entry?.tasks ?? 0;
-  const assessed = assessedCount(counts);
+  const assessed = entry?.touched_tasks ?? 0;
 
   const seen = new Set<string>();
   const marketRows: { label: string; slug: string; activities: number }[] = [];
@@ -48,12 +46,12 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
     for (const activity of rows) {
       if (seen.has(activity.activity_id)) continue;
       seen.add(activity.activity_id);
-      if (activity.evidence_rows) {
+      if (activity.updates) {
         reached.push({
           label: (zh ? activity.label_zh_cn : activity.label_en) ?? activity.label_en,
           market,
           slug: `${marketSlug(edge.market_id)}#${activityAnchor(activity.activity_id, edge.market_id)}`,
-          updates: activity.evidence_rows,
+          updates: activity.updates,
         });
       } else unread += 1;
     }

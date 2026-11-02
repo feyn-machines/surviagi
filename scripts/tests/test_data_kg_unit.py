@@ -26,6 +26,8 @@ def small_payload():
         },
         "markets": [{"market_id": "m", "occupation_id": "o1"}, {"market_id": "m", "occupation_id": "o2"}],
         "tasks": [],
+        "work": [{"id": "a1", "updates": 1}],
+        "occupations": [{"id": "o1", "tasks": 2, "touched_tasks": 1}],
         "events": [{"event_id": "e1", "title": "T"}],
         "models": [{"model_id": "x"}],
         "sources": [{"account_key": "k", "note": None}],

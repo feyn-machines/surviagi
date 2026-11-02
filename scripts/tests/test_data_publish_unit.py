@@ -169,6 +169,7 @@ ROUTES = (
     ("progress_markets", "market_task AS ("),
     ("progress_occupations", "occupation_task AS ("),
     ("progress_global", "FROM per_task GROUP BY 1"),
+    ("occupation_tasks", "WHERE r.kind = 'has_task' AND r.ontology_version"),
     ("group_labels", "kind = 'occupation_group'"),
     ("market_labels", "kind = 'market'"),
     ("occupation_labels", "kind = 'occupation'"),
@@ -392,6 +393,13 @@ def dataset(**overrides):
         "occupation_group": [
             {"parent_id": "oaw:occupation-group:13",
              "child_id": "oaw:occupation:13-2011.00"},
+        ],
+        # Task 1 is covered by the audit activity, which an update speaks of;
+        # task 3 by nothing. The progress buckets above count the same three.
+        "occupation_tasks": [
+            {"occupation_id": "oaw:occupation:13-2011.00", "task_id": "oaw:task:1"},
+            {"occupation_id": "oaw:occupation:13-2011.00", "task_id": "oaw:task:3"},
+            {"occupation_id": "oaw:occupation:13-2011.00", "task_id": "oaw:task:4"},
         ],
     }
     data.update(overrides)
@@ -915,6 +923,53 @@ class WorkProgressTests(unittest.TestCase):
         # taking the highest is what put baggage porters at 59%.
         self.assertIn("min(level)", sql)
 
+
+class WithoutLevelsTests(unittest.TestCase):
+    """The collections the pages read once levels are retired (Issue #35)."""
+
+    def setUp(self):
+        self.snapshot = publish.build(FakeConn(dataset()), "1.0.0")
+
+    def test_an_update_lists_the_work_it_speaks_of(self):
+        event = self.snapshot["events"][0]
+        self.assertEqual(event["work"], [{"activity_id": "oaw:market:audit-evidence", "confirmations": []}])
+
+    def test_a_confirmation_travels_without_a_level(self):
+        data = dataset(confirmations=[
+            {"event_id": "evt:1", "activity_id": "oaw:market:audit-evidence", "source_id": "1950000000000000000",
+             "account_key": "x:tester", "handle": "tester", "post_nature": "hands_on_test",
+             "evidence_tier": "T2", "observed_level": Decimal("3.0"), "level": 3},
+        ])
+        post = publish.build(FakeConn(data), "1.0.0")["events"][0]["work"][0]["confirmations"][0]
+        self.assertEqual(set(post), {"source_id", "account_key", "handle", "url", "posted_at", "post_nature"})
+        self.assertEqual(post["url"], "https://x.com/tester/status/1950000000000000000")
+
+    def test_work_rows_count_updates_and_carry_no_level(self):
+        work = {row["id"]: row for row in self.snapshot["work"]}
+        self.assertEqual(work["oaw:market:audit-evidence"]["updates"], 1)
+        self.assertEqual(work["oaw:market:bedside-care"]["updates"], 0)
+        for row in work.values():
+            self.assertEqual(row["kind"], "work")
+            self.assertFalse({"level", "best_tier", "evidence_rows", "gated", "gates"} & set(row))
+
+    def test_an_occupation_counts_touched_tasks_and_names_its_markets(self):
+        (row,) = self.snapshot["occupations"]
+        self.assertEqual(row["id"], "oaw:occupation:13-2011.00")
+        self.assertEqual((row["tasks"], row["touched_tasks"]), (3, 1))
+        self.assertEqual((row["group_id"], row["group_zh_cn"]), ("oaw:occupation-group:13", "商业与金融"))
+        self.assertEqual(row["markets"], [{"market_id": "oaw:market:audit", "confidence": 0.81, "status": "candidate"}])
+
+    def test_a_task_counts_as_touched_when_any_covering_work_is_spoken_of(self):
+        """Not the minimum over its covering work: that was the takeover reading."""
+        data = dataset(tasks=dataset()["tasks"] + [
+            {"activity_id": "oaw:market:bedside-care", "task_id": "oaw:task:1",
+             "confidence": Decimal("0.5"), "status": "candidate"}])
+        (row,) = publish.build(FakeConn(data), "1.0.0")["occupations"]
+        self.assertEqual(row["touched_tasks"], 1)
+
+    def test_the_manifest_counts_the_new_collections(self):
+        counts = self.snapshot["manifest"]["counts"]
+        self.assertEqual((counts["work"], counts["occupations"]), (2, 1))
 
 
 class TopicsTests(unittest.TestCase):

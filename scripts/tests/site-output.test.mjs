@@ -12,7 +12,8 @@ import { assemble, cleanup, exitsWithin, freePort, running, startServer, stop } 
 // These tests start the built server (`pnpm build` first) and read what it answers over HTTP.
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const STANDALONE = join(ROOT, ".next", "standalone");
-const SNAPSHOT_DIR = join(ROOT, "datasets", "published", "latest");
+// SNAPSHOT_DIR lets the same checks run against a snapshot written by a newer publisher.
+const SNAPSHOT_DIR = process.env.SNAPSHOT_DIR ?? join(ROOT, "datasets", "published", "latest");
 const HAS_SNAPSHOT = existsSync(join(SNAPSHOT_DIR, "manifest.json"));
 const LEGAL = ["/privacy", "/terms"];
 const FIXED = ["", "/markets", "/occupations", "/topics", "/updates", "/voices", "/articles", "/whitepaper", "/agents", ...LEGAL];

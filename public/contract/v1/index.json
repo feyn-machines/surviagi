@@ -1,5 +1,5 @@
 {
-  "contract_version": "1.0.0",
+  "contract_version": "1.1.0",
   "ontology_version": "2.5.0",
   "name": "SurviAGI public data contract",
   "x-name-zh-CN": "SurviAGI 公开数据契约",
@@ -55,6 +55,26 @@
       "identifier": "id",
       "schema": "/contract/v1/schemas/Concept.schema.json",
       "snapshot_file": null
+    },
+    {
+      "name": "Work",
+      "title": {
+        "en": "Kind of work in a market",
+        "zh-CN": "赛道里的工作"
+      },
+      "identifier": "id",
+      "schema": "/contract/v1/schemas/Work.schema.json",
+      "snapshot_file": "work.json"
+    },
+    {
+      "name": "Occupation",
+      "title": {
+        "en": "Occupation",
+        "zh-CN": "职业"
+      },
+      "identifier": "id",
+      "schema": "/contract/v1/schemas/Occupation.schema.json",
+      "snapshot_file": "occupations.json"
     },
     {
       "name": "Organization",
@@ -190,19 +210,19 @@
   "retired_collections": [
     {
       "file": "chain",
-      "reason": "Activity and level readings; retired with the L0–L5 scale (Issue #35)."
+      "reason": "Activity and level readings; retired with the L0–L5 scale (Issue #35). Ungraded links are `Event.work`, the work itself `work.json`."
     },
     {
       "file": "markets",
-      "reason": "Carries level readings per market; replaced by observations (Issue #35)."
+      "reason": "Market-to-occupation edges; carried on `occupations.json` rows since 1.1.0 (Issue #35)."
     },
     {
       "file": "tasks",
-      "reason": "Carries level readings per task; replaced by observations (Issue #35)."
+      "reason": "Work-to-task edges; folded into counts on `work.json` and `occupations.json` since 1.1.0 (Issue #35)."
     },
     {
       "file": "progress",
-      "reason": "A takeover-progress figure; retired with the level scale (Issue #35)."
+      "reason": "A takeover-progress figure; retired with the level scale (Issue #35). Ungraded task counts are on `occupations.json`."
     },
     {
       "file": "coverage",

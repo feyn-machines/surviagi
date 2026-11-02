@@ -27,7 +27,7 @@ from .pipeline import ROOT, canonical, digest
 
 SCHEMA_FILE = ROOT / "db/published/001_kg.sql"
 SNAPSHOT_DIR = ROOT / "datasets/published/latest"
-SNAPSHOT_FILES = ("chain", "markets", "tasks", "events", "models", "sources", "topics", "coverage", "progress")
+SNAPSHOT_FILES = ("chain", "markets", "tasks", "work", "occupations", "events", "models", "sources", "topics", "coverage", "progress")
 
 # Collection -> the document field that is its entity id (None: no natural id).
 # A field is listed only if it is present and unique in the published data, and
@@ -42,6 +42,8 @@ COLLECTIONS: dict[str, str | None] = {
     "chain.gate_edges": None,
     "markets": None,
     "tasks": None,
+    "work": "id",
+    "occupations": "id",
     "events": "event_id",
     "models": "model_id",
     "sources": "account_key",
