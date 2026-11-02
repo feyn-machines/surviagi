@@ -232,7 +232,7 @@ class EventLayerTest(unittest.TestCase):
                 "SELECT title, kind_vocabulary, schema_version, basis, subject, actor_account_key"
                 " FROM extracted_events WHERE event_id=%s", (event_id,)).fetchone()
             self.assertEqual(after, {"title": "Old title", "kind_vocabulary": EVENT_KIND_VOCABULARY,
-                                     "schema_version": "2.4.0", "basis": "vendor_claim", "subject": "GPT-X",
+                                     "schema_version": "2.5.0", "basis": "vendor_claim", "subject": "GPT-X",
                                      "actor_account_key": "x:openai"})
             self.assertEqual(self.count("extracted_event_facts", "event_id", event_id), 1)
             self.assertEqual(self.count("extracted_events", "event_id", event_id), 1)

@@ -1,6 +1,7 @@
 """Fixed local PostgreSQL connection and transactional, hash-checked migrations."""
 
 import hashlib
+import os
 from pathlib import Path
 import re
 import stat
@@ -11,7 +12,10 @@ from psycopg.rows import dict_row
 ROOT = Path(__file__).resolve().parents[2]
 MIGRATIONS = ROOT / "db/migrations"
 PASSWORD = ROOT / "data/postgres/password"
-DATABASE = "openaiwill_local"
+# A branch with a new migration is verified against a scratch database
+# (OAW_DATA_DATABASE): migrate() on the working one would apply a file main does
+# not have, and the next daily run stops on "changed or is missing".
+DATABASE = os.environ.get("OAW_DATA_DATABASE", "openaiwill_local")
 
 
 def connect(database=None):

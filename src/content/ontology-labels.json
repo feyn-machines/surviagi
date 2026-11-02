@@ -1,6 +1,6 @@
 {
   "generated_from": "datasets/ontology/schema/schema.json",
-  "schema_version": "2.4.0",
+  "schema_version": "2.5.0",
   "classes": {
     "Concept": {
       "en": "Concept",
@@ -69,6 +69,26 @@
     "TopicOption": {
       "en": "Topic answer",
       "zh-CN": "话题选项"
+    },
+    "Product": {
+      "en": "Product",
+      "zh-CN": "产品"
+    },
+    "ProductAvailability": {
+      "en": "Product availability",
+      "zh-CN": "产品可用性"
+    },
+    "Observation": {
+      "en": "Observation",
+      "zh-CN": "观察"
+    },
+    "ObservationSource": {
+      "en": "Observation source",
+      "zh-CN": "观察来源"
+    },
+    "ObservationFact": {
+      "en": "Observation fact",
+      "zh-CN": "观察事实"
     }
   },
   "relations": {
@@ -195,6 +215,22 @@
     "weighs_on": {
       "en": "weighs on",
       "zh-CN": "关系到"
+    },
+    "built_on": {
+      "en": "built on",
+      "zh-CN": "基于"
+    },
+    "concerns": {
+      "en": "concerns",
+      "zh-CN": "关系到"
+    },
+    "adopts": {
+      "en": "adopts",
+      "zh-CN": "采用"
+    },
+    "invests_in": {
+      "en": "invests in",
+      "zh-CN": "投资"
     }
   },
   "vocabularies": {
@@ -1930,6 +1966,14 @@
             "en": "A named organization runs it in its real operations.",
             "zh-CN": "具名机构在真实业务中运行。"
           }
+        },
+        "statistic": {
+          "en": "Statistic",
+          "zh-CN": "统计",
+          "definition": {
+            "en": "An institution's own count or index of adoption, spending, usage or employment, taken across many users or workers. Not a test of one product and not the maker's claim.",
+            "zh-CN": "机构对采用、花费、使用或就业所做的统计或指数，覆盖许多用户或劳动者。不是对某个产品的测试，也不是出品方自述。"
+          }
         }
       }
     },
@@ -2097,6 +2141,254 @@
           "definition": {
             "en": "Makes the answer less likely to be true.",
             "zh-CN": "使这个答案更不可能成立。"
+          }
+        }
+      }
+    },
+    "observation_actor_role": {
+      "label": {
+        "en": "Role of the actor in an observation",
+        "zh-CN": "主体在观察里的身份"
+      },
+      "terms": {
+        "maker": {
+          "en": "Maker",
+          "zh-CN": "出品方",
+          "definition": {
+            "en": "The organization that makes the subject.",
+            "zh-CN": "做出该对象的组织。"
+          }
+        },
+        "adopter": {
+          "en": "Adopter",
+          "zh-CN": "采用方",
+          "definition": {
+            "en": "An organization that uses the subject in its own operations.",
+            "zh-CN": "在自己的业务里使用该对象的组织。"
+          }
+        },
+        "practitioner": {
+          "en": "Practitioner",
+          "zh-CN": "从业者",
+          "definition": {
+            "en": "A person who does this work and reports their own use.",
+            "zh-CN": "做这项工作、讲述自己使用情况的个人。"
+          }
+        },
+        "evaluator": {
+          "en": "Evaluator",
+          "zh-CN": "第三方测评",
+          "definition": {
+            "en": "Someone other than the maker who tests the subject.",
+            "zh-CN": "出品方以外、对该对象做测试的人。"
+          }
+        },
+        "researcher": {
+          "en": "Researcher",
+          "zh-CN": "研究/统计机构",
+          "definition": {
+            "en": "An institution that counts or studies use, spending or employment.",
+            "zh-CN": "对使用、花费或就业做统计或研究的机构。"
+          }
+        }
+      }
+    },
+    "observation_direction": {
+      "label": {
+        "en": "Which way an observation points",
+        "zh-CN": "观察指向哪一边"
+      },
+      "terms": {
+        "ai_takes_on": {
+          "en": "AI takes on more",
+          "zh-CN": "AI 接手更多",
+          "definition": {
+            "en": "The observation shows AI doing more of the work.",
+            "zh-CN": "观察显示 AI 在做更多这项工作。"
+          }
+        },
+        "human_still_needed": {
+          "en": "A person is still needed",
+          "zh-CN": "仍需要人",
+          "definition": {
+            "en": "The observation shows a person still needed, or the AI failing.",
+            "zh-CN": "观察显示仍需要人，或 AI 没做成。"
+          }
+        },
+        "neutral": {
+          "en": "Neutral",
+          "zh-CN": "中性",
+          "definition": {
+            "en": "Neither: a count, a price, a description.",
+            "zh-CN": "两者都不是：一个数字、一个价格、一段描述。"
+          }
+        }
+      }
+    },
+    "observation_review": {
+      "label": {
+        "en": "Review state of an observation",
+        "zh-CN": "观察的复核状态"
+      },
+      "terms": {
+        "machine_proposed": {
+          "en": "Machine proposed",
+          "zh-CN": "机器提出",
+          "definition": {
+            "en": "Read by a model and not looked at by a person.",
+            "zh-CN": "由模型读出，没有人看过。"
+          }
+        },
+        "human_confirmed": {
+          "en": "Human confirmed",
+          "zh-CN": "人工确认",
+          "definition": {
+            "en": "A person checked it against the source.",
+            "zh-CN": "有人对照来源核对过。"
+          }
+        },
+        "human_rejected": {
+          "en": "Human rejected",
+          "zh-CN": "人工否决",
+          "definition": {
+            "en": "A person checked it and it does not hold.",
+            "zh-CN": "有人核对过，不成立。"
+          }
+        }
+      }
+    },
+    "observation_source_type": {
+      "label": {
+        "en": "Kind of source for an observation",
+        "zh-CN": "观察的来源类型"
+      },
+      "terms": {
+        "x_post": {
+          "en": "X post",
+          "zh-CN": "X 帖子",
+          "definition": {
+            "en": "A post on X, kept in the collected posts.",
+            "zh-CN": "X 上的帖子，保存在已采集的帖子里。"
+          }
+        },
+        "official_blog": {
+          "en": "Official blog",
+          "zh-CN": "官方博客",
+          "definition": {
+            "en": "A blog or news page of the organization.",
+            "zh-CN": "组织自己的博客或新闻页。"
+          }
+        },
+        "case_page": {
+          "en": "Customer case page",
+          "zh-CN": "客户案例页",
+          "definition": {
+            "en": "A customer story or case study page.",
+            "zh-CN": "客户故事或案例页。"
+          }
+        },
+        "report": {
+          "en": "Report",
+          "zh-CN": "报告",
+          "definition": {
+            "en": "A report, index or dataset from an institution.",
+            "zh-CN": "机构发布的报告、指数或数据集。"
+          }
+        },
+        "paper": {
+          "en": "Paper",
+          "zh-CN": "论文",
+          "definition": {
+            "en": "A research paper or preprint.",
+            "zh-CN": "研究论文或预印本。"
+          }
+        }
+      }
+    },
+    "product_stage": {
+      "label": {
+        "en": "Availability stage of a product",
+        "zh-CN": "产品的可用性阶段"
+      },
+      "terms": {
+        "announced": {
+          "en": "Announced",
+          "zh-CN": "已宣布",
+          "definition": {
+            "en": "Said to be coming; nobody outside can use it yet.",
+            "zh-CN": "已宣布将推出，外部还不能用。"
+          }
+        },
+        "preview": {
+          "en": "Preview",
+          "zh-CN": "预览",
+          "definition": {
+            "en": "Open to a limited group, as a preview or waitlist.",
+            "zh-CN": "向有限人群开放，预览或候补。"
+          }
+        },
+        "available": {
+          "en": "Available",
+          "zh-CN": "已上线",
+          "definition": {
+            "en": "Open to the audience it names.",
+            "zh-CN": "对其所写的用户开放。"
+          }
+        },
+        "retired": {
+          "en": "Retired",
+          "zh-CN": "已下线",
+          "definition": {
+            "en": "No longer offered.",
+            "zh-CN": "不再提供。"
+          }
+        }
+      }
+    },
+    "adoption_stage": {
+      "label": {
+        "en": "Stage of an organization's adoption",
+        "zh-CN": "组织采用的阶段"
+      },
+      "terms": {
+        "in_use": {
+          "en": "In use",
+          "zh-CN": "在用",
+          "definition": {
+            "en": "The source says the organization uses it and not how far; neither a pilot nor production can be told from the words.",
+            "zh-CN": "来源只说组织在用，没说到什么程度；从文字上分不出是试点还是生产。"
+          }
+        },
+        "planned": {
+          "en": "Planned",
+          "zh-CN": "计划",
+          "definition": {
+            "en": "Said to be planned; not yet running.",
+            "zh-CN": "说是计划中，尚未运行。"
+          }
+        },
+        "pilot": {
+          "en": "Pilot",
+          "zh-CN": "试点",
+          "definition": {
+            "en": "Running for a limited team, site or period.",
+            "zh-CN": "在有限的团队、地点或期间内运行。"
+          }
+        },
+        "integrated": {
+          "en": "Integrated",
+          "zh-CN": "集成",
+          "definition": {
+            "en": "Built into the organization's tools or process.",
+            "zh-CN": "已接入组织的工具或流程。"
+          }
+        },
+        "production": {
+          "en": "Production",
+          "zh-CN": "生产",
+          "definition": {
+            "en": "Running in the organization's real operations.",
+            "zh-CN": "在组织的真实业务中运行。"
           }
         }
       }
