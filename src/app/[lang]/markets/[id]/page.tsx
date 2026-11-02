@@ -8,6 +8,7 @@ import { getLocale } from "@/lib/locale";
 import { breadcrumbLd, pageMetadata } from "@/lib/seo";
 import { JsonLd } from "@/components/json-ld";
 import { ObservationLedger } from "@/components/observation-ledger";
+import { evidenceLd, ledger, pageQuestion } from "@/lib/observation-view";
 import { siteNavCopy } from "@/lib/site-nav";
 import { href } from "@/lib/routes";
 import { indexable } from "@/lib/site-pages";
@@ -60,11 +61,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const market = marketForSlug(id);
   if (!market) notFound();
   const name = (language === "zh-CN" ? market.zh_cn : market.en) ?? market.en;
+  const view = ledger(observationsOfMarket(market.id), name, language);
   return pageMetadata({
     language,
     path: `/markets/${id}`,
-    title: `${name} · ${c.metaSuffix}`,
-    description: fill(c.metaDescription, { name, count: market.activities }),
+    title: pageQuestion("market", name, language),
+    // With observations mapped, the description is the evidence sentence the page opens its ledger with.
+    description: view.state === "some" ? view.answer : fill(c.metaDescription, { name, count: market.activities }),
     // A market no update bears on has nothing of its own to show yet.
     index: indexable.market(market.id),
     markdown: true,
@@ -116,24 +119,36 @@ export default async function MarketPage({ params }: Props) {
   const updateIds = new Set(
     activities.flatMap((activity) => activity.updates.flatMap((u) => (u.eventId ? [u.eventId] : []))),
   );
+  const slug = (await params).id;
+  // The page's answer in one dated sentence with its numbers, the line an engine can quote.
+  const sentence = fill(updateIds.size === 0 ? c.answerNone : c.answer, {
+    date: manifest()?.generated_at.slice(0, 10) ?? "",
+    name,
+    n: count(activities.length),
+    scored: count(withUpdates.length),
+    updates: count(updateIds.size),
+  });
   return (
     <div className={s.page}>
-      <JsonLd data={breadcrumbLd(language, [{ name: siteNavCopy[language].markets, path: "/markets" }, { name, path: `/markets/${(await params).id}` }])} />
+      <JsonLd data={breadcrumbLd(language, [{ name: siteNavCopy[language].markets, path: "/markets" }, { name, path: `/markets/${slug}` }])} />
+      <JsonLd
+        data={evidenceLd(language, {
+          kind: "market",
+          name,
+          slug,
+          path: `/markets/${slug}`,
+          sentence,
+          rows: observationsOfMarket(market.id),
+        })}
+      />
       <Link className="oaw-back" href={href(language, "/markets")}>
         {c.back}
       </Link>
       <PageHeader
         eyebrow={c.eyebrow}
-        title={name}
+        title={pageQuestion("market", name, language)}
         lead={c.lead}
-        // The page's answer in one dated sentence with its numbers, the line an engine can quote.
-        note={fill(updateIds.size === 0 ? c.answerNone : c.answer, {
-          date: manifest()?.generated_at.slice(0, 10) ?? "",
-          name,
-          n: count(activities.length),
-          scored: count(withUpdates.length),
-          updates: count(updateIds.size),
-        })}
+        note={sentence}
       />
 
       <Screen className={x.stats}>

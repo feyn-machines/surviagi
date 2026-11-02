@@ -332,8 +332,18 @@ test("market, occupation and sector pages open with one dated sentence that answ
       const title = page.match(/<h1[^>]*>([^<]+)<\/h1>/)?.[1];
       const sentence = page.match(new RegExp(`<p[^>]*>(${opening[language]}[^<]+)</p>`))?.[1];
       assert.ok(sentence, `${language}${path}: no dated answer`);
-      // A topic's title is its question; the sentence counts who argues, so it does not repeat it.
-      if (section !== "/topics/") assert.ok(title && sentence.includes(title), `${language}${path}: the answer does not name ${title}`);
+      // The page's subject, as its breadcrumb names it.
+      const crumbs = ld(page).find((item) => item["@type"] === "BreadcrumbList")?.itemListElement ?? [];
+      const subject = crumbs.at(-1)?.name.replace(/&/g, "&amp;").replace(/'/g, "&#x27;");
+      if (section === "/markets/" || section === "/occupations/") {
+        // Issue #32: a market or an occupation page is titled by the question it answers, its subject inside.
+        assert.match(title ?? "", language === "en" ? /^Will AI (change|replace) .+\? The evidence so far$/ : /^AI 会(改变|取代).+吗？现在的证据$/, `${language}${path}: ${title}`);
+        assert.ok(subject && sentence.includes(subject), `${language}${path}: the answer does not name ${subject}`);
+        if (language === "zh-CN") assert.ok(title.includes(subject), `${path}: the question does not name ${subject}`);
+      } else if (section !== "/topics/") {
+        // A topic's title is its question; the sentence counts who argues, so it does not repeat it.
+        assert.ok(title && sentence.includes(title), `${language}${path}: the answer does not name ${title}`);
+      }
       assert.ok(!/\{\w+\}/.test(sentence), `${language}${path}: unfilled placeholder in ${sentence}`);
     }
   }
@@ -1411,6 +1421,42 @@ test("market and occupation pages count their observations by evidence type and 
     assert.match(occ, /1 observation bears on .*: 1 production use\./);
     assert.ok(occ.includes("None of them says a person is still needed.") && !occ.includes("obs-b"));
     assert.ok((await (await fetch(`${base}${occupationPath}`)).text()).includes('id="obs-a"'));
+    const pageCounts = (copy) => Object.fromEntries([...copy.matchAll(/^- (Production use|Measurement|Statistic|Own use|Demonstration|Vendor claim): (\d+)$/gm)]
+      .map(([, label, n]) => [label.toLowerCase().replace(" ", "_"), Number(n)]));
+
+    // Issue #32: the page's question titles a Dataset whose downloads are the page's copy and the Agent
+    // interface's JSON for it, and an FAQ whose answers are the words the page shows.
+    const visible = (html) => html.replace(/<script[\s\S]*?<\/script>/g, " ").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&#x27;|&#39;/g, "'").replace(/&quot;/g, '"');
+    for (const [prefix, path] of [["", marketPath], ["/zh-CN", marketPath], ["", occupationPath]]) {
+      const html = await (await fetch(`${base}${prefix}${path}`)).text();
+      const title = visible(html.match(/<h1[^>]*>([^<]+)<\/h1>/)[1]);
+      const blocks = ld(html);
+      const dataset = blocks.find((b) => b["@type"] === "Dataset");
+      const faq = blocks.find((b) => b["@type"] === "FAQPage");
+      assert.equal(dataset.name, title, `${prefix}${path}: the Dataset is named by the page's question`);
+      assert.equal(faq.mainEntity[0].name, title);
+      assert.equal(dataset.description, faq.mainEntity[0].acceptedAnswer.text);
+      assert.equal(faq.mainEntity.length, 2);
+      // Every sentence of the first answer is on the page; the second ends with the line under the counts.
+      for (const part of faq.mainEntity[0].acceptedAnswer.text.split(/(?<=[.。])\s*/).filter(Boolean)) {
+        assert.ok(visible(html).includes(part.replace(/[.。]$/, "")), `${prefix}${path}: "${part}" is not on the page`);
+      }
+      const machine = prefix ? "由模型读出，没有人核对过。" : "Read by a model; no person has checked it.";
+      assert.ok(faq.mainEntity[1].acceptedAnswer.text.endsWith(machine) && visible(html).includes(machine));
+      assert.ok(title.endsWith(prefix ? "现在的证据" : "The evidence so far"));
+      const downloads = Object.fromEntries(dataset.distribution.map((d) => [d.encodingFormat === "text/markdown" ? "md" : new URL(d.contentUrl).pathname.split("/").at(-1), d.contentUrl]));
+      assert.equal(downloads.md, `${SITE}${prefix}${path}/raw.md`);
+      for (const route of ["summary", "observations"]) {
+        const url = new URL(downloads[route]);
+        const res = await fetch(`${base}${url.pathname}${url.search}`);
+        assert.equal(res.status, 200, downloads[route]);
+        const body = await res.json();
+        if (route === "summary") assert.deepEqual(body.counts.by_evidence_type, pageCounts(path === marketPath ? md : occ), downloads[route]);
+      }
+      assert.equal((await (await fetch(`${base}${prefix}${path}/raw.md`)).text()).split("\n")[0], `# ${title}`);
+    }
+    const marketTitle = visible((await (await fetch(`${base}${marketPath}`)).text()).match(/<title>([^<]+)<\/title>/)[1]);
+    assert.match(marketTitle, /^Will AI change .+\? The evidence so far \| SurviAGI$/);
 
     // The list pages count the same rows once each, and each row links to its page's evidence.
     const marketCount = new Set(work.map((w) => w.market_id)).size;
@@ -1440,8 +1486,6 @@ test("market and occupation pages count their observations by evidence type and 
       const res = await fetch(`${base}${path}`);
       return { status: res.status, body: await res.json() };
     };
-    const pageCounts = (copy) => Object.fromEntries([...copy.matchAll(/^- (Production use|Measurement|Statistic|Own use|Demonstration|Vendor claim): (\d+)$/gm)]
-      .map(([, label, n]) => [label.toLowerCase().replace(" ", "_"), Number(n)]));
     const market = (await api(`/api/agent/summary?market=${marketId}`)).body;
     assert.equal(market.state, "some");
     assert.deepEqual(market.counts.by_evidence_type, pageCounts(md));

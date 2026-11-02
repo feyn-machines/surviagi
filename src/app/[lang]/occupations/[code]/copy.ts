@@ -3,7 +3,6 @@ import { bilingual } from "@/lib/i18n";
 /** Copy for the occupation page and its Markdown copy (`raw.md`), so the two say the same words. */
 export const copy = bilingual({
   en: {
-    metaSuffix: "Occupation",
     metaDescription: "{name}: {tasks} tasks, {reached} reached by an AI update.",
     back: "All occupations",
     lead: "Which pieces of this job an update has reached, and which nobody has looked at.",
@@ -28,7 +27,6 @@ export const copy = bilingual({
     unread: "{n} more {n|kind|kinds} of work reaching this occupation {n|has|have} no evidence yet.",
   },
   "zh-CN": {
-    metaSuffix: "职业",
     metaDescription: "{name}：{tasks} 项任务，其中 {reached} 项已被 AI 更新触及。",
     back: "全部职业",
     lead: "这份工作里，哪几件已经被更新触及，哪几件还没人看过。",

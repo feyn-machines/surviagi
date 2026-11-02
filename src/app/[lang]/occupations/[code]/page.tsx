@@ -7,6 +7,7 @@ import { getLocale } from "@/lib/locale";
 import { breadcrumbLd, pageMetadata } from "@/lib/seo";
 import { JsonLd } from "@/components/json-ld";
 import { ObservationLedger } from "@/components/observation-ledger";
+import { evidenceLd, ledger, pageQuestion } from "@/lib/observation-view";
 import { siteNavCopy } from "@/lib/site-nav";
 import { indexable } from "@/lib/site-pages";
 import { activityHref, href } from "@/lib/routes";
@@ -57,6 +58,20 @@ function idForCode(code: string): string | undefined {
   return occupations().find((row) => occupationSlug(row.occupation_id) === code)?.occupation_id;
 }
 
+/** The page's dated sentence: how many of the occupation's tasks a collected update bears on. */
+function sentence(id: string, name: string, language: Language): string {
+  const c = copy[language];
+  const entry = occupationById(id);
+  const totalTasks = entry?.tasks ?? 0;
+  const assessed = entry?.touched_tasks ?? 0;
+  return plural(assessed > 0 ? c.answer : c.answerNone, { total: totalTasks, assessed, rest: Math.max(0, totalTasks - assessed) })
+    .replace("{date}", manifest()?.generated_at.slice(0, 10) ?? "")
+    .replace("{name}", name)
+    .replace("{total}", formatNumber(totalTasks))
+    .replace("{assessed}", formatNumber(assessed))
+    .replace("{rest}", formatNumber(Math.max(0, totalTasks - assessed)));
+}
+
 function label(id: string, language: Language) {
   const entry = occupationById(id);
   const zh = entry?.label_zh_cn ?? null;
@@ -73,14 +88,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const name = label(id, language);
   const entry = occupationById(id);
   const reached = entry?.touched_tasks ?? 0;
+  const view = ledger(observationsOfOccupation(id), name, language);
   return pageMetadata({
     language,
     path: `/occupations/${code}`,
-    title: `${name} · ${c.metaSuffix}`,
-    description: c.metaDescription
-      .replace("{name}", name)
-      .replace("{tasks}", String(entry?.tasks ?? 0))
-      .replace("{reached}", String(reached)),
+    title: pageQuestion("occupation", name, language),
+    // With observations mapped, the description is the evidence sentence the page opens its ledger with.
+    description:
+      view.state === "some"
+        ? view.answer
+        : c.metaDescription
+            .replace("{name}", name)
+            .replace("{tasks}", String(entry?.tasks ?? 0))
+            .replace("{reached}", String(reached)),
     // An occupation no update has reached has nothing of its own to show yet.
     index: indexable.occupation(reached),
     markdown: true,
@@ -175,20 +195,23 @@ export default async function OccupationPage({ params }: Props) {
   return (
     <div className={`${s.page} ${bp.canvas}`}>
       <JsonLd data={breadcrumbLd(language, trail)} />
+      <JsonLd
+        data={evidenceLd(language, {
+          kind: "occupation",
+          name,
+          slug: code,
+          path: `/occupations/${code}`,
+          sentence: sentence(id, name, language),
+          rows: observationsOfOccupation(id),
+        })}
+      />
       <Link className="oaw-back" href={href(language, "/occupations")}>
         {c.back}
       </Link>
-      <h1 className={s.title}>{name}</h1>
+      <h1 className={s.title}>{pageQuestion("occupation", name, language)}</h1>
       <p className={s.pageLead}>{c.lead}</p>
       {/* The page's answer in one dated sentence with its numbers, the line an engine can quote. */}
-      <p className={s.answer}>
-        {plural(assessed > 0 ? c.answer : c.answerNone, { total: totalTasks, assessed, rest: Math.max(0, totalTasks - assessed) })
-          .replace("{date}", manifest()?.generated_at.slice(0, 10) ?? "")
-          .replace("{name}", name)
-          .replace("{total}", formatNumber(totalTasks))
-          .replace("{assessed}", formatNumber(assessed))
-          .replace("{rest}", formatNumber(Math.max(0, totalTasks - assessed)))}
-      </p>
+      <p className={s.answer}>{sentence(id, name, language)}</p>
 
       <div className={s.stats}>
         <Stat

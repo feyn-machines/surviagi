@@ -93,7 +93,6 @@ export const detailCopy = bilingual({
   en: {
     eyebrow: "Market",
     back: "All markets",
-    metaSuffix: "Market",
     metaDescription: "{name}: {count} kinds of work, each with the AI updates that bear on it.",
     lead: "Each kind of work in this market, and the collected AI updates that bear on it, with their sources.",
     answer: "As of {date}, {updates} collected {updates|update bears|updates bear} on {scored} of the {n} {n|kind|kinds} of work in {name}.",
@@ -129,7 +128,6 @@ export const detailCopy = bilingual({
   "zh-CN": {
     eyebrow: "赛道",
     back: "全部赛道",
-    metaSuffix: "赛道",
     metaDescription: "{name}：{count} 类工作，以及触及每类工作的 AI 更新。",
     lead: "这个赛道里的每项工作，以及采集到的、触及它的 AI 更新和出处。",
     answer: "截至 {date}，采集到的 {updates} 条更新触及了{name}的 {n} 项工作中的 {scored} 项。",

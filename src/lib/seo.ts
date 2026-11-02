@@ -155,7 +155,21 @@ const DATA_STATUS: Record<Language, string> = {
   "zh-CN": "由机器提出，尚未经人审核",
 };
 
-export function datasetLd(language: Language, page: { name: string; description: string; path: string }): object | null {
+/**
+ * `measured` names what the counts are counted by; `downloads` are the same
+ * data in other forms (the page's Markdown copy, the Agent interface's JSON),
+ * each with its full address and media type.
+ */
+export function datasetLd(
+  language: Language,
+  page: {
+    name: string;
+    description: string;
+    path: string;
+    measured?: string[];
+    downloads?: { url: string; type: string }[];
+  },
+): object | null {
   const manifest = dataManifest();
   if (!manifest) return null;
   return {
@@ -169,6 +183,26 @@ export function datasetLd(language: Language, page: { name: string; description:
     version: `${manifest.method_version} / ontology ${manifest.schema_version}`,
     dateModified: manifest.generated_at,
     creativeWorkStatus: DATA_STATUS[language],
+    isAccessibleForFree: true,
+    ...(page.measured?.length ? { variableMeasured: page.measured } : {}),
+    ...(page.downloads?.length
+      ? { distribution: page.downloads.map((d) => ({ "@type": "DataDownload", contentUrl: d.url, encodingFormat: d.type })) }
+      : {}),
+  };
+}
+
+/** The questions a page answers, each with the answer the page shows. */
+export function faqLd(language: Language, items: { question: string; answer: string }[]): object | null {
+  if (items.length === 0) return null;
+  return {
+    "@context": CONTEXT,
+    "@type": "FAQPage",
+    inLanguage: language,
+    mainEntity: items.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: { "@type": "Answer", text: item.answer },
+    })),
   };
 }
 
