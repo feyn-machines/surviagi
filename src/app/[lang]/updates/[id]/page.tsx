@@ -8,8 +8,8 @@ import { getLocale } from "@/lib/locale";
 import { articleLd, breadcrumbLd, pageMetadata } from "@/lib/seo";
 import { JsonLd } from "@/components/json-ld";
 import { siteNavCopy } from "@/lib/site-nav";
-import { UPDATE_LANGUAGES } from "@/lib/site-pages";
-import { copy, updateDate } from "./copy";
+import { UPDATE_LANGUAGES, indexable } from "@/lib/site-pages";
+import { copy, reports, updateDate } from "./copy";
 import { activityHref, href, marketHref } from "@/lib/routes";
 import { activityById, linkedEvents, events as allEvents, linksOfEvent } from "@/lib/snapshot";
 
@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const id = (await params).id;
   const update = find(id);
   if (!update) notFound();
-  return pageMetadata({ language, path: `/updates/${id}`, title: update.title, description: update.summary, languages: UPDATE_LANGUAGES, markdown: true });
+  return pageMetadata({ language, path: `/updates/${id}`, title: update.title, description: update.summary, languages: UPDATE_LANGUAGES, index: indexable.update(update), markdown: true });
 }
 
 function compact(n: number, zh: boolean): string {
@@ -62,6 +62,7 @@ export default async function UpdatePage({ params }: Props) {
     .sort((a, b) => a.market.localeCompare(b.market, language) || a.name.localeCompare(b.name, language));
   const markets = new Set(rows.map((r) => r.marketId));
   const views = more?.attention?.views ?? null;
+  const told = reports(update, language);
   const say = plural(c.say, { n: rows.length, m: markets.size }).replace("{n}", String(rows.length)).replace("{m}", String(markets.size));
 
   const path = `/updates/${update.event_id}`;
@@ -91,6 +92,36 @@ export default async function UpdatePage({ params }: Props) {
         <div className={s.fact}><dt>{c.sourcesFact}</dt><dd>{update.source_urls.length}</dd></div>
         <div className={s.fact}><dt>{c.views}</dt><dd>{views ? compact(views, zh) : "—"}</dd></div>
       </dl>
+
+      {(told.basis || told.task || told.facts.length > 0) && (
+        <>
+          <h2 className={s.h2}>{c.reportsTitle}</h2>
+          <p className={s.sub}>{c.reportsSub}</p>
+          <ul className={s.list}>
+            {told.basis && (
+              <li className={s.row}>
+                <div className={s.when}>{c.basis}</div>
+                <div className={s.what}><span className={s.name}>{told.basis}</span>{told.basisMeans && <p>{told.basisMeans}</p>}</div>
+                <div className={s.how} />
+              </li>
+            )}
+            {told.task && (
+              <li className={s.row}>
+                <div className={s.when}>{c.task}</div>
+                <div className={s.what}><span className={s.name}>{told.task}</span></div>
+                <div className={s.how}>{told.result && <span className={s.tag}>{told.result}</span>}</div>
+              </li>
+            )}
+            {told.facts.map((f, i) => (
+              <li key={i} className={s.row}>
+                <div className={s.when}>{c.figure}</div>
+                <div className={s.what}><span className={s.name}>{f.value}</span><p>{f.what}</p><small>“{f.quote}”</small></div>
+                <div className={s.how} />
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
 
       <h2 className={s.h2}>{c.listTitle}</h2>
       <p className={s.sub}>{c.listSub}</p>

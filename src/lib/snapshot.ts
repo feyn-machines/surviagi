@@ -144,7 +144,17 @@ export type EventRow = {
   attention?: { views: number | null; likes: number | null; provisional?: boolean } | null;
   /** The kinds of work a judge linked it to. Absent in releases before Issue #35. */
   work?: WorkLink[];
+  /** What it says happened, recorded since event_kind 2.1.0; null on older rows and for kinds that carry none. */
+  subject?: string | null;
+  basis?: string | null;
+  task?: string | null;
+  result?: string | null;
+  /** Figures the post states, each with the words it was read from. */
+  facts?: EventFact[] | null;
 };
+
+/** One figure an update states: its value as written, the post's words for it, and what it measures. */
+export type EventFact = { value: string; unit: string | null; what: string; quote: string };
 
 /**
  * What was looked at, and what was not. Every number here is about the

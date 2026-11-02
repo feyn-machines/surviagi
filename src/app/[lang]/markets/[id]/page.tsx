@@ -9,6 +9,7 @@ import { breadcrumbLd, pageMetadata } from "@/lib/seo";
 import { JsonLd } from "@/components/json-ld";
 import { siteNavCopy } from "@/lib/site-nav";
 import { href } from "@/lib/routes";
+import { indexable } from "@/lib/site-pages";
 import {
   activitiesOfMarket,
   activityAnchor,
@@ -62,6 +63,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     path: `/markets/${id}`,
     title: `${name} · ${c.metaSuffix}`,
     description: fill(c.metaDescription, { name, count: market.activities }),
+    // A market no update bears on has nothing of its own to show yet.
+    index: indexable.market(market.id),
     markdown: true,
   });
 }

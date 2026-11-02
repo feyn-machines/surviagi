@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { LANGUAGES, type Language } from "@/lib/i18n";
 import { absoluteUrl } from "@/lib/seo";
-import { FIXED_PATHS, UPDATE_LANGUAGES, detailPages, evidenceDates } from "@/lib/site-pages";
+import { FIXED_PATHS, UPDATE_LANGUAGES, evidenceDates, indexedPages } from "@/lib/site-pages";
 import { manifest } from "@/lib/snapshot";
 import { approvedEditorialArticles, publicPreviews } from "@/lib/editorial-store";
 import publishedArticles from "@/content/articles.json";
@@ -23,9 +23,9 @@ type Page = { path: string; lastModified?: string; languages?: readonly Language
  * time: a detail page with no date of its own would otherwise claim a change
  * at every data release.
  *
- * Only pages with something of their own are listed: an occupation no update
- * has reached is left out (its page asks not to be indexed), and an update is
- * listed once because its words are the same in every language.
+ * Only pages with something of their own are listed (`indexable`): the rest
+ * still answer but ask not to be indexed. An update is listed once because its
+ * words are the same in every language.
  */
 let kept: { key: string; entries: MetadataRoute.Sitemap } | null = null;
 
@@ -71,17 +71,17 @@ function entries(built: string | undefined, approvedSlugs: Set<string>): Metadat
   const dated = evidenceDates();
   const pages: Page[] = [
     ...FIXED_PATHS.map((path) => ({ path, lastModified: built })),
-    ...detailPages.markets().map((id) => ({ path: `/markets/${id}`, lastModified: dated.market(`oaw:market:${id}`) })),
-    ...detailPages.occupationGroups().map((id) => ({
+    ...indexedPages.markets().map((id) => ({ path: `/markets/${id}`, lastModified: dated.market(`oaw:market:${id}`) })),
+    ...indexedPages.occupationGroups().map((id) => ({
       path: `/occupations/g/${id}`,
       lastModified: dated.group(`oaw:occupation-group:${id}`),
     })),
-    ...detailPages.reachedOccupations().map((code) => ({
+    ...indexedPages.occupations().map((code) => ({
       path: `/occupations/${code}`,
       lastModified: dated.occupation(`oaw:occupation:${code}`),
     })),
-    ...detailPages.topics().map(({ slug, latest }) => ({ path: `/topics/${slug}`, lastModified: latest ?? undefined })),
-    ...detailPages.updates().map(({ id, occurredAt }) => ({ path: `/updates/${id}`, lastModified: occurredAt ?? undefined, languages: UPDATE_LANGUAGES })),
+    ...indexedPages.topics().map(({ slug, latest }) => ({ path: `/topics/${slug}`, lastModified: latest ?? undefined })),
+    ...indexedPages.updates().map(({ id, occurredAt }) => ({ path: `/updates/${id}`, lastModified: occurredAt ?? undefined, languages: UPDATE_LANGUAGES })),
     // The article pages are built ahead from documents the server does not carry,
     // so the list comes from the index written beside the build.
     ...publishedArticles.filter((item) => !approvedSlugs.has(item.slug)).map((item) => ({ path: `/articles/${item.slug}`, lastModified: item.date })),

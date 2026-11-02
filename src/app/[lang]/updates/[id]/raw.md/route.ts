@@ -1,10 +1,11 @@
 import { vocabularyTerm } from "@/components/ontology-labels";
 import { plural } from "@/lib/plural";
 import { DEFAULT_LANGUAGE, normalizeLanguage } from "@/lib/i18n";
-import { link, markdownResponse } from "@/lib/markdown-copy";
+import { colon, link, markdownResponse } from "@/lib/markdown-copy";
+import { indexable } from "@/lib/site-pages";
 import { activityAnchor } from "@/lib/anchors";
 import { activityById, linkedEvents, events as allEvents, linksOfEvent, marketSlug } from "@/lib/snapshot";
-import { copy, updateDate } from "../copy";
+import { copy, reports, updateDate } from "../copy";
 
 /** Rendered per request from the loaded data release, like the page. */
 export const dynamic = "force-dynamic";
@@ -43,9 +44,17 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
     ...(update.summary ? [`> ${update.summary.replace(/\s+/g, " ")}`, ""] : []),
     say,
     "",
-    `## ${c.listTitle}`,
-    "",
   ];
+  const told = reports(update, language);
+  if (told.basis || told.task || told.facts.length > 0) {
+    const sep = colon(language);
+    body.push(`## ${c.reportsTitle}`, "");
+    if (told.basis) body.push(`- ${c.basis}${sep}${told.basis}${told.basisMeans ? ` — ${told.basisMeans}` : ""}`);
+    if (told.task) body.push(`- ${c.task}${sep}${told.task}${told.result ? ` (${told.result})` : ""}`);
+    for (const f of told.facts) body.push(`- ${c.figure}${sep}${f.value} — ${f.what}`, `  > ${f.quote.replace(/\s+/g, " ")}`);
+    body.push("");
+  }
+  body.push(`## ${c.listTitle}`, "");
   for (const r of rows) {
     const work = activityById(r.activity_id);
     const name = (zh ? r.activity_zh_cn : r.activity_en) ?? r.activity_en;
@@ -60,5 +69,5 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
     update.source_urls.forEach((url, i) => body.push(`- [${c.source.replace("{i}", String(i + 1)).replace(/\s*↗$/, "")}](${url})`));
   }
   // An update keeps its original words in every language, so its English page is the one to keep.
-  return markdownResponse(language, `/updates/${update.event_id}`, update.title, body, { canonical: "en" });
+  return markdownResponse(language, `/updates/${update.event_id}`, update.title, body, { canonical: "en", index: indexable.update(update) });
 }
