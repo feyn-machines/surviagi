@@ -180,8 +180,10 @@ def _facts(raw, texts):
 
 
 # One number told twice in different forms is one fact: "+32" and "32", "1,200"
-# and "1200", "32%" and "32" in "%", when the same words carry it. A sign
-# other than plus, or two different units, keeps them apart.
+# and "1200", "32%" and "32" in "%", when the same words carry it, or when one
+# quote, itself holding the number, is part of the other ("18,000" inside "it
+# put 18,000 behind Gemini").
+# A sign other than plus, or two different units, keeps them apart.
 _SPACES = re.compile(r"\s+")
 _DIGIT_COMMA = re.compile(r"(?<=\d),(?=\d{3}\b)")
 
@@ -197,24 +199,28 @@ def _fact_form(fact):
 def same_fact(a, b):
     value_a, unit_a, quote_a = _fact_form(a)
     value_b, unit_b, quote_b = _fact_form(b)
-    return value_a == value_b and quote_a == quote_b and (unit_a is None or unit_b is None or unit_a == unit_b)
+    if value_a != value_b or not (unit_a is None or unit_b is None or unit_a == unit_b):
+        return False
+    shorter, longer = sorted((quote_a, quote_b), key=len)
+    return shorter == longer or (shorter in longer and value_a in _DIGIT_COMMA.sub("", shorter))
 
 
 def distinct_facts(facts):
     """Facts in their order, each number once: of two forms of one, the one that
-    says more (unit, baseline, method) stands, else the earlier."""
+    says more (unit, baseline, method, then the longer quote) stands, else the
+    earlier."""
     kept = []
     for fact in facts:
         twin = next((i for i, k in enumerate(kept) if same_fact(k, fact)), None)
         if twin is None:
             kept.append(fact)
-        elif _filled(fact) > _filled(kept[twin]):
+        elif _fullness(fact) > _fullness(kept[twin]):
             kept[twin] = fact
     return kept
 
 
-def _filled(fact):
-    return sum(fact.get(name) is not None for name in ("unit", "baseline", "method_note"))
+def _fullness(fact):
+    return sum(fact.get(name) is not None for name in ("unit", "baseline", "method_note")), len(fact["quote"])
 
 
 def check_observation(raw, by_id):
