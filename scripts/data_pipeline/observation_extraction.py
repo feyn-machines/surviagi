@@ -2,13 +2,13 @@
 
 An observation is one actor using one subject on one piece of work, how it came
 out, on what basis, and where it is written
-(rule:observation-is-one-actor-one-subject-one-work). They come out of the same
-model call as updates: `deepseek.system_prompt(observations=True)` appends
-`prompt_section` and the answer gains an `observations` list. This module is the
-deterministic part around that call:
+(rule:observation-is-one-actor-one-subject-one-work). They are read in a
+call of their own, `deepseek.extract_observations`, next to the update call:
+asked in the same call, the model traded updates for observations. This module
+is the deterministic part around that call:
 
   prefilter            (pure: which posts are worth a call at all)
-  prompt_section       (pure: the instructions, rendered from the schema)
+  system_prompt        (pure: the instructions, rendered from the schema)
   assemble_observations (pure: model output -> checked, merged observations)
 
 A quote the post does not contain refuses the observation, and a fact whose
@@ -25,11 +25,12 @@ import re
 from . import ontology_schema
 from .event_extraction import _iso, _slug, _text_or_none, quoted_in, resolve_org
 
-EXTRACTOR = "observation-extraction-2"
+EXTRACTOR = "observation-extraction-3"
 # -2: more posts are read as observations (a person's own use without numbers,
 # an agent doing something it was not asked to), the actor's role follows who
 # makes the subject, and a value is written without its unit. On the 500-post
 # sample of 2026-11-03, -1 found 18 and missed own-use and failure reports.
+# -3: a call of its own instead of a section of the update prompt.
 
 ACTOR_ROLES = frozenset(ontology_schema.term_ids("observation_actor_role"))
 EVIDENCE_TYPES = frozenset(ontology_schema.term_ids("event_basis"))
@@ -65,17 +66,17 @@ def prefilter(candidate):
     return None
 
 
-def prompt_section(schema=None):
-    """The observation instructions appended to the extraction prompt."""
+def system_prompt(schema=None):
+    """The observation prompt, with its vocabularies rendered from the schema."""
     schema = schema or ontology_schema.load_schema()
 
     def choices(name):
         terms = schema["vocabularies"][name]["terms"]
         return [f"  - {term_id}: {body['definition']['en']}" for term_id, body in terms.items()]
 
-    return [
-        "OBSERVATIONS. Independently of where a post ends up above, also return `observations`: what "
-        "the posts show about AI doing real work that people are paid for. One observation is ONE "
+    return "\n".join([
+        "You read posts about AI from companies, organizations and individual people, and return "
+        "OBSERVATIONS: what the posts show about AI doing real work that people are paid for. One observation is ONE "
         "actor using ONE AI product or model on ONE piece of work, how it came out, and on what basis. "
         "A post gives zero, one or several. Return [] when none does.",
         "- It is an observation when a post says that AI did, helped with, failed at or was measured "
@@ -134,10 +135,10 @@ def prompt_section(schema=None):
         '- "conditions": human oversight, pilot scope, region, limits or failure mode as stated, or null',
         '- "occurred_at": ISO 8601 UTC timestamp of when it happened, or null',
         '- "quote": the sentence of the post that states it, copied EXACTLY',
-        "The full answer is then {\"events\": [...], \"attachments\": [...], \"dropped\": [...], "
-        "\"observations\": [...]}. Never invent an actor, a number or an outcome: \"not_stated\" "
-        "and null are correct answers.",
-    ]
+        "Return STRICT JSON, an object: {\"observations\": [...]}. Use only the given posts as "
+        "evidence. Never invent an actor, a number or an outcome: \"not_stated\" and null are "
+        "correct answers. Output ONLY the JSON object.",
+    ])
 
 
 def observation_id(actor_key, subject_key, work_key, occurred_on):
