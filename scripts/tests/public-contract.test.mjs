@@ -15,6 +15,10 @@ const observation = () => ({
   event_id: null, task: "Write and test code", evidence_type: "vendor_claim", outcome: "succeeded", direction: "ai_takes_on", scale: null,
   conditions: null, occurred_on: "2026-11-01", announced_at: null, observed_at: "2026-11-02T00:00:00+00:00", review_state: "machine_proposed",
   reviewed_at: null, extractor: "extract-1", prompt_sha256: null, model: null, schema_version: "2.5.0", created_at: "2026-11-02T00:00:00+00:00",
+  sources: [{ source_ref: "src-1", source_type: "x_post", url: "https://x.com/a/status/1", source_id: "1", quote: "it wrote the tests", published_at: "2026-11-01T00:00:00+00:00" }],
+  facts: [],
+  concerns: [{ concept_id: "w:software", kind: "work", label_en: "Software", label_zh_cn: null, method: "ai_proposed", status: "candidate" }],
+  merged_from: ["obs-0"],
 });
 
 test("contract files are deterministic and every schema compiles", () => {
@@ -50,6 +54,10 @@ test("an observation fits; a missing key, an unknown key, a bad term and a null 
   assert.ok(!validate({ ...observation(), direction: "sideways" }), "term outside the vocabulary");
   assert.ok(!validate({ ...observation(), task: null }), "null in a required (1..1) field");
   assert.ok(!validate({ ...observation(), occurred_on: "01/11/2026" }), "date format");
+  assert.ok(validate({ ...observation(), concerns: [], merged_from: [] }), "unmapped and never merged");
+  assert.ok(!validate({ ...observation(), merged_from: [1] }), "a redirect is an id");
+  const { sources, ...withoutSources } = observation();
+  assert.ok(sources.length && !validate(withoutSources), "sources is a declared key");
 });
 
 test("zero is a value and null is unknown, in the optional fields of a topic view", () => {
@@ -69,7 +77,7 @@ test("a snapshot directory is checked row by row", () => {
   const dir = mkdtempSync(join(tmpdir(), "contract-"));
   try {
     writeFileSync(join(dir, "manifest.json"), JSON.stringify({ counts: { models: 1 } }));
-    for (const name of ["events", "sources", "topics", "work", "occupations"]) writeFileSync(join(dir, `${name}.json`), "[]");
+    for (const name of ["events", "sources", "topics", "work", "occupations", "observations"]) writeFileSync(join(dir, `${name}.json`), "[]");
     const model = { model_id: "m", org_id: null, level: "release", parent_model_id: null, name: "n", version: null, variant: null, status: "confirmed", released_at: null, owner: null, owner_zh_cn: null, events: 0 };
     writeFileSync(join(dir, "models.json"), JSON.stringify([model]));
     assert.deepEqual(checkSnapshot(dir), []);

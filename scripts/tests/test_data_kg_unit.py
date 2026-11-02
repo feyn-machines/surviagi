@@ -4,6 +4,7 @@ Dependency-free on purpose (no psycopg): runs under `pnpm data:test:unit` with t
 system python. The database behaviour is in test_data_kg.py.
 """
 import json
+import os
 import sys
 import unittest
 from pathlib import Path
@@ -12,7 +13,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from data_pipeline import kg  # noqa: E402
 from data_pipeline.pipeline import digest  # noqa: E402
 
-LATEST = Path(__file__).resolve().parents[2] / "datasets/published/latest"
+# SNAPSHOT_DIR lets the same checks run against a snapshot written by a newer publisher.
+LATEST = Path(os.environ.get("SNAPSHOT_DIR") or Path(__file__).resolve().parents[2] / "datasets/published/latest")
 
 
 def small_payload():
@@ -28,6 +30,7 @@ def small_payload():
         "tasks": [],
         "work": [{"id": "a1", "updates": 1}],
         "occupations": [{"id": "o1", "tasks": 2, "touched_tasks": 1}],
+        "observations": [{"observation_id": "obs-1", "merged_from": []}],
         "events": [{"event_id": "e1", "title": "T"}],
         "models": [{"model_id": "x"}],
         "sources": [{"account_key": "k", "note": None}],
@@ -165,6 +168,13 @@ class DiffTest(unittest.TestCase):
 
 @unittest.skipUnless((LATEST / "manifest.json").is_file(), "no local published snapshot")
 class RealSnapshotTest(unittest.TestCase):
+    def setUp(self):
+        # A snapshot written before a collection existed is older than this code, not wrong;
+        # `read_snapshot` still refuses it at release time.
+        older = [name for name in kg.SNAPSHOT_FILES if not (LATEST / f"{name}.json").is_file()]
+        if older:
+            self.skipTest(f"local snapshot predates {', '.join(older)}; run pnpm data:publish:snapshot or set SNAPSHOT_DIR")
+
     def test_round_trip_reproduces_the_manifest_hash(self):
         payload, manifest = kg.read_snapshot(LATEST)
         rows = kg.pack(payload)

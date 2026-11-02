@@ -1,6 +1,6 @@
 # Public data contract / 对外数据契约
 
-Issue #27, part of the evidence-ledger redesign (#34). Contract version **1.0.0**, ontology schema **2.5.0**.
+Issue #27, part of the evidence-ledger redesign (#34). Contract version **1.2.0**, ontology schema **2.5.0**.
 
 The ontology schema is the one type definition. The public contract is generated from it, so an agent can learn from one place which entities exist, what each field means, how far it can be trusted, and how the format evolves.
 
@@ -24,6 +24,8 @@ Types, cardinalities and enumerated values come from `datasets/ontology/schema/s
 
 Concept (market, work, occupation, …), Organization, Person, SourceAccount, Event, Model, Provider, Product, ProductAvailability, Observation, ObservationSource, ObservationFact, Topic, TopicOption. Articles are not in the ontology (they live in the `editorial` schema) and join the contract with the article/observation work in #29/#32. Level readings (`chain`, `markets`, `tasks`, `progress`, `coverage`) are outside the contract and listed as retired in `index.json` (#35).
 
+Snapshot files under the contract: `work`, `occupations` (1.1.0), `events`, `models`, `sources`, `topics`, and `observations` (1.2.0).
+
 ## Field grades / 字段分级
 
 Each property carries `x-grade`:
@@ -39,6 +41,7 @@ Each property carries `x-grade`:
 - Every declared field is always present. Unknown is `null`; a key is never dropped to mean unknown. `0`, `""` and `[]` are real values (`rule:three-states-are-not-zero`).
 - One declared exception: `Event.announced_at` is written only for updates with no `occurred_at` (marked `x-key-optional`), so dated updates stay byte-identical.
 - Fields marked `x-shape: view` are denormalised snapshot fields (joins and rollups such as an organisation's name, claims on a topic). Their nested shapes are not frozen in 1.0.0; they are replaced when the snapshot is rebuilt around observations.
+- `observations.json` publishes only the head of a merge (#25). An observation found to be the same as an earlier one is not a row of its own; its id appears in the head's `merged_from` and redirects there, and the head carries its sources and facts. Catalog entries in `concerns` are machine-proposed candidates; one a person rejected is dropped, and so is an observation a person rejected.
 - `SourceAccount.identity_url` is typed `uri` in the ontology, but 31 of 374 rows hold the evidence note that found it. The contract states the wire truth (`x-wire-range: text`) until the data or the ontology is corrected.
 
 ## Versions / 版本
@@ -56,8 +59,14 @@ In the snapshot manifest, `ontology_version` is the sealed catalog package (1.0.
 
 A field added in a minor version is optional for readers to use. A field is deprecated for at least one minor version before it is removed. A breaking change moves the path (`/contract/v2/`).
 
+## Changes / 变更
+
+- 1.2.0 — `observations.json`: Observation rows with `sources`, `facts`, `concerns` (candidate market work items, occupations and O*NET tasks) and `merged_from` (redirects). Additive: a reader of 1.1.0 is unaffected.
+- 1.1.0 — `work.json` and `occupations.json` without levels; `Event.work` links (#35).
+- 1.0.0 — first contract (#27).
+
 ## Checks / 校验
 
-- `pnpm data:contract [dir]` validates a snapshot directory against the schemas (rows of `events`, `models`, `sources`, `topics`, id uniqueness).
+- `pnpm data:contract [dir]` validates a snapshot directory against the schemas (rows of every snapshot file listed above, id uniqueness).
 - `pnpm data:release` and `pnpm data:local:release` run it first and refuse a snapshot that does not conform.
 - `scripts/tests/public-contract.test.mjs` covers the generator and the validator; `site-output.test.mjs` checks the served files and that live responses match the OpenAPI.

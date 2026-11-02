@@ -43,6 +43,7 @@ def payload(extra_event=None, drop_event=None, tweak_model=False):
         "tasks": [{"task_id": "t", "confidence": 0.1}],
         "work": [{"id": "a1", "updates": 1}],
         "occupations": [{"id": "o1", "tasks": 2, "touched_tasks": 1}],
+        "observations": [{"observation_id": "obs-1", "merged_from": []}],
         "events": [dict(e, summary="s") for e in events],
         "models": models,
         "sources": [{"account_key": "k", "followers": 0}],

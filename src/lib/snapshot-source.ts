@@ -7,7 +7,7 @@ import type { Manifest, Payload } from "./snapshot";
 export type Loaded = { payload: Payload; releaseId: string };
 
 /** The collections of a release and how each is shaped; mirrors `COLLECTIONS` in scripts/data_pipeline/kg.py. */
-const LISTS = ["markets", "tasks", "work", "occupations", "events", "models", "sources", "topics"] as const;
+const LISTS = ["markets", "tasks", "work", "occupations", "events", "models", "sources", "topics", "observations"] as const;
 const CHAIN_LISTS = ["activities", "gates", "events", "evidence", "gate_edges"] as const;
 const SINGLES = ["coverage", "progress"] as const;
 
@@ -88,6 +88,7 @@ export async function loadFromDatabase(url: string): Promise<Loaded | null> {
     topics: list("topics"),
     work: carried("work") ? list("work") : undefined,
     occupations: carried("occupations") ? list("occupations") : undefined,
+    observations: carried("observations") ? list("observations") : undefined,
   } as unknown as Payload;
   return { payload, releaseId: release.release_id };
 }
@@ -107,7 +108,8 @@ export function loadFromFiles(dir: string): Loaded | null {
   };
   const manifest = read("manifest") as Manifest;
   // Files a snapshot may lack: topics before they were published, the graded
-  // documents once retired, the ungraded collections before Issue #35.
+  // documents once retired, the ungraded collections before Issue #35,
+  // observations before Issue #25.
   const optional = (name: string) => (existsSync(path(name)) ? read(name) : undefined);
   const payload = {
     chain: optional("chain"),
@@ -120,6 +122,7 @@ export function loadFromFiles(dir: string): Loaded | null {
     topics: optional("topics") ?? [],
     work: optional("work"),
     occupations: optional("occupations"),
+    observations: optional("observations"),
   } as Payload;
   return { payload, releaseId: releaseIdOf(manifest) };
 }
