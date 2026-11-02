@@ -608,7 +608,8 @@ export const READ_TOOLS = [
     name: "search",
     title: "Search SurviAGI",
     description:
-      "Search SurviAGI's published records of AI progress: updates, questions and public bilingual editorial articles (deprecated: evidence readings, only when asked for with types). " +
+      "Search SurviAGI's published records of AI progress: updates, questions, observations (dated statements that AI did or did not do a piece of work, with their source words) and public bilingual editorial articles (deprecated: evidence readings, only when asked for with types). " +
+      "A Chinese query finds English records through the occupation, market and work names they carry in both languages; each result's matched says which field and terms it matched, and title_language whether its title is Chinese. " +
       "Use types to select article; articles can be filtered by status approved or preview. Results include exact revision IDs, sources, " +
       "evidence cutoff and the true publication status. A preview is public but not approved. Search returns only public article pointers; " +
       "private drafts and reviewer identities or notes are never exposed. Summaries are machine-proposed and unreviewed; quote sources, cite the url. " +
@@ -618,7 +619,7 @@ export const READ_TOOLS = [
       properties: {
         query: { type: "string", minLength: 1, maxLength: MAX_QUERY, description: "What to look for, in English or Chinese: a company, model, kind of work, job or question." },
         limit: { type: "integer", minimum: 1, maximum: MAX_RESULTS, default: DEFAULT_RESULTS, description: "How many records to return." },
-        types: { type: "array", items: { type: "string", enum: [...RECORD_TYPES] }, description: "Only these kinds of record. Default: update, question and article. `evidence` (levels from the retired L0–L5 scale) is deprecated and returned only when named here." },
+        types: { type: "array", items: { type: "string", enum: [...RECORD_TYPES] }, description: "Only these kinds of record. Default: update, question, observation and article. `evidence` (levels from the retired L0–L5 scale) is deprecated and returned only when named here." },
         status: { type: "string", enum: [...EDITORIAL_STATUSES], description: "For articles: approved or public preview. Omit to include both; ignored for other record types." },
         from: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "Only records dated on or after this day (YYYY-MM-DD)." },
         to: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "Only records dated on or before this day (YYYY-MM-DD)." },

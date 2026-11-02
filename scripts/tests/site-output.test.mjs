@@ -1045,7 +1045,7 @@ test("MCP: a client initializes with no key, and the public endpoint lists only 
   assert.equal((await rpc("/api/mcp", { jsonrpc: "2.0", method: "notifications/initialized" })).status, 202);
   const tools = (await rpc("/api/mcp", { jsonrpc: "2.0", id: 3, method: "tools/list" })).body.result.tools;
   assert.deepEqual(tools.map((t) => t.name), ["search", "get_record", "query_observations", "occupation_summary", "changes_since"]);
-  assert.deepEqual(tools[0].inputSchema.properties.types.items.enum, ["update", "question", "evidence", "article"]);
+  assert.deepEqual(tools[0].inputSchema.properties.types.items.enum, ["update", "question", "observation", "evidence", "article"]);
   assert.deepEqual(tools[0].inputSchema.properties.status.enum, ["approved", "preview"]);
   for (const t of tools) {
     assert.equal(t.annotations.readOnlyHint, true);
@@ -1316,6 +1316,22 @@ test("the public data contract is served and the agent responses carry its four 
   }
 });
 
+// Issue #30: the evaluation set runs over the loaded release; its hit rate is reported, and a floor keeps a regression from passing.
+test("search: the evaluation set finds a record about what each question asks in the first results", { skip: !HAS_SNAPSHOT, timeout: 60000 }, async () => {
+  const { evaluate } = await import("../search-eval.mjs");
+  // An address of its own, so the other tests' requests do not count against the per-address read limit.
+  const report = await evaluate({ base: site.base, snapshotDir: SNAPSHOT_DIR, headers: { "cf-connecting-ip": "198.51.100.30" } });
+  const pct = (v) => `${Math.round(v * 100)}%`;
+  console.log(`# search eval hit@${report.k}: ${pct(report.hit_rate)} (en ${pct(report.by_language.en)}, zh-CN ${pct(report.by_language["zh-CN"])}), MRR ${report.mrr.toFixed(2)}; missed: ${report.rows.filter((r) => !r.hit).map((r) => r.id).join(", ") || "none"}`);
+  assert.ok(report.questions >= 20);
+  // Measured 2026-11-03 on the releases of 11-02: 88% (75% before observations, names in both languages and weighted terms).
+  assert.ok(report.hit_rate >= 0.7, `hit rate ${pct(report.hit_rate)} fell below 70%`);
+  assert.ok(report.by_language["zh-CN"] >= 0.6, `Chinese hit rate ${pct(report.by_language["zh-CN"])} fell below 60%`);
+  // A Chinese question that has its own Chinese text answers in Chinese.
+  const zh = report.rows.filter((r) => r.language === "zh-CN" && r.types.includes("question"));
+  assert.ok(zh.length && zh.every((r) => r.titles_in_language > 0), "a Chinese query returns Chinese titles where a record has them");
+});
+
 // Issue #32: observations counted by evidence type on market and occupation pages, the same on the page and its copy.
 test("market and occupation pages count their observations by evidence type and list them with their sources", { skip: !HAS_SNAPSHOT, timeout: 60000 }, async () => {
   const read = (name) => JSON.parse(readFileSync(join(SNAPSHOT_DIR, `${name}.json`), "utf8"));
@@ -1354,7 +1370,7 @@ test("market and occupation pages count their observations by evidence type and 
   writeFileSync(join(dir, "observations.json"), JSON.stringify([
     row("obs-a", {
       evidence_type: "production_use", announced_at: day(5),
-      concerns: [concern(first.id, "work"), concern(second.id, "work"), concern(occupation.id, "occupation")],
+      concerns: [concern(first.id, "work"), concern(second.id, "work"), { ...concern(occupation.id, "occupation"), label_en: occupation.label_en, label_zh_cn: occupation.label_zh_cn }],
       facts: [{ fact_id: "fact-a", value: "48", unit: "%", what: "share of tickets closed", baseline: null, method_note: null, quote: "FIGURE obs-a" }],
     }),
     row("obs-b", {
@@ -1468,6 +1484,23 @@ test("market and occupation pages count their observations by evidence type and 
       body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "occupation_summary", arguments: { market: marketId } } }),
     })).json();
     assert.deepEqual(viaMcp.result.structuredContent.counts, market.counts, "MCP and HTTP answer alike");
+
+    // Issue #30: search finds observations by default, says why, and a Chinese query finds them through the names they carry.
+    const found = (await api(`/api/agent/search?query=${encodeURIComponent("Task of obs-a")}`)).body;
+    const hit = found.results.find((r) => r.id === "obs-a");
+    assert.ok(hit, "an observation is searched by default");
+    assert.deepEqual([hit.type, hit.title, hit.snippet, hit.content, hit.title_language], ["observation", "Task of obs-a", "FIGURE obs-a", "post_quote", "en"]);
+    assert.deepEqual(hit.matched[0], { field: "task", terms: ["task", "obs-a"] });
+    assert.equal(hit.url, `https://surviagi.com${occupationPath}#obs-a`);
+    assert.equal(hit.markdown_url, `https://surviagi.com${occupationPath}/raw.md`, "the copy of the page, not of an anchor");
+    assert.ok(!(await api(`/api/agent/search?query=${encodeURIComponent("Task of obs-a")}&types=update`)).body.results.some((r) => r.type === "observation"));
+    if (occupation.label_zh_cn) {
+      const zh = (await api(`/api/agent/search?query=${encodeURIComponent(occupation.label_zh_cn)}&types=observation&language=zh-CN`)).body;
+      const byName = zh.results.find((r) => r.id === "obs-a");
+      assert.ok(byName, `a Chinese query finds the observation through its occupation's name (${occupation.label_zh_cn})`);
+      assert.equal(byName.matched[0].field, "concerns");
+      assert.equal(byName.url, `https://surviagi.com/zh-CN${occupationPath}#obs-a`);
+    }
 
     // Issue #29: what is new since a moment, read from the timestamps the loaded release carries.
     const since = day(10).slice(0, 10);

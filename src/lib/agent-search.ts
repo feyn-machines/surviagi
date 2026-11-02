@@ -2,8 +2,10 @@ import contract from "../../public/contract/v1/index.json";
 import type { Language } from "./i18n";
 import { absoluteUrl } from "./seo";
 import { workSlug } from "./routes";
-import { OBSERVATION_ID, observationRecord } from "./agent-observations";
+import { termNameOrRaw } from "@/components/ontology-labels";
+import { OBSERVATION_ID, observationRecord, pagePath, pagesOf } from "./agent-observations";
 import {
+  activities,
   activityAnchor,
   activityById,
   linkedEvents,
@@ -12,28 +14,33 @@ import {
   legacyEvidence,
   manifest,
   marketSlug,
+  markets,
+  observationDate,
+  observations,
+  occupations,
   topics,
   type LinkedEvent,
   type EventRow,
   type EvidenceRow,
+  type ObservationRow,
   type Topic,
 } from "./snapshot";
 
 /**
  * Search and record reading for agents (Issue #5). Everything here is read from the data release the pages
- * render, in memory: the same updates, topics and readings a reader can open on the site, and nothing else.
+ * render, in memory: the same updates, topics, observations and readings a reader can open on the site, and nothing else.
  * No collection store, no raw archive, no reader's submission, no model is reached from here, and a query
  * that finds nothing starts nothing.
  */
 
-export const RECORD_TYPES = ["update", "question", "evidence", "article"] as const;
+export const RECORD_TYPES = ["update", "question", "observation", "evidence", "article"] as const;
 export type RecordType = (typeof RECORD_TYPES)[number];
 
 /**
  * What a search covers when `types` is not given. Evidence readings carry the L0–L5 level scale, which is being
  * retired (Issue #35), so they are returned only when asked for by name.
  */
-export const DEFAULT_RECORD_TYPES: readonly RecordType[] = ["update", "question", "article"];
+export const DEFAULT_RECORD_TYPES: readonly RecordType[] = ["update", "question", "observation", "article"];
 
 /** Sent with every evidence reading until the type is removed: one contract minor version after this one. */
 export const EVIDENCE_DEPRECATION = {
@@ -81,18 +88,24 @@ export function releaseInfo() {
   return { id: dataRelease().releaseId, generated_at: m?.generated_at ?? null, method: m?.method_version ?? null };
 }
 
+/** A searched field: its name is what a result's `matched` reports. */
+type Field = { name: string; text: string; weight: number };
+
 type Doc = {
   id: string;
   type: RecordType;
   title: string;
   snippet: string;
+  /** The Chinese title and snippet, where the record has its own; otherwise a Chinese answer shows the English. */
+  zh?: { title: string; snippet: string };
   content: keyof typeof CONTENT_KINDS;
   date: string | null;
   organization: string | null;
   sources: string[];
   path: string;
+  markdownPath: string;
   /** Lower-cased fields with weights, searched by substring. */
-  fields: { text: string; weight: number }[];
+  fields: Field[];
 };
 
 const lower = (text: string | null | undefined) => (text ?? "").normalize("NFKC").toLowerCase();
@@ -108,6 +121,48 @@ export const evidenceId = (row: Pick<EvidenceRow, "event_id" | "activity_id">) =
 function workPath(activityId: string): string | null {
   const work = activityById(activityId);
   return work ? `/markets/${marketSlug(work.market_id)}#${activityAnchor(work.activity_id, work.market_id)}` : null;
+}
+
+/** The names, in both languages, of the kinds of work an update was linked to and of their markets. */
+function workNames(e: LinkedEvent): string {
+  const names = new Set<string>();
+  for (const link of e.work ?? []) {
+    const work = activityById(link.activity_id);
+    if (!work) continue;
+    for (const name of [work.label_en, work.label_zh_cn, work.market_en, work.market_zh_cn]) if (name) names.add(name);
+  }
+  return [...names].join(" ");
+}
+
+/** An observation as a search document, or null when no page shows it: a result must have a page to cite. */
+function observationDoc(row: ObservationRow, updateIds: Set<string>): Doc | null {
+  const page = pagesOf(row)[0];
+  const path = page ? `${pagePath(page)}#${row.observation_id}` : row.event_id && updateIds.has(row.event_id) ? `/updates/${row.event_id}` : null;
+  if (!path) return null;
+  const markdownPath = `${path.replace(/#.*$/, "")}/raw.md`;
+  const quote = row.facts[0]?.quote ?? row.sources[0]?.quote ?? "";
+  const concerns = row.concerns.flatMap((c) => [c.label_en, c.label_zh_cn]).filter(Boolean).join(" ");
+  const basis = (["en", "zh-CN"] as const).map((l) => termNameOrRaw("event_basis", row.evidence_type, l)).join(" ");
+  return {
+    id: row.observation_id,
+    type: "observation",
+    title: row.task,
+    snippet: clip(quote || row.task),
+    content: quote ? "post_quote" : "machine_summary",
+    date: observationDate(row),
+    organization: row.actor_name,
+    sources: row.sources.map((s) => s.url),
+    path,
+    markdownPath,
+    fields: [
+      { name: "task", text: lower(row.task), weight: 3 },
+      { name: "concerns", text: lower(concerns), weight: 2 },
+      { name: "actor", text: lower([row.actor_name, row.actor_key, row.subject_key === "unspecified" ? null : row.subject_key].filter(Boolean).join(" ")), weight: 2 },
+      { name: "facts", text: lower(row.facts.map((f) => `${f.value} ${f.unit ?? ""} ${f.what}`).join(" ")), weight: 1 },
+      { name: "quotes", text: lower([...row.sources.map((s) => s.quote), ...row.facts.map((f) => f.quote)].join(" ")), weight: 1 },
+      { name: "evidence_type", text: lower(basis), weight: 1 },
+    ],
+  };
 }
 
 function buildDocs(): Doc[] {
@@ -127,10 +182,12 @@ function buildDocs(): Doc[] {
       organization: e.org_name,
       sources: e.source_urls ?? [],
       path: `/updates/${e.event_id}`,
+      markdownPath: `/updates/${e.event_id}/raw.md`,
       fields: [
-        { text: lower(e.title), weight: 3 },
-        { text: lower(e.summary), weight: 1 },
-        { text: lower([e.org_name, more?.org_name_zh_cn, more?.kind].filter(Boolean).join(" ")), weight: 2 },
+        { name: "title", text: lower(e.title), weight: 3 },
+        { name: "summary", text: lower(e.summary), weight: 1 },
+        { name: "organization", text: lower([e.org_name, more?.org_name_zh_cn, more?.kind].filter(Boolean).join(" ")), weight: 2 },
+        { name: "work", text: lower(workNames(e)), weight: 1 },
       ],
     });
   }
@@ -140,15 +197,19 @@ function buildDocs(): Doc[] {
       type: "question",
       title: t.question.en,
       snippet: clip(`${t.question["zh-CN"]} · ${t.options.map((o) => `${o.key}) ${o.text.en}`).join(" ")}`),
+      zh: t.question["zh-CN"]
+        ? { title: t.question["zh-CN"], snippet: clip(`${t.question.en} · ${t.options.map((o) => `${o.key}) ${o.text["zh-CN"] || o.text.en}`).join(" ")}`) }
+        : undefined,
       content: "machine_summary",
       date: t.latest_claim_at ?? t.opened_at,
       organization: null,
       sources: [],
       path: `/topics/${t.slug}`,
+      markdownPath: `/topics/${t.slug}/raw.md`,
       fields: [
-        { text: lower(`${t.question.en} ${t.question["zh-CN"]} ${t.object}`), weight: 3 },
-        { text: lower([t.about?.en, t.about?.["zh-CN"], t.group?.en, t.group?.["zh-CN"]].filter(Boolean).join(" ")), weight: 2 },
-        { text: lower(t.options.map((o) => `${o.text.en} ${o.text["zh-CN"]}`).join(" ")), weight: 1 },
+        { name: "question", text: lower(`${t.question.en} ${t.question["zh-CN"]} ${t.object}`), weight: 3 },
+        { name: "about", text: lower([t.about?.en, t.about?.["zh-CN"], t.group?.en, t.group?.["zh-CN"]].filter(Boolean).join(" ")), weight: 2 },
+        { name: "options", text: lower(t.options.map((o) => `${o.text.en} ${o.text["zh-CN"]}`).join(" ")), weight: 1 },
       ],
     });
   }
@@ -166,24 +227,99 @@ function buildDocs(): Doc[] {
       organization: update.org_name,
       sources: update.source_urls ?? [],
       path: workPath(r.activity_id) ?? `/updates/${r.event_id}`,
+      markdownPath: `${(workPath(r.activity_id) ?? `/updates/${r.event_id}`).replace(/#.*$/, "")}/raw.md`,
       fields: [
-        { text: lower(`${work.label_en} ${work.label_zh_cn ?? ""}`), weight: 3 },
-        { text: lower(`${work.market_en} ${work.market_zh_cn ?? ""} ${update.title}`), weight: 2 },
-        { text: lower(update.org_name), weight: 1 },
+        { name: "work", text: lower(`${work.label_en} ${work.label_zh_cn ?? ""}`), weight: 3 },
+        { name: "market", text: lower(`${work.market_en} ${work.market_zh_cn ?? ""} ${update.title}`), weight: 2 },
+        { name: "organization", text: lower(update.org_name), weight: 1 },
       ],
     });
+  }
+  const updateIds = new Set(updates.keys());
+  for (const row of observations()) {
+    const doc = observationDoc(row, updateIds);
+    if (doc) docs.push(doc);
   }
   return docs;
 }
 
-let cached: { key: string; docs: Doc[] } | null = null;
+const CJK_RUN = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]+/gu;
+const isCjk = (term: string) => /^[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]+$/u.test(term);
 
-/** The documents of the loaded release, built once per release. */
-function docs(): Doc[] {
+/**
+ * The Chinese names of the release's occupations, markets and kinds of work, cut at their joining words
+ * ("会计师与审计师" gives "会计师" and "审计师"): the words a Chinese query is about, as opposed to how it is asked.
+ * Kept as every piece of two characters or more of those words, so a query is looked up piece by piece.
+ */
+function buildLexicon(): Set<string> {
+  const names = [
+    ...occupations().map((o) => o.label_zh_cn),
+    ...markets().map((m) => m.zh_cn),
+    ...activities().flatMap((a) => [a.label_zh_cn, a.market_zh_cn]),
+  ];
+  const words = new Set<string>();
+  for (const name of names) {
+    for (const run of (name ?? "").normalize("NFKC").match(CJK_RUN) ?? []) {
+      for (const word of run.split(/[与和及或的]/u)) {
+        const chars = [...word];
+        for (let i = 0; i < chars.length; i += 1) for (let end = i + 2; end <= chars.length; end += 1) words.add(chars.slice(i, end).join(""));
+      }
+    }
+  }
+  return words;
+}
+
+/** No name piece is looked up longer than this many characters. */
+const LONGEST_NAME = 16;
+
+let cached: { key: string; docs: Doc[]; texts: string[]; lexicon: Set<string> } | null = null;
+
+/** The documents of the loaded release, built once per release, with each one's fields joined for counting terms. */
+function corpus() {
   const release = dataRelease();
   const key = `${release.releaseId}|${release.loadedAt}`;
-  if (cached?.key !== key) cached = { key, docs: buildDocs() };
-  return cached.docs;
+  if (cached?.key !== key) {
+    const built = buildDocs();
+    cached = { key, docs: built, texts: built.map((d) => d.fields.map((f) => f.text).join("\n")), lexicon: buildLexicon() };
+  }
+  return cached;
+}
+
+/**
+ * The longest pieces of the query's Chinese that are part of a name in the lexicon, read left to right:
+ * "程序员" and nothing else in "程序员会被取代吗" (in "计算机程序员"). Two characters at least.
+ */
+export function namedTerms(query: string, lexicon: Set<string>): string[] {
+  const out: string[] = [];
+  for (const run of lower(query).match(CJK_RUN) ?? []) {
+    const chars = [...run];
+    let i = 0;
+    while (i < chars.length - 1) {
+      let found = 0;
+      for (let end = Math.min(chars.length, i + LONGEST_NAME); end >= i + 2 && !found; end -= 1) {
+        if (lexicon.has(chars.slice(i, end).join(""))) found = end - i;
+      }
+      if (found) {
+        out.push(chars.slice(i, i + found).join(""));
+        i += found;
+      } else i += 1;
+    }
+  }
+  return [...new Set(out)];
+}
+
+/**
+ * How much a term says, from how many records of the release contain it: about 1 for a term in one record of a
+ * hundred, less for a term most records contain ("会被", "取代" in a question), more for a rare one, between 0.25
+ * and 1.5. A term no record contains is 0.
+ */
+function termWeights(words: string[], texts: string[]): number[] {
+  const n = Math.max(1, texts.length);
+  return words.map((word) => {
+    let df = 0;
+    for (const text of texts) if (text.includes(word)) df += 1;
+    return df === 0 ? 0 : Math.min(1.5, Math.max(0.25, Math.log(n / df) / Math.log(100)));
+  });
 }
 
 const STOP = new Set(["a", "an", "and", "the", "of", "to", "in", "on", "for", "is", "are", "be", "by", "with", "or", "at", "as", "it", "its", "do", "does", "will", "what", "how", "which", "who"]);
@@ -228,62 +364,94 @@ export type SearchResult = {
   url: string;
   markdown_url: string;
   sources: string[];
+  /** The language `title` and `snippet` are written in: Chinese only where the record has its own Chinese text. */
+  title_language: Language;
+  /** Why it matched: each field that held query terms, with those terms, strongest field first. */
+  matched: { field: string; terms: string[] }[];
 };
 
 export type RankedSearchResult = { result: SearchResult; score: number };
 
 /**
- * Ranks the release's records by how many query terms they contain, weighted by field, with a bonus for the
- * whole query as typed; at least half the terms must match. Ties go to the newer record. Dates filter on the
- * record's own date (an update's `occurred_at`, a question's latest claim), and an undated record passes no
- * date filter. A query of one or two terms needs all of them: "coding agent" is not every record about agents.
+ * Ranks the release's records by the query terms they contain, each weighted by its field and by how rare it is
+ * in the release, with a bonus for the whole query as typed. A record must hold at least half of the terms, or
+ * half of their weight: "程序员" in "程序员会被取代吗" outweighs "会被" and "代吗", which many questions share. Ties go to the
+ * newer record. Dates filter on the record's own date (an update's `occurred_at`, a question's latest claim, an
+ * observation's announcement), and an undated record passes no date filter. A query of one or two terms needs all
+ * of them: "coding agent" is not every record about agents. A pair of Chinese characters no record contains is
+ * an artefact of cutting the query into pairs ("代吗" in "会被取代吗") and is not required. When the Chinese of
+ * the query names an occupation, market or kind of work, a record must contain one of those names: "程序员会被取代吗"
+ * is about programmers, not every question that asks "会被取代吗".
+ *
+ * Records carry names in both languages where the release has them (the kinds of work an update was linked to,
+ * an observation's occupations, markets and tasks, a question's subject), so a Chinese query finds English
+ * records through them; `matched` says which field it was.
  */
 export function rankedSearch(input: SearchInput): { query: string; total: number; results: RankedSearchResult[]; release: ReturnType<typeof releaseInfo>; content_kinds: typeof CONTENT_KINDS } {
-  const words = terms(input.query);
+  const { docs, texts, lexicon } = corpus();
+  const named = namedTerms(input.query, lexicon).filter((word) => texts.some((text) => text.includes(word)));
+  const all = [...new Set([...terms(input.query), ...named])];
+  const weights = termWeights(all, texts);
+  const words = all.filter((word, i) => weights[i] > 0 || !isCjk(word));
+  const rarity = words.map((word) => weights[all.indexOf(word)]);
   const phrase = lower(input.query).trim();
   const limit = Math.min(MAX_RESULTS, Math.max(1, input.limit ?? DEFAULT_RESULTS));
   const types = new Set<RecordType>(input.types ?? DEFAULT_RECORD_TYPES);
   const language = input.language ?? "en";
-  const need = words.length <= 2 ? words.length : Math.ceil(words.length / 2);
-  const scored: { doc: Doc; score: number }[] = [];
-  for (const doc of words.length === 0 ? [] : docs()) {
+  const total = rarity.reduce((sum, r) => sum + r, 0);
+  const enough = (count: number, held: number) =>
+    count > 0 && (words.length <= 2 ? count === words.length : count >= Math.ceil(words.length / 2) || held >= total / 2);
+  const scored: { doc: Doc; score: number; matched: Map<string, string[]> }[] = [];
+  for (const doc of words.length === 0 ? [] : docs) {
     if (!types.has(doc.type)) continue;
     if (input.from && (!doc.date || doc.date.slice(0, 10) < input.from)) continue;
     if (input.to && (!doc.date || doc.date.slice(0, 10) > input.to)) continue;
-    let matched = 0;
+    let count = 0;
+    let held = 0;
     let score = 0;
-    for (const word of words) {
-      let best = 0;
-      for (const field of doc.fields) if (field.weight > best && field.text.includes(word)) best = field.weight;
-      if (best > 0) {
-        matched += 1;
-        score += best;
-      }
-    }
-    if (matched < need) continue;
+    const matched = new Map<string, string[]>();
+    words.forEach((word, i) => {
+      let best: Field | null = null;
+      for (const field of doc.fields) if (field.weight > (best?.weight ?? 0) && field.text.includes(word)) best = field;
+      if (!best) return;
+      count += 1;
+      held += rarity[i];
+      score += best.weight * rarity[i];
+      matched.set(best.name, [...(matched.get(best.name) ?? []), word]);
+    });
+    if (!enough(count, held)) continue;
+    if (named.length && !named.some((word) => doc.fields.some((field) => field.text.includes(word)))) continue;
     if (phrase.length > 2 && doc.fields.some((field) => field.text.includes(phrase))) score += 5;
-    scored.push({ doc, score: score + matched / Math.max(1, words.length) });
+    scored.push({ doc, score: score + count / Math.max(1, words.length), matched });
   }
   scored.sort((a, b) => b.score - a.score || (b.doc.date ?? "").localeCompare(a.doc.date ?? "") || a.doc.id.localeCompare(b.doc.id));
   return {
     query: input.query,
     total: scored.length,
-    results: scored.slice(0, limit).map(({ doc, score }) => ({
-      score,
-      result: {
-        id: doc.id,
-        type: doc.type,
-        title: doc.title,
-        snippet: doc.snippet,
-        content: doc.content,
-        review: REVIEW,
-        date: doc.date,
-        organization: doc.organization,
-        url: absoluteUrl(language, doc.path),
-        markdown_url: absoluteUrl(language, `${doc.path}/raw.md`),
-        sources: doc.sources,
-      },
-    })),
+    results: scored.slice(0, limit).map(({ doc, score, matched }) => {
+      const zh = language === "zh-CN" ? doc.zh : undefined;
+      const order = new Map(doc.fields.map((f, i) => [f.name, i]));
+      return {
+        score,
+        result: {
+          id: doc.id,
+          type: doc.type,
+          title: zh?.title ?? doc.title,
+          snippet: zh?.snippet ?? doc.snippet,
+          content: doc.content,
+          review: REVIEW,
+          date: doc.date,
+          organization: doc.organization,
+          url: absoluteUrl(language, doc.path),
+          markdown_url: absoluteUrl(language, doc.markdownPath),
+          sources: doc.sources,
+          title_language: zh ? "zh-CN" : "en",
+          matched: [...matched.entries()]
+            .sort((a, b) => (order.get(a[0]) ?? 0) - (order.get(b[0]) ?? 0))
+            .map(([field, found]) => ({ field, terms: found })),
+        },
+      };
+    }),
     release: releaseInfo(),
     content_kinds: CONTENT_KINDS,
   };

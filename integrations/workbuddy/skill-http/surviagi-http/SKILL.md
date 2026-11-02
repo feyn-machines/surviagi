@@ -13,7 +13,7 @@ allowed-tools: Bash
 当用户需要查询 AI 能否独立完成某类工作、某个职业或行业受 AI 影响的证据，或想把问题交给 SurviAGI 研究时，用 Bash 运行 `scripts/surviagi.py`（只用 Python 标准库）：
 
 ```sh
-python3 scripts/surviagi.py search "coding agents" --limit 5 [--types update,evidence,article] [--status preview|approved] [--from 2026-10-01] [--language zh-CN]
+python3 scripts/surviagi.py search "coding agents" --limit 5 [--types update,question,observation,article] [--status preview|approved] [--from 2026-10-01] [--language zh-CN]
 python3 scripts/surviagi.py record <id>
 # 某个职业或赛道的证据统计（与页面数字一致），可传 ID 或中英文名称
 python3 scripts/surviagi.py summary --occupation "会计师与审计师" [--language zh-CN]
