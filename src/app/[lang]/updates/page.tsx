@@ -8,7 +8,6 @@ import {
   evidence,
   events,
   activityById,
-  progress,
   snapshotExists,
 } from "@/lib/snapshot";
 import {
@@ -19,6 +18,7 @@ import {
   dataStyles as d,
   isoDate,
 } from "@/components/data-page";
+import { activityHref } from "@/lib/routes";
 import { UpdatesBrowser, type UpdateRow } from "./updates-browser";
 import s from "./updates.module.css";
 
@@ -79,7 +79,6 @@ const copy = bilingual({
     colUpdate: "Update",
     colFrom: "From",
     colLanded: "Bears on (work / markets)",
-    colTop: "Highest",
     runsEyebrow: "Provenance",
     runsTitle: "The runs that produced these rows",
     runsLead: "Every pass that read the collection, and whether it finished.",
@@ -89,13 +88,12 @@ const copy = bilingual({
     colStarted: "Started",
     noDecided: "This run recorded no decision count.",
     openSource: "opens the original post",
-    readingsOpen: "{n} {n|piece|pieces} of evidence",
-    readingsClose: "Hide evidence",
+    readingsOpen: "{n} {n|kind|kinds} of work",
+    readingsClose: "Hide the work",
     noDate: "No publication time was recorded for this update.",
     noOrg: "No publisher was resolved for this update.",
     noSource: "No source URL was retained for this update.",
-    noLevel: "none",
-    capNote: "capped {cap}",
+    onMarket: "Open on the market page",
     empty0: "No updates are published in this snapshot.",
   },
   "zh-CN": {
@@ -132,7 +130,6 @@ const copy = bilingual({
     colUpdate: "更新",
     colFrom: "来自",
     colLanded: "涉及（工作 / 赛道）",
-    colTop: "最高",
     runsEyebrow: "溯源",
     runsTitle: "产出这些行的运行",
     runsLead: "每一次读过采集的判断轮次，以及它有没有跑完。",
@@ -142,13 +139,12 @@ const copy = bilingual({
     colStarted: "开始",
     noDecided: "这次运行没有记录判定数。",
     openSource: "打开原帖",
-    readingsOpen: "{n} 条证据",
-    readingsClose: "收起证据",
+    readingsOpen: "{n} 项工作",
+    readingsClose: "收起",
     noDate: "这条更新没有记录发布时间。",
     noOrg: "这条更新没有解析出发布方。",
     noSource: "这条更新没有保留源头链接。",
-    noLevel: "无",
-    capNote: "{cap} 封顶",
+    onMarket: "在赛道页打开",
     empty0: "本次快照没有发布任何更新。",
   },
 });
@@ -171,40 +167,18 @@ export default async function UpdatesPage() {
     );
   }
 
-  // The ladder's own words, read from the snapshot. Nothing in src/ restates
-  // them: pnpm ontology:check fails the build if anything does.
-  const words = progress()?.levels ?? {};
-  const caps = progress()?.tier_caps ?? null;
-  const rung = (level: number | null | undefined): string | null => {
-    if (level === null || level === undefined) return null;
-    const step = String(Math.floor(level));
-    const word = words[step]?.[language];
-    return word ? `L${step} · ${word}` : `L${step}`;
-  };
-
   const landed = new Map(chainEvents().map((e) => [e.event_id, e]));
   const readingsByEvent = new Map<string, UpdateRow["readings"]>();
   for (const row of evidence()) {
     const activity = activityById(row.activity_id);
     const list = readingsByEvent.get(row.event_id) ?? [];
-    const tier = row.evidence_tier as keyof NonNullable<typeof caps>;
-    const cap = caps?.[tier];
     list.push({
       activity:
         (language === "zh-CN" ? activity?.label_zh_cn : activity?.label_en) ??
         activity?.label_en ??
         row.activity_id,
       market: (language === "zh-CN" ? activity?.market_zh_cn : activity?.market_en) ?? null,
-      level: rung(row.level),
-      // Only when the tier actually held the reading down: a cap that did not
-      // bite is machinery, and saying so on every row would be noise.
-      cap:
-        cap !== undefined &&
-        row.observed_level !== null &&
-        row.level !== null &&
-        row.observed_level > row.level
-          ? `${row.evidence_tier} → L${cap}`
-          : null,
+      href: activity ? activityHref(language, activity) : null,
     });
     readingsByEvent.set(row.event_id, list);
   }
@@ -226,7 +200,6 @@ export default async function UpdatesPage() {
         url: row.source_urls?.[0] ?? null,
         activities: hit?.activities ?? 0,
         markets: hit?.markets ?? 0,
-        level: rung(hit?.top_level),
         readings: readingsByEvent.get(row.event_id) ?? [],
       };
     });
@@ -286,15 +259,13 @@ export default async function UpdatesPage() {
             colUpdate: c.colUpdate,
             colFrom: c.colFrom,
             colLanded: c.colLanded,
-            colTop: c.colTop,
             openSource: c.openSource,
             readingsOpen: c.readingsOpen,
             readingsClose: c.readingsClose,
             noDate: c.noDate,
             noOrg: c.noOrg,
             noSource: c.noSource,
-            noLevel: c.noLevel,
-            capNote: c.capNote,
+            onMarket: c.onMarket,
           }}
         />
       )}
