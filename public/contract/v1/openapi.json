@@ -2,9 +2,9 @@
   "openapi": "3.1.0",
   "info": {
     "title": "SurviAGI agent API",
-    "version": "1.5.0",
+    "version": "1.6.0",
     "description": "Read-only access to published SurviAGI records and key-gated submissions. Every record is machine-proposed unless its review state says otherwise; cite the source URLs, not our summaries. Entity field names, types and grades are in the JSON Schemas listed under `x-entities`.",
-    "x-ontology-version": "2.5.0"
+    "x-ontology-version": "2.6.0"
   },
   "servers": [
     {
@@ -300,7 +300,7 @@
               "type": "string",
               "maxLength": 200
             },
-            "description": "Occupation id, O*NET code or name (English or Chinese)."
+            "description": "Occupation id, O*NET code, name (English or Chinese), or another name it is known by (1.6.0: \"software engineer\", \"程序员\"); a name of several occupations answers 404 with candidates."
           },
           {
             "name": "market",
@@ -554,7 +554,7 @@
               "type": "string",
               "maxLength": 200
             },
-            "description": "Only what is new for this occupation: id, O*NET code or name."
+            "description": "Only what is new for this occupation: id, O*NET code, name, or another name it is known by."
           },
           {
             "name": "market",
@@ -657,7 +657,7 @@
               "type": "string",
               "maxLength": 200
             },
-            "description": "Occupation id, O*NET code or name. Give this or market."
+            "description": "Occupation id, O*NET code, name, or another name it is known by. Give this or market."
           },
           {
             "name": "market",
@@ -917,6 +917,48 @@
               "$ref": "#/components/schemas/SearchResult"
             }
           },
+          "aliases": {
+            "type": "array",
+            "description": "Other names of occupations found in the query (1.6.0): each stands for the occupations listed, and a record naming any of them, in either language, matched it. The occupations are named by their own names; a name of more than three occupations stands for none.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "term": {
+                  "type": "string"
+                },
+                "occupations": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "label_en": {
+                        "type": "string"
+                      },
+                      "label_zh_cn": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "description": "Chinese name."
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "label_en",
+                      "label_zh_cn"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "term",
+                "occupations"
+              ]
+            }
+          },
           "release": {
             "type": "object",
             "description": "The loaded data release.",
@@ -975,6 +1017,7 @@
           "query",
           "total",
           "results",
+          "aliases",
           "release",
           "versions",
           "content_kinds",

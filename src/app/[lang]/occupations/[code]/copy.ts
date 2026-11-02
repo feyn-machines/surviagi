@@ -25,6 +25,7 @@ export const copy = bilingual({
     updatesUnit: "{n|update|updates}",
     tasksTag: "{n} tasks",
     unread: "{n} more {n|kind|kinds} of work reaching this occupation {n|has|have} no evidence yet.",
+    alsoCalled: "Also called: {names}. Job titles workers reported to O*NET; they help find this occupation and do not define it.",
   },
   "zh-CN": {
     metaDescription: "{name}：{tasks} 项任务，其中 {reached} 项已被 AI 更新触及。",
@@ -49,5 +50,6 @@ export const copy = bilingual({
     updatesUnit: "条更新",
     tasksTag: "{n} 项任务",
     unread: "另有 {n} 项与这个职业相关的工作还没有证据。",
+    alsoCalled: "也叫：{names}。这些是中文常用叫法和从业者向 O*NET 报告的职称（AI 翻译），只用于查找，不定义这个职业。",
   },
 });

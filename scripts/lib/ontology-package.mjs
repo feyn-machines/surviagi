@@ -7,7 +7,7 @@
 import { createHash } from "node:crypto";
 import { lstat, mkdir, mkdtemp, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
-import { dataFormat, exportCounts, toTurtle } from "./ontology-export.mjs";
+import { dataFormat, exportCounts, sealedFile, sealedProperties, toTurtle } from "./ontology-export.mjs";
 
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const fail = (message) => { throw new Error(message); };
@@ -31,7 +31,7 @@ const rowsOf = (bytes) => {
 };
 
 /** The sealed rows against the schema: every enumerated field is a vocabulary term, every relation joins the classes it declares. */
-export function conformance(schema, { concepts, relations }) {
+export function conformance(schema, { concepts, relations, sealed = {} }) {
   const terms = (name) => new Set(Object.keys(schema.vocabularies[name].terms));
   const governed = Object.entries(schema.properties)
     .filter(([, body]) => body.domain === "Concept" && body.range.startsWith("vocabulary:"))
@@ -55,7 +55,33 @@ export function conformance(schema, { concepts, relations }) {
     if (seen.has(row.id)) fail(`duplicate relation id: ${row.id}`);
     seen.add(row.id);
   }
-  return { concepts: concepts.length, relations: relations.length };
+  const counts = { concepts: concepts.length, relations: relations.length };
+  // A property sealed on its own: each row belongs to a concept of the property's class and fits its fields.
+  for (const [, body] of sealedProperties(schema)) {
+    const name = sealedFile(body).slice(0, -6);
+    const rows = sealed[name];
+    if (!rows) continue;
+    const required = Object.keys(body.fields).filter((field) => !(body.optional_fields ?? []).includes(field));
+    const values = new Set();
+    for (const row of rows) {
+      const where = `${name} row ${row.concept_id}/${row.label}`;
+      if (kindOf.get(row.concept_id) !== classKind[body.domain]) fail(`${where} is not on a ${body.domain}`);
+      for (const field of Object.keys(row)) if (field !== "concept_id" && !(field in body.fields)) fail(`${where} has unknown field ${field}`);
+      for (const field of required) if (!(field in row)) fail(`${where} is missing ${field}`);
+      for (const [field, range] of Object.entries(body.fields)) {
+        if (!(field in row)) continue;
+        const value = row[field];
+        if (typeof value !== "string" || !value.trim()) fail(`${where} has an empty ${field}`);
+        if (field === "language" && !["en", "zh-CN"].includes(value)) fail(`${where} has language ${value}`);
+        if (range.startsWith("vocabulary:") && !terms(range.slice(11)).has(value)) fail(`${where} has ${field}=${value}, outside its vocabulary`);
+      }
+      const identity = JSON.stringify([row.concept_id, row.language, row.label]);
+      if (values.has(identity)) fail(`${where} is listed twice`);
+      values.add(identity);
+    }
+    counts[name] = rows.length;
+  }
+  return counts;
 }
 
 /**
@@ -81,6 +107,19 @@ export async function sealPackage({ schema, previousDir, dataDir, outputDir, att
       if (digest(bytes) !== file.sha256) fail(`previous release is damaged: ${file.path}`);
       await add(file.path, bytes, { rows: file.rows, inherited_from: previous.manifest.version });
       counts[file.path.slice(0, -6)] = file.rows;
+    }
+    // A property sealed in a file of its own enters with the release that first declares it, and is inherited after that.
+    for (const [, body] of sealedProperties(schema)) {
+      const name = sealedFile(body);
+      const source = join(dataDir, name);
+      const carried = files.find((f) => f.path === name);
+      if (carried) {
+        if (await exists(source) && digest(await readFile(source)) !== carried.sha256) fail(`${name} differs from the file it inherits; sealed values do not change in place`);
+        continue;
+      }
+      const bytes = await readFile(source);
+      await add(name, bytes, { rows: rowsOf(bytes).length });
+      counts[name.slice(0, -6)] = rowsOf(bytes).length;
     }
     const previousFormat = JSON.parse(await readFile(join(previousDir, previous.manifest.files.some((f) => f.path === "data-format.json") ? "data-format.json" : "schema.json")));
     await add("schema.json", json(schema));
@@ -134,8 +173,11 @@ export async function verifyPackage(dir, { previousDir } = {}) {
   }
   // The derived files are derived: regenerating them from the sealed schema gives the same bytes.
   if (content["ontology.ttl"].toString("utf8") !== toTurtle(schema)) fail("ontology.ttl is not the export of the sealed schema");
+  for (const [key, body] of sealedProperties(schema)) if (!content[sealedFile(body)]) fail(`ontology release is missing ${sealedFile(body)} for ${key}`);
   const counts = conformance(schema, {
     concepts: rowsOf(content["concepts.jsonl"]), relations: rowsOf(content["relations.jsonl"]),
+    sealed: Object.fromEntries(sealedProperties(schema).map(([, body]) => sealedFile(body))
+      .filter((name) => content[name]).map((name) => [name.slice(0, -6), rowsOf(content[name])])),
   });
   for (const [name, n] of Object.entries(counts)) {
     if (manifest.counts[name] !== n) fail(`manifest count mismatch: ${name}`);

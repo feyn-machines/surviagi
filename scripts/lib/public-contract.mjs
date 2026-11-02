@@ -13,7 +13,7 @@
 import { schema, termIds, validateSchema } from "./ontology-schema.mjs";
 
 /** The contract's own version. Moves independently of the ontology, the method and the data. */
-export const CONTRACT_VERSION = "1.5.0";
+export const CONTRACT_VERSION = "1.6.0";
 export const CONTRACT_PATH = "contract/v1";
 
 /**
@@ -84,6 +84,9 @@ export const ENTITIES = [
       tasks: view("integer", "excerpt", "Tasks of the occupation in the catalog (O*NET).", "目录（O*NET）中该职业的任务数。"),
       touched_tasks: view("integer", "machine", "Tasks covered by at least one kind of work that a published update was linked to. Says what was collected, not what AI can do.", "至少被一项有已发布更新关联的工作覆盖的任务数。说的是采集到了什么，不是 AI 能做什么。"),
       markets: view("array", "machine", "Markets the occupation serves: market id, confidence and status of the machine-proposed edge.", "该职业服务的赛道：赛道编号及机器提出的边的置信度与状态。"),
+      // 1.6.0 (Issue #30): Occupation.alt_label, sealed in the ontology from 2.6.0.
+      alt_labels_en: view("array", "excerpt", "Other English names to find the occupation by: job titles its workers reported to O*NET, as written there. A title can be narrower than the occupation. Null when the release carries none.", "可用来找到该职业的其他英文名：从业者向 O*NET 报告的职称，原样保留。职称可能比职业窄。发布未带别名时为 null。", { nullable: true, itemType: "string", ontology: "Occupation.alt_label" }),
+      alt_labels_zh_cn: view("array", "machine", "Other Chinese names to find the occupation by: AI translations of the reported titles and up to three model-proposed common names. One name can belong to several occupations; they find an occupation, they do not define it. Null when the release carries none.", "可用来找到该职业的其他中文名：报告职称的 AI 翻译，及模型提出的至多三个常用叫法。同一个名字可能属于几个职业；只用于查找，不定义职业。发布未带别名时为 null。", { nullable: true, itemType: "string", ontology: "Occupation.alt_label" }),
     },
   },
   {
@@ -294,6 +297,7 @@ function viewSchema(name, v) {
     "x-description-zh-CN": v.definition["zh-CN"],
     "x-grade": v.grade,
     "x-shape": "view",
+    ...(v.ontology ? { "x-ontology-property": v.ontology } : {}),
   };
 }
 
@@ -420,7 +424,7 @@ export function openApi(entityNames) {
           summary: "List observations, filtered, with counts over everything that matches.",
           description: "Occupation and market select exactly the observations their pages list, so the counts equal the page's. Pages through the rows with `cursor`; a cursor of an earlier data release is refused.",
           parameters: [
-            { name: "occupation", in: "query", schema: { type: "string", maxLength: 200 }, description: "Occupation id, O*NET code or name (English or Chinese)." },
+            { name: "occupation", in: "query", schema: { type: "string", maxLength: 200 }, description: "Occupation id, O*NET code, name (English or Chinese), or another name it is known by (1.6.0: \"software engineer\", \"程序员\"); a name of several occupations answers 404 with candidates." },
             { name: "market", in: "query", schema: { type: "string", maxLength: 200 }, description: "Market id, slug or name." },
             { name: "task", in: "query", schema: { type: "string", maxLength: 120 }, description: "Task id, e.g. oaw:task:21593." },
             { name: "organization", in: "query", schema: { type: "string", maxLength: 200 }, description: "Organization id, actor key or exact actor name." },
@@ -445,7 +449,7 @@ export function openApi(entityNames) {
           description: "Everything listed was recorded or published after `since`, so none of it can be in an earlier release. Updates carry no recorded time: those listed happened after it, a lower bound. With occupation or market, updates and articles are null.",
           parameters: [
             { name: "since", in: "query", required: true, schema: { type: "string", minLength: 1, maxLength: 64 }, description: "A data release id (`versions.data` of an earlier answer), a date YYYY-MM-DD (from its start, UTC) or a time with offset." },
-            { name: "occupation", in: "query", schema: { type: "string", maxLength: 200 }, description: "Only what is new for this occupation: id, O*NET code or name." },
+            { name: "occupation", in: "query", schema: { type: "string", maxLength: 200 }, description: "Only what is new for this occupation: id, O*NET code, name, or another name it is known by." },
             { name: "market", in: "query", schema: { type: "string", maxLength: 200 }, description: "Only what is new for this market: id, slug or name." },
             { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 50, default: 10 }, description: "Items per list; totals count all." },
             LANGUAGE,
@@ -458,7 +462,7 @@ export function openApi(entityNames) {
           operationId: "occupationSummary",
           summary: "Evidence statistics of one occupation or market, as its page states them.",
           parameters: [
-            { name: "occupation", in: "query", schema: { type: "string", maxLength: 200 }, description: "Occupation id, O*NET code or name. Give this or market." },
+            { name: "occupation", in: "query", schema: { type: "string", maxLength: 200 }, description: "Occupation id, O*NET code, name, or another name it is known by. Give this or market." },
             { name: "market", in: "query", schema: { type: "string", maxLength: 200 }, description: "Market id, slug or name." },
             LANGUAGE,
           ],
@@ -504,13 +508,18 @@ export function openApi(entityNames) {
             query: S("string"),
             total: S("integer"),
             results: { type: "array", items: ref("SearchResult") },
+            aliases: {
+              type: "array",
+              description: "Other names of occupations found in the query (1.6.0): each stands for the occupations listed, and a record naming any of them, in either language, matched it. The occupations are named by their own names; a name of more than three occupations stands for none.",
+              items: { type: "object", properties: { term: S("string"), occupations: { type: "array", items: { type: "object", properties: { id: S("string"), label_en: S("string"), label_zh_cn: NULLABLE_DESC("string", "Chinese name.") }, required: ["id", "label_en", "label_zh_cn"] } } }, required: ["term", "occupations"] },
+            },
             release: { type: "object", description: "The loaded data release.", properties: { id: S("string"), generated_at: NULLABLE_DESC("string", "When the snapshot was built."), method: NULLABLE_DESC("string", "Method version.") } },
             versions: ref("Versions"),
             content_kinds: { type: "object", additionalProperties: S("string") },
             editorial_articles: { type: ["object", "null"], description: "Article store availability and hit count; null when articles were not requested.", properties: { available: { type: ["boolean", "null"] }, count: S("integer") } },
             note: S("string"),
           },
-          required: ["query", "total", "results", "release", "versions", "content_kinds", "editorial_articles", "note"],
+          required: ["query", "total", "results", "aliases", "release", "versions", "content_kinds", "editorial_articles", "note"],
         },
         ObservationCounts: {
           type: ["object", "null"],

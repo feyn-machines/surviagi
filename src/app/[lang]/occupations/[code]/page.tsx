@@ -16,6 +16,7 @@ import { WorkGrid, gridCounts } from "@/components/work-grid";
 import { Bar, Block, Stat, blueprint as bp } from "@/components/blueprint";
 import {
   activitiesOfMarket,
+  alsoCalled,
   linksOfWork,
   groupSlug,
   manifest,
@@ -213,6 +214,9 @@ export default async function OccupationPage({ params }: Props) {
       <p className={s.pageLead}>{c.lead}</p>
       {/* The page's answer in one dated sentence with its numbers, the line an engine can quote. */}
       <p className={s.answer}>{sentence(id, name, language)}</p>
+      {alsoCalled(entry, language).length > 0 && (
+        <p className={s.alsoCalled}>{fill(c.alsoCalled, { names: alsoCalled(entry, language).join(language === "zh-CN" ? "、" : ", ") })}</p>
+      )}
 
       <div className={s.stats}>
         <Stat

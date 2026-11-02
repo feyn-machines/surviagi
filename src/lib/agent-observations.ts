@@ -51,11 +51,12 @@ export const OBSERVATION_CONTENT = {
 
 const NO_ORIGINAL = "The full text of the sources is not published here; open the source URLs.";
 
-type Concept = { kind: "occupation" | "market"; id: string; slug: string; label_en: string; label_zh_cn: string | null };
+type Concept = { kind: "occupation" | "market"; id: string; slug: string; label_en: string; label_zh_cn: string | null; alt_labels?: string[] };
 
 function occupationConcepts(): Concept[] {
   return occupations().map((o) => ({
     kind: "occupation", id: o.occupation_id, slug: occupationSlug(o.occupation_id), label_en: o.label_en, label_zh_cn: o.label_zh_cn,
+    alt_labels: [...(o.alt_labels_en ?? []), ...(o.alt_labels_zh_cn ?? [])],
   }));
 }
 
@@ -69,7 +70,8 @@ export type Resolved = { ok: true; concept: Concept } | { ok: false; candidates:
 
 /**
  * An occupation or market named by its id, the slug in its page address, or its name. A name matches whole
- * first, then as part of a name; more than one partial match is returned as candidates, never guessed.
+ * first, then an occupation's other name whole ("码农", "software engineer"; one occupation is taken, several are
+ * candidates), then as part of a name; more than one partial match is returned as candidates, never guessed.
  */
 export function resolveConcept(kind: "occupation" | "market", given: string): Resolved {
   const all = kind === "occupation" ? occupationConcepts() : marketConcepts();
@@ -77,6 +79,9 @@ export function resolveConcept(kind: "occupation" | "market", given: string): Re
   const exact = all.find((c) => fold(c.id) === key || fold(c.slug) === key) ??
     all.find((c) => fold(c.label_en) === key || fold(c.label_zh_cn) === key);
   if (exact) return { ok: true, concept: exact };
+  const named = all.filter((c) => c.alt_labels?.some((label) => fold(label) === key));
+  if (named.length === 1) return { ok: true, concept: named[0] };
+  if (named.length > 1) return { ok: false, candidates: named.slice(0, 10) };
   const partial = key.length >= 2 ? all.filter((c) => fold(c.label_en).includes(key) || fold(c.label_zh_cn).includes(key)) : [];
   if (partial.length === 1) return { ok: true, concept: partial[0] };
   return { ok: false, candidates: partial.slice(0, 10) };

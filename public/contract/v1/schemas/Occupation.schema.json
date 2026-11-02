@@ -98,6 +98,34 @@
       "x-description-zh-CN": "该职业服务的赛道：赛道编号及机器提出的边的置信度与状态。",
       "x-grade": "machine",
       "x-shape": "view"
+    },
+    "alt_labels_en": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "description": "Other English names to find the occupation by: job titles its workers reported to O*NET, as written there. A title can be narrower than the occupation. Null when the release carries none.",
+      "x-description-zh-CN": "可用来找到该职业的其他英文名：从业者向 O*NET 报告的职称，原样保留。职称可能比职业窄。发布未带别名时为 null。",
+      "x-grade": "excerpt",
+      "x-shape": "view",
+      "x-ontology-property": "Occupation.alt_label"
+    },
+    "alt_labels_zh_cn": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "description": "Other Chinese names to find the occupation by: AI translations of the reported titles and up to three model-proposed common names. One name can belong to several occupations; they find an occupation, they do not define it. Null when the release carries none.",
+      "x-description-zh-CN": "可用来找到该职业的其他中文名：报告职称的 AI 翻译，及模型提出的至多三个常用叫法。同一个名字可能属于几个职业；只用于查找，不定义职业。发布未带别名时为 null。",
+      "x-grade": "machine",
+      "x-shape": "view",
+      "x-ontology-property": "Occupation.alt_label"
     }
   },
   "required": [
@@ -110,7 +138,9 @@
     "group_zh_cn",
     "tasks",
     "touched_tasks",
-    "markets"
+    "markets",
+    "alt_labels_en",
+    "alt_labels_zh_cn"
   ],
   "additionalProperties": false,
   "x-identifier": "id",

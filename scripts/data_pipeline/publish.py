@@ -11,7 +11,9 @@ is never forced to blur them.
 """
 from __future__ import annotations
 
+import hashlib
 import json
+import re
 from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
@@ -24,6 +26,7 @@ from .ontology_schema import EVENT_KIND_VOCABULARIES
 
 ROOT = Path(__file__).resolve().parents[2]
 PUBLISHED = ROOT / "datasets/published"
+ONTOLOGY_RELEASES = ROOT / "datasets/ontology/releases"
 SNAPSHOT_VERSION = "snapshot-1"
 
 
@@ -353,6 +356,40 @@ def confirmation(row: dict) -> dict:
         "observed_level": row["observed_level"],
         "level": row["level"],
     }
+
+
+def occupation_alt_labels(releases: Path = ONTOLOGY_RELEASES) -> tuple[dict, dict | None]:
+    """Other names of each occupation (Occupation.alt_label, ontology 2.6.0, Issue #30).
+
+    They are sealed in the ontology release, not imported into the database: the
+    database holds the concepts of the version it routes against, and a name to
+    find an occupation by takes no part in any calculation. Read from the newest
+    sealed release that carries the file, checked against its manifest hash.
+    Returns ({concept_id: {"en": [...], "zh_cn": [...]}}, provenance), or ({}, None)
+    when no release has them (rule:alternative-names-find-not-define).
+    """
+    def version(path):
+        return tuple(int(x) for x in path.name[1:].split("."))
+    found = sorted((p for p in releases.glob("v*") if re.fullmatch(r"v\d+\.\d+\.\d+", p.name)), key=version, reverse=True)
+    for release in found:
+        raw = (release / "manifest.json").read_bytes()
+        sha = hashlib.sha256(raw).hexdigest()
+        if (release / "manifest.sha256").read_text(encoding="utf-8").split()[0] != sha:
+            raise ValueError(f"ontology release {release.name} does not match its manifest hash")
+        listed = next((f for f in json.loads(raw)["files"] if f["path"] == "occupation_alt_labels.jsonl"), None)
+        if not listed:
+            continue
+        data = (release / listed["path"]).read_bytes()
+        if hashlib.sha256(data).hexdigest() != listed["sha256"]:
+            raise ValueError(f"{listed['path']} of {release.name} does not match its manifest")
+        names: dict[str, dict] = {}
+        rows = [json.loads(line) for line in data.decode("utf-8").splitlines()]
+        # The names people say come before translated titles: a page shows the first few.
+        for row in sorted(rows, key=lambda r: r["basis"] != "common_name"):
+            key = "en" if row["language"] == "en" else "zh_cn"
+            names.setdefault(row["concept_id"], {"en": [], "zh_cn": []})[key].append(row["label"])
+        return names, {"ontology_version": release.name[1:], "manifest_sha256": sha, "rows": listed["rows"]}
+    return {}, None
 
 
 def build(conn, ontology_version: str | None = None) -> dict:
@@ -1022,15 +1059,19 @@ def build(conn, ontology_version: str | None = None) -> dict:
     for edge in markets:
         served.setdefault(edge["occupation_id"], []).append(
             {"market_id": edge["market_id"], "confidence": edge["confidence"], "status": edge["status"]})
+    alt_labels, alt_labels_from = occupation_alt_labels()
     occupations = []
     for occupation_id in sorted(occupation_labels):
         group_id = occupation_group.get(occupation_id)
         group = group_labels.get(group_id, {}) if group_id else {}
         own = tasks_of.get(occupation_id, set())
+        names = alt_labels.get(occupation_id, {"en": [], "zh_cn": []}) if alt_labels_from else {"en": None, "zh_cn": None}
         occupations.append({
             "id": occupation_id, "kind": "occupation",
             "label_en": occupation_labels[occupation_id]["label_en"],
             "label_zh_cn": occupation_labels[occupation_id]["label_zh_cn"],
+            # Names to find it by; null when the release carries none (not "no other names").
+            "alt_labels_en": names["en"], "alt_labels_zh_cn": names["zh_cn"],
             "group_id": group_id, "group_en": group.get("label_en"), "group_zh_cn": group.get("label_zh_cn"),
             "tasks": len(own), "touched_tasks": len(own & touched_tasks),
             "markets": served.get(occupation_id, []),
@@ -1073,6 +1114,8 @@ def build(conn, ontology_version: str | None = None) -> dict:
         "schema_version": ontology_schema.SCHEMA_VERSION,
         "contract_version": contract_version(),
         "method_version": METHOD_VERSION,
+        # Which sealed release the occupations' other names come from (Issue #30).
+        "alt_labels_from": alt_labels_from,
         # chain is four lists in one file, so counting it as "1" would publish a
         # manifest that cannot be checked against the file it describes.
         "counts": {
