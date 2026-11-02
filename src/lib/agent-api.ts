@@ -25,6 +25,7 @@ import {
   rankedSearch,
   record,
   RECORD_TYPES,
+  DEFAULT_RECORD_TYPES,
   type RecordType,
   versionsInfo,
 } from "./agent-search";
@@ -139,7 +140,7 @@ export async function runSearch(args: Args): Promise<Outcome> {
     }
     status = args.status as "approved" | "preview";
   }
-  const selectedTypes = types ?? [...RECORD_TYPES];
+  const selectedTypes = types ?? [...DEFAULT_RECORD_TYPES];
   const includeArticles = selectedTypes.includes("article");
   const found = rankedSearch({
     query: query.value as string,
@@ -402,17 +403,17 @@ export const READ_TOOLS = [
     name: "search",
     title: "Search SurviAGI",
     description:
-      "Search SurviAGI's published records of AI progress: updates, questions, evidence readings, and public bilingual editorial articles. " +
+      "Search SurviAGI's published records of AI progress: updates, questions and public bilingual editorial articles (deprecated: evidence readings, only when asked for with types). " +
       "Use types to select article; articles can be filtered by status approved or preview. Results include exact revision IDs, sources, " +
       "evidence cutoff and the true publication status. A preview is public but not approved. Search returns only public article pointers; " +
-      "private drafts and reviewer identities or notes are never exposed. Summaries and levels are machine-proposed and unreviewed; quote sources, cite the url. " +
+      "private drafts and reviewer identities or notes are never exposed. Summaries are machine-proposed and unreviewed; quote sources, cite the url. " +
       "Read one record in full with get_record. No sign-in or key needed.",
     inputSchema: {
       type: "object",
       properties: {
         query: { type: "string", minLength: 1, maxLength: MAX_QUERY, description: "What to look for, in English or Chinese: a company, model, kind of work, job or question." },
         limit: { type: "integer", minimum: 1, maximum: MAX_RESULTS, default: DEFAULT_RESULTS, description: "How many records to return." },
-        types: { type: "array", items: { type: "string", enum: [...RECORD_TYPES] }, description: "Only these kinds of record. Default all, including public articles." },
+        types: { type: "array", items: { type: "string", enum: [...RECORD_TYPES] }, description: "Only these kinds of record. Default: update, question and article. `evidence` (levels from the retired L0–L5 scale) is deprecated and returned only when named here." },
         status: { type: "string", enum: [...EDITORIAL_STATUSES], description: "For articles: approved or public preview. Omit to include both; ignored for other record types." },
         from: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "Only records dated on or after this day (YYYY-MM-DD)." },
         to: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "Only records dated on or before this day (YYYY-MM-DD)." },
@@ -430,7 +431,7 @@ export const READ_TOOLS = [
       "Read one published record by the id search returned: a public article revision returns its full Markdown, bilingual link, sources, evidence cutoff, exact version and real approval scope/status; " +
       "an update with its source posts and every reading of it; " +
       "a question with its answer options, the posts that argued them (with short quotes of the posts' own words) and the " +
-      "updates that weigh on them; or one evidence reading with its level, tier, rationale and sources. Each text says whether " +
+      "updates that weigh on them; or one evidence reading (deprecated: its level is from the retired L0–L5 scale) with rationale and sources. Each text says whether " +
       "it is our summary or the source's words. The full text of source posts is not published: open the source URLs. No key needed.",
     inputSchema: {
       type: "object",

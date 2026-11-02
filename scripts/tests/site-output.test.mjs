@@ -811,23 +811,16 @@ test("llms.txt is generated from the site, names real pages, and overstates noth
   assert.match(text, /https:\/\/discord\.gg\/ArVHw2K9X/);
   assert.match(text, /https:\/\/github\.com\/feyn-machines\/surviagi/);
   if (HAS_SNAPSHOT) {
-    // One dated sentence an engine can quote, with the numbers the home page shows, then the work furthest along.
+    // One dated sentence an engine can quote, with the numbers the home page shows. The level scale is retired (#35).
     const manifest = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "manifest.json"), "utf8"));
-    const said = text.match(/^As of (\d{4}-\d{2}-\d{2}), AI updates have given a level to (\d+) of the (\d+) kinds of work .*? (\d+) updates from (\d+) AI companies/m);
+    const said = text.match(/^As of (\d{4}-\d{2}-\d{2}), (\d+) updates from (\d+) AI companies bear on the (\d+) kinds of work /m);
     assert.ok(said, "llms.txt has no dated answer sentence");
     assert.equal(said[1], manifest.generated_at.slice(0, 10));
     const home = html("en", "").replace(/<script[\s\S]*?<\/script>/g, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
-    for (const [n, label] of [[said[2], "Kinds of work reached"], [said[5], "AI companies tracked"]]) {
-      assert.ok(home.includes(`${n} ${label}`), `llms.txt says ${n} where the home page does not say "${n} ${label}"`);
-    }
-    assert.match(text, /^### At L\d\n\n- \[[^\]]+\]\(https:\/\/surviagi\.com\/work\//m);
-    // Each level says what it means and what evidence it needs, in the home page's words.
-    const homeHtml = html("en", "");
-    for (const line of text.match(/^- L[0-5] .+$/gm) ?? []) {
-      const roles = line.replace(/^- L\d [^:]+: /, "").replace(/ Evidence required: .*$/, "");
-      assert.ok(homeHtml.includes(roles), `llms.txt says "${roles}", the home page does not`);
-    }
-    assert.equal((text.match(/^- L[0-5] .+$/gm) ?? []).length, 6, "llms.txt does not define all six levels");
+    assert.ok(home.includes(`${said[3]} AI companies tracked`), `llms.txt says ${said[3]} where the home page does not say "${said[3]} AI companies tracked"`);
+    assert.doesNotMatch(text, /^## Levels/m, "llms.txt still defines the retired levels");
+    assert.doesNotMatch(text, /^- L[0-5] /m);
+    assert.doesNotMatch(text, /\bL[0-5]\b(?!–L5)/, "llms.txt presents a level as a conclusion");
   }
   for (const [, url] of text.matchAll(/\]\((https:\/\/surviagi\.com[^)]*)\)/g)) {
     const path = url.slice(SITE.length).replace(/\/$/, "");
@@ -1023,7 +1016,8 @@ test("MCP: search answers with structured, cited records of the loaded release; 
   assert.equal(found.release.generated_at, manifest.generated_at);
   const ids = new Set([...chain.events.map((e) => e.event_id), ...topics.map((t) => t.topic_id)]);
   for (const r of found.results) {
-    assert.ok(["update", "question", "evidence"].includes(r.type));
+    // Evidence readings carry the retired level scale: they are returned only when asked for by name (#35).
+    assert.ok(["update", "question"].includes(r.type), `${r.type} is not a default search type`);
     assert.equal(r.review, "machine_proposed_unreviewed");
     assert.ok(Object.keys(found.content_kinds).includes(r.content));
     assert.ok(r.url.startsWith("https://surviagi.com/"));
@@ -1039,6 +1033,7 @@ test("MCP: search answers with structured, cited records of the loaded release; 
     assert.equal(read.isError, undefined, id);
     const record = read.structuredContent;
     assert.equal(record.id, id);
+    if (record.type === "evidence") assert.match(record.deprecated.reason, /retired/, "an evidence reading says it is deprecated");
     assert.equal(record.original_text.available, false);
     assert.equal(record.release.generated_at, manifest.generated_at);
     const page = await fetch(`${site.base}${record.url.slice("https://surviagi.com".length)}`);
