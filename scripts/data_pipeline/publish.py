@@ -18,6 +18,7 @@ from pathlib import Path
 
 from . import attention, checkpoint, ontology_schema
 from .activity_state import ACTIVITY_LEVEL_SQL, IS_TASK, readings_sql
+from .observation_extraction import distinct_facts
 from .pipeline import digest
 from .ontology_schema import EVENT_KIND_VOCABULARIES
 
@@ -309,6 +310,8 @@ def observations(conn, ontology_version: str) -> list[dict]:
             SELECT observation_id, fact_id, value, unit, what, baseline, method_note, quote
               FROM public.observation_facts ORDER BY observation_id, fact_id"""):
         facts_of.setdefault(r.pop("observation_id"), []).append(r)
+    # Rows stored before facts were compared by form can hold one number twice.
+    facts_of = {oid: distinct_facts(facts) for oid, facts in facts_of.items()}
 
     out = _clean(_rows(conn, """
         SELECT o.observation_id, o.actor_key, o.actor_org_id, o.actor_person_id, o.actor_name, o.actor_role,
