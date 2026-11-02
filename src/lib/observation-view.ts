@@ -2,6 +2,7 @@ import { termDefinition, termNameOrRaw } from "@/components/ontology-labels";
 import { bilingual, type Language } from "@/lib/i18n";
 import { colon } from "@/lib/markdown-copy";
 import { plural } from "@/lib/plural";
+import { SITE_URL, absoluteUrl, datasetLd, faqLd } from "@/lib/seo";
 import {
   EVIDENCE_ORDER,
   byStrength,
@@ -376,4 +377,99 @@ export function ledgerMarkdown(view: Ledger, language: Language): string[] {
   if (view.unlisted > 0) body.push("", fill(c.more, { n: view.unlisted }));
   body.push("");
   return body;
+}
+
+/**
+ * The question a market or an occupation page answers, as its title (Issue
+ * #32): the words a person searches with, the subject's name inside them.
+ */
+export const questionCopy = bilingual({
+  en: {
+    market: "Will AI change {name}? The evidence so far",
+    occupation: "Will AI replace {name}? The evidence so far",
+    howCounted: "What does each count rest on?",
+  },
+  "zh-CN": {
+    market: "AI 会改变{name}这门生意吗？现在的证据",
+    occupation: "AI 会取代{name}吗？现在的证据",
+    howCounted: "每一类计数依据的是什么？",
+  },
+});
+
+/**
+ * "Will AI replace credit analysts?": an English name set mid-sentence drops
+ * the capitals of its ordinary words and keeps acronyms and languages.
+ */
+function inSentence(name: string): string {
+  return name.replace(/\b([A-Z])([a-z]+)\b/g, (word, first: string, rest: string) =>
+    /^(English|Spanish|French|German|Chinese|American)$/.test(word) ? word : first.toLowerCase() + rest,
+  );
+}
+
+export function pageQuestion(kind: "market" | "occupation", name: string, language: Language): string {
+  return fill(questionCopy[language][kind], { name: language === "en" ? inSentence(name) : name });
+}
+
+/**
+ * The questions a market or an occupation page answers and the answers it
+ * shows, word for word, for its FAQ structured data: the page question with
+ * the ledger's sentence and the lines under it, then what each count rests on.
+ * `sentence` is the page's own dated line, used when no observation is mapped.
+ */
+export function evidenceFaq(
+  view: Ledger,
+  question: string,
+  sentence: string,
+  language: Language,
+): { question: string; answer: string }[] {
+  const c = ledgerCopy[language];
+  const join = (parts: string[]) => parts.join(language === "zh-CN" ? "" : " ");
+  if (view.state === "unpublished") return [{ question, answer: join([sentence, c.notPublished]) }];
+  if (view.state === "none") return [{ question, answer: join([sentence, c.none, c.noneWhy]) }];
+  const sep = colon(language);
+  const stop = language === "zh-CN" ? "。" : ".";
+  const ended = (text: string) => (/[.。]$/.test(text) ? text : `${text}${stop}`);
+  return [
+    { question, answer: join([view.answer, ...view.notes]) },
+    {
+      question: questionCopy[language].howCounted,
+      answer: join([
+        // The six counts side by side with their definitions, as the page shows them.
+        ...EVIDENCE_ORDER.map((t) => {
+          const meaning = typeMeaning(t, language);
+          const count = ended(`${typeName(t, language)}${sep}${view.stats.byType[t]}`);
+          return meaning ? `${count}${language === "zh-CN" ? "" : " "}${ended(meaning)}` : count;
+        }),
+        c.machine,
+      ]),
+    },
+  ];
+}
+
+/**
+ * The structured data of a market or an occupation page: a Dataset named by
+ * the page's question, with its Markdown copy and the Agent interface's JSON
+ * for the same subject as downloads, and the FAQ the page answers.
+ */
+export function evidenceLd(
+  language: Language,
+  page: { kind: "market" | "occupation"; name: string; slug: string; path: string; sentence: string; rows: ObservationRow[] },
+): object[] {
+  const question = pageQuestion(page.kind, page.name, language);
+  const faq = evidenceFaq(ledger(page.rows, page.name, language), question, page.sentence, language);
+  const api = (route: string) => `${SITE_URL}/api/agent/${route}?${page.kind}=${encodeURIComponent(page.slug)}&language=${language}`;
+  return [
+    datasetLd(language, {
+      name: question,
+      description: faq[0].answer,
+      path: page.path,
+      measured: EVIDENCE_ORDER.map((t) => typeName(t, language)),
+      downloads: [
+        { url: absoluteUrl(language, `${page.path}/raw.md`), type: "text/markdown" },
+        { url: api("summary"), type: "application/json" },
+        { url: api("observations"), type: "application/json" },
+      ],
+    }),
+    faqLd(language, faq),
+  ].filter((block): block is object => block !== null);
 }
