@@ -155,7 +155,7 @@ export function typeMeaning(type: EvidenceType, language: Language): string | nu
 }
 
 /** "1 production use, 1 measurement" / "生产使用 1 条、测量 1 条": the types that occur, strongest first. */
-function typesLine(stats: Pick<ObservationStats, "byType">, language: Language): string {
+export function typesLine(stats: Pick<ObservationStats, "byType">, language: Language): string {
   return EVIDENCE_ORDER.filter((t) => stats.byType[t] > 0)
     .map((t) => (language === "zh-CN" ? `${typeName(t, language)} ${stats.byType[t]} 条` : `${stats.byType[t]} ${typeName(t, language).toLowerCase()}`))
     .join(language === "zh-CN" ? "、" : ", ");
@@ -338,7 +338,7 @@ export function actorLine(row: ObservationRow, language: Language): string {
 
 const escape = (text: string) => text.replace(/([[\]])/g, "\\$1");
 
-function observationMarkdown(row: ObservationRow, language: Language): string[] {
+export function observationMarkdown(row: ObservationRow, language: Language): string[] {
   const c = ledgerCopy[language];
   const sep = colon(language);
   const head = [

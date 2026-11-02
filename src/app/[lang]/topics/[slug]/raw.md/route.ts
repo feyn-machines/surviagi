@@ -2,12 +2,13 @@ import { DEFAULT_LANGUAGE, normalizeLanguage } from "@/lib/i18n";
 import { colon, link, markdownResponse } from "@/lib/markdown-copy";
 import { indexable } from "@/lib/site-pages";
 import { linkedEvents, manifest, topicBySlug } from "@/lib/snapshot";
+import { topicEvidence, topicEvidenceMarkdown } from "@/lib/topic-evidence";
 import { answerSentence, copy } from "../copy";
 
 /** Rendered per request from the loaded data release, like the page. */
 export const dynamic = "force-dynamic";
 
-/** The topic page as Markdown: its sentence, then under each answer the updates that weigh on it and who argues it. */
+/** The topic page as Markdown: its sentence, the observations about its subject, then under each answer the updates that weigh on it and who argues it. */
 export async function GET(_: Request, { params }: { params: Promise<{ lang: string; slug: string }> }) {
   const { lang, slug } = await params;
   const language = normalizeLanguage(lang) ?? DEFAULT_LANGUAGE;
@@ -25,6 +26,8 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
     "",
     [c[topic.question_type], about, `${c.since} ${topic.opened_at.slice(0, 10)}`].filter(Boolean).join(" · "),
   ];
+  const observed = topicEvidence(topic, language);
+  if (observed) body.push("", ...topicEvidenceMarkdown(observed, language).slice(0, -1));
   for (const option of topic.options) {
     body.push("", `## ${option.text[language]}`, "",
       `${c.argued} ${option.accounts} · ${c.for} ${option.supports} · ${c.against} ${option.contradicts}`);

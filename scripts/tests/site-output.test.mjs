@@ -1397,6 +1397,12 @@ test("market and occupation pages count their observations by evidence type and 
     row("obs-d", { evidence_type: "own_use", announced_at: day(1), concerns: [concern(elsewhere.id, "work")] }),
     row("obs-1111111111111111", { evidence_type: "vendor_claim", direction: "neutral", merged_from: ["obs-0000000000000001"], concerns: [concern(elsewhere.id, "work")] }),
   ]));
+  // Issue #32: one topic about the occupation and one about the market, so each links to the other's page.
+  const topicRows = read("topics");
+  const [jobTopic, marketTopic] = topicRows;
+  jobTopic.about = { id: occupation.id, kind: "occupation", en: occupation.label_en, "zh-CN": occupation.label_zh_cn };
+  marketTopic.about = { id: marketId, kind: "market", en: "The market", "zh-CN": "这个赛道" };
+  writeFileSync(join(dir, "topics.json"), JSON.stringify(topicRows));
   const { base, proc } = await startServer({ SNAPSHOT_DIR: dir });
   try {
     const marketPath = `/markets/${marketId.replace(/^oaw:market:/, "")}`;
@@ -1590,6 +1596,31 @@ test("market and occupation pages count their observations by evidence type and 
       body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "changes_since", arguments: { since, market: marketId } } }),
     })).json();
     assert.deepEqual(changesMcp.result.structuredContent.observations, scoped.observations, "MCP and HTTP answer alike");
+
+    // Issue #32: a topic page sets its subject's observations beside the question, pointing each way, with the
+    // subject page's own sentence, and links to that page's evidence; the subject page lists the topic.
+    const quoted = (copy) => copy.split("\n").find((line) => line.startsWith("> ") && /observations? bears? on|条观察涉及/.test(line));
+    const jobMd = await (await fetch(`${base}/topics/${jobTopic.slug}/raw.md`)).text();
+    assert.ok(jobMd.includes(`## What the observations about ${occupation.label_en} show`), "topic copy names its subject");
+    assert.equal(quoted(jobMd), quoted(occ), "the topic says the occupation page's sentence");
+    const section = (copy, heading) => copy.split(`### ${heading}`)[1].split(/\n##/)[0];
+    assert.ok(section(jobMd, "AI takes on more").includes("`obs-a`"));
+    assert.ok(section(jobMd, "A person is still needed").includes("None among the observations mapped here."));
+    assert.ok(jobMd.includes(`(https://surviagi.com${occupationPath}#evidence)`), "topic copy links the occupation's evidence");
+    const marketMd = await (await fetch(`${base}/topics/${marketTopic.slug}/raw.md`)).text();
+    assert.equal(quoted(marketMd), quoted(md));
+    assert.ok(section(marketMd, "A person is still needed").includes("`obs-b`") && !section(marketMd, "AI takes on more").includes("`obs-b`"));
+    const jobPage = await (await fetch(`${base}/zh-CN/topics/${jobTopic.slug}`)).text();
+    assert.ok(jobPage.includes('id="observations"') && jobPage.includes('id="obs-a"') && jobPage.includes(`href="/zh-CN${occupationPath}#evidence"`), "Chinese topic page");
+    assert.ok(visible(jobPage).includes(quoted(await (await fetch(`${base}/zh-CN${occupationPath}/raw.md`)).text()).slice(2)), "Chinese topic page says the occupation's sentence");
+    for (const [path, topic] of [[occupationPath, jobTopic], [marketPath, marketTopic]]) {
+      const html = await (await fetch(`${base}${path}`)).text();
+      assert.ok(html.includes('id="topics"') && html.includes(`href="/topics/${topic.slug}"`), `${path} lists its topic`);
+      const copy = await (await fetch(`${base}${path}/raw.md`)).text();
+      assert.ok(copy.includes("## Questions argued about it") && copy.includes(`(https://surviagi.com/topics/${topic.slug})`), `${path} copy lists its topic`);
+    }
+    const unrelated = topicRows.find((t) => !t.about);
+    if (unrelated) assert.ok(!(await (await fetch(`${base}/topics/${unrelated.slug}`)).text()).includes('id="observations"'), "a topic about nothing on a page shows none");
   } finally {
     await stop(proc);
     rmSync(dir, { recursive: true, force: true });

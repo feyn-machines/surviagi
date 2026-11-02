@@ -3,6 +3,7 @@ import { DEFAULT_LANGUAGE, normalizeLanguage } from "@/lib/i18n";
 import { colon, link, markdownResponse } from "@/lib/markdown-copy";
 import { ledger, ledgerMarkdown, pageQuestion } from "@/lib/observation-view";
 import { indexable } from "@/lib/site-pages";
+import { topicsAbout, topicsMarkdown } from "@/lib/topic-evidence";
 import { activityAnchor } from "@/lib/anchors";
 import {
   activitiesOfMarket,
@@ -74,6 +75,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
     c.lead,
     "",
     ...ledgerMarkdown(ledger(observationsOfOccupation(id), name, language), language),
+    ...topicsMarkdown(topicsAbout("occupation", id), language),
     `## ${c.activitiesTitle}`,
     "",
   ];

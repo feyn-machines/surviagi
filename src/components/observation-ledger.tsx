@@ -1,3 +1,5 @@
+import type { Route } from "next";
+import Link from "next/link";
 import { Block } from "@/components/blueprint";
 import { termDefinition, termNameOrRaw } from "@/components/ontology-labels";
 import type { Language } from "@/lib/i18n";
@@ -14,8 +16,10 @@ import {
   typeName,
   type Overview,
 } from "@/lib/observation-view";
-import { EVIDENCE_ORDER, observationDate, type ObservationRow, type ObservationStats } from "@/lib/snapshot";
+import { EVIDENCE_ORDER, observationDate, type ObservationRow, type ObservationStats, type Topic } from "@/lib/snapshot";
 import { plural } from "@/lib/plural";
+import { directionName, subjectHref, topicEvidence, topicEvidenceCopy, topicLine } from "@/lib/topic-evidence";
+import { topicHref } from "@/lib/routes";
 import l from "./observation-ledger.module.css";
 
 /**
@@ -120,6 +124,66 @@ export function ObservationOverview({
           </ul>
         </>
       )}
+    </Block>
+  );
+}
+
+/**
+ * A topic page's observations (Issue #32): what is mapped to the occupation or
+ * market the question is about, the strongest few pointing each way, and a
+ * link to that page's full ledger. Nothing when the topic has no such page.
+ * The topic page's Markdown copy says the same through `topicEvidenceMarkdown`.
+ */
+export function TopicObservations({ topic, language }: { topic: Topic; language: Language }) {
+  const view = topicEvidence(topic, language);
+  if (!view) return null;
+  const c = topicEvidenceCopy[language];
+  const lc = ledgerCopy[language];
+  const name = view.subject.name;
+  const page = subjectHref(view.subject, language) as Route;
+  return (
+    <Block id="observations" title={fill(c.title, { name })} lead={fill(c.lead, { name })}>
+      {view.state === "unpublished" ? (
+        <p className={l.empty}>{lc.notPublished}</p>
+      ) : view.state === "none" ? (
+        <div className={l.empty}>
+          <p className={l.emptyTitle}>{lc.none}</p>
+          <p>{lc.noneWhy}</p>
+        </div>
+      ) : (
+        <>
+          <p className={l.answer}>{view.answer}</p>
+          <EvidenceCounts stats={view.stats} language={language} />
+          <p className={l.machine}>{lc.machine}</p>
+          {([["ai_takes_on", view.takesOn], ["human_still_needed", view.stillNeeded]] as const).map(([direction, rows]) => (
+            <div key={direction}>
+              <h3 className={l.h3}>{directionName(direction, language)}</h3>
+              {rows.length === 0 ? <p className={l.sub}>{c.noneHere}</p> : <Observations rows={rows} language={language} />}
+            </div>
+          ))}
+        </>
+      )}
+      <Link className={l.onward} href={page}>
+        {view.state === "some" ? fill(c.all, { n: view.stats.total, name }) : name} →
+      </Link>
+    </Block>
+  );
+}
+
+/** The topics asked about an occupation or a market, on its page; nothing when there are none. */
+export function RelatedTopics({ list, language }: { list: Topic[]; language: Language }) {
+  if (list.length === 0) return null;
+  const c = topicEvidenceCopy[language];
+  return (
+    <Block id="topics" title={c.topicsTitle} lead={c.topicsLead}>
+      <ul className={l.topics}>
+        {list.map((t) => (
+          <li key={t.topic_id}>
+            <Link href={topicHref(language, t.slug)}>{t.question[language]}</Link>
+            <small>{topicLine(t, language)}</small>
+          </li>
+        ))}
+      </ul>
     </Block>
   );
 }
