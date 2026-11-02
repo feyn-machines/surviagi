@@ -264,7 +264,10 @@
   overflow-wrap: anywhere;
 }
 
-.tasks, .share {
+/* With observations in the release, a column for them ahead of the tasks (Issue #32). */
+.rowObs { grid-template-columns: minmax(0, 1fr) 6ch 9ch 72px 6ch; }
+
+.tasks, .share, .obs {
   font-family: var(--ah-font-mono);
   font-variant-numeric: tabular-nums;
   text-align: right;
@@ -272,6 +275,8 @@
 }
 
 .tasks { color: var(--ah-color-subtle); }
+.obs { color: var(--ah-color-signal); }
+.obsZero { color: var(--ah-color-subtle); }
 .unit { letter-spacing: var(--ah-tracking-label); }
 .meter { display: block; min-width: 0; }
 .share { color: var(--ah-color-text); }
@@ -318,6 +323,7 @@
 @media (max-width: 760px) {
   .list { grid-template-columns: 1fr; }
   .row { grid-template-columns: minmax(0, 1fr) 8ch 6ch; }
+  .rowObs { grid-template-columns: minmax(0, 1fr) 5ch 8ch 6ch; }
   .meter { display: none; }
 }
 

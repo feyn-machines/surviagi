@@ -51,6 +51,12 @@ export const ledgerCopy = bilingual({
     conditions: "Conditions",
     scale: "Scale",
     perType: "{n|observation|observations}",
+    acrossTitle: "What the evidence shows across {kind}",
+    across: "As of {date}, {n} {n|observation is|observations are} mapped to {m} of the {total} {kind}: {types}.",
+    acrossNone: "As of {date}, no observation is mapped to any of the {total} {kind}.",
+    acrossWhy: "An observation that bears on several is counted once here and once on each of their pages.",
+    markets: "markets",
+    occupations: "occupations",
   },
   "zh-CN": {
     title: "证据怎么说",
@@ -77,6 +83,12 @@ export const ledgerCopy = bilingual({
     conditions: "条件",
     scale: "规模",
     perType: "条",
+    acrossTitle: "证据怎么说：全部{kind}",
+    across: "截至 {date}，有 {n} 条观察映射到 {total} 个{kind}中的 {m} 个：{types}。",
+    acrossNone: "截至 {date}，{total} 个{kind}里还没有一个映射到观察。",
+    acrossWhy: "一条观察涉及几个时，这里只算一次，在它们各自的页面上各算一次。",
+    markets: "赛道",
+    occupations: "职业",
   },
 });
 
@@ -111,15 +123,29 @@ export function typeMeaning(type: EvidenceType, language: Language): string | nu
   return termDefinition("event_basis", type, language)?.text ?? null;
 }
 
+/** "1 production use, 1 measurement" / "生产使用 1 条、测量 1 条": the types that occur, strongest first. */
+function typesLine(stats: ObservationStats, language: Language): string {
+  return EVIDENCE_ORDER.filter((t) => stats.byType[t] > 0)
+    .map((t) => (language === "zh-CN" ? `${typeName(t, language)} ${stats.byType[t]} 条` : `${stats.byType[t]} ${typeName(t, language).toLowerCase()}`))
+    .join(language === "zh-CN" ? "、" : ", ");
+}
+
+/** The lines under the answer: how many point the other way, how recent they are, how many carry no date. */
+function notesOf(stats: ObservationStats, language: Language): string[] {
+  const c = ledgerCopy[language];
+  return [
+    stats.against > 0 ? fill(c.against, { n: stats.against }) : c.againstNone,
+    fill(c.recent, { d30: stats.last30, d90: stats.last90 }),
+    ...(stats.undated > 0 ? [fill(c.undated, { n: stats.undated })] : []),
+  ];
+}
+
 export function ledger(rows: ObservationRow[], name: string, language: Language): Ledger {
   if (!observationsPublished()) return { state: "unpublished" };
   if (rows.length === 0) return { state: "none" };
   const c = ledgerCopy[language];
   const date = manifest()?.generated_at ?? null;
   const stats = observationStats(rows, date);
-  const types = EVIDENCE_ORDER.filter((t) => stats.byType[t] > 0)
-    .map((t) => (language === "zh-CN" ? `${typeName(t, language)} ${stats.byType[t]} 条` : `${stats.byType[t]} ${typeName(t, language).toLowerCase()}`))
-    .join(language === "zh-CN" ? "、" : ", ");
   const sorted = [...rows].sort(byStrength);
   const otherWay = sorted.filter((r) => r.direction === "human_still_needed");
   const forward = sorted.filter((r) => r.direction !== "human_still_needed");
@@ -129,16 +155,40 @@ export function ledger(rows: ObservationRow[], name: string, language: Language)
   return {
     state: "some",
     stats,
-    answer: fill(c.answer, { date: date?.slice(0, 10) ?? "", n: stats.total, name, types }),
-    notes: [
-      stats.against > 0 ? fill(c.against, { n: stats.against }) : c.againstNone,
-      fill(c.recent, { d30: stats.last30, d90: stats.last90 }),
-      ...(stats.undated > 0 ? [fill(c.undated, { n: stats.undated })] : []),
-    ],
+    answer: fill(c.answer, { date: date?.slice(0, 10) ?? "", n: stats.total, name, types: typesLine(stats, language) }),
+    notes: notesOf(stats, language),
     strongest,
     otherWay: shownOther,
     rest: remaining.slice(0, FOLDED),
     unlisted: Math.max(0, remaining.length - FOLDED),
+  };
+}
+
+export type Overview =
+  | { state: "unpublished"; title: string }
+  | { state: "some"; title: string; stats: ObservationStats; answer: string; notes: string[] };
+
+/**
+ * The same counts over a whole list page (Issue #32): every observation mapped
+ * to at least one market, or one occupation, once each, and how many of them
+ * have any. `byPage` holds each page's own rows, so the per-row column and this
+ * total come from the same mapping.
+ */
+export function overview(byPage: ObservationRow[][], kind: "markets" | "occupations", language: Language): Overview {
+  const c = ledgerCopy[language];
+  const title = fill(c.acrossTitle, { kind: c[kind] });
+  if (!observationsPublished()) return { state: "unpublished", title };
+  const date = manifest()?.generated_at ?? null;
+  const rows = [...new Map(byPage.flat().map((row) => [row.observation_id, row])).values()];
+  const stats = observationStats(rows, date);
+  const values = { date: date?.slice(0, 10) ?? "", n: stats.total, m: byPage.filter((p) => p.length > 0).length, total: byPage.length, kind: c[kind] };
+  if (rows.length === 0) return { state: "some", title, stats, answer: fill(c.acrossNone, values), notes: [] };
+  return {
+    state: "some",
+    title,
+    stats,
+    answer: fill(c.across, { ...values, types: typesLine(stats, language) }),
+    notes: [...notesOf(stats, language), c.acrossWhy],
   };
 }
 

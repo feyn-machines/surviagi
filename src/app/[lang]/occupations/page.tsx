@@ -5,6 +5,8 @@ import { datasetLd, pageMetadata } from "@/lib/seo";
 import { JsonLd } from "@/components/json-ld";
 import {
   groupSlug,
+  observationsOfOccupation,
+  observationsPublished,
   occupationGroups,
   occupationSlug,
   occupations,
@@ -12,6 +14,7 @@ import {
   touchedShare,
 } from "@/lib/snapshot";
 import { NoSnapshot } from "@/components/data-page";
+import { ObservationOverview } from "@/components/observation-ledger";
 import { Stat, blueprint as bp } from "@/components/blueprint";
 import { OccupationDirectory, type DirectoryGroup, type DirectoryRow } from "./directory";
 import s from "./occupations.module.css";
@@ -70,7 +73,9 @@ export default async function Occupations({ searchParams }: Props) {
   const c = copy[language];
   if (!snapshotExists()) return <NoSnapshot language={language} />;
 
-  const rows: DirectoryRow[] = occupations().map((entry) => {
+  const published = observationsPublished();
+  const ledgers = occupations().map((entry) => observationsOfOccupation(entry.occupation_id));
+  const rows: DirectoryRow[] = occupations().map((entry, i) => {
     const id = entry.occupation_id;
     const en = entry.label_en ?? id;
     const zh = entry.label_zh_cn ?? "";
@@ -85,6 +90,7 @@ export default async function Occupations({ searchParams }: Props) {
       tasks: entry.tasks,
       share: touchedShare(entry.touched, entry.tasks),
       touched: entry.touched,
+      observations: published ? ledgers[i].length : null,
     };
   });
 
@@ -131,6 +137,8 @@ export default async function Occupations({ searchParams }: Props) {
           }
         />
       </div>
+
+      <ObservationOverview byPage={ledgers} kind="occupations" language={language} />
 
       <OccupationDirectory
         rows={rows}

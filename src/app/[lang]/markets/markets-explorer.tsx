@@ -34,9 +34,11 @@ export type MarketRow = {
   /** Collected updates that bear on any work in the market, once each. */
   updates: number;
   occupations: number;
+  /** Observations mapped to any work in the market; null when the release carries none. */
+  observations: number | null;
 };
 
-type Sort = "updates" | "total" | "scored" | "occupations";
+type Sort = "observations" | "updates" | "total" | "scored" | "occupations";
 type Coverage = "all" | "with" | "without";
 
 export function MarketsExplorer({
@@ -52,7 +54,9 @@ export function MarketsExplorer({
   const c = indexCopy[language];
   const [query, setQuery] = useState(initialQuery);
   const [coverage, setCoverage] = useState<Coverage>("all");
-  const [sort, setSort] = useState<Sort>("updates");
+  // Observations lead once the release carries them (Issue #32); before that, updates.
+  const published = rows.some((row) => row.observations !== null);
+  const [sort, setSort] = useState<Sort>(published ? "observations" : "updates");
   const searchId = useId();
 
   const blank = useMemo(() => rows.filter((row) => row.updates === 0).length, [rows]);
@@ -69,8 +73,8 @@ export function MarketsExplorer({
       return row.en.toLowerCase().includes(needle) || row.zh.toLowerCase().includes(needle);
     });
     const key = (row: MarketRow) =>
-      sort === "updates" ? row.updates : sort === "total" ? row.total : sort === "scored" ? row.scored : row.occupations;
-    return [...filtered].sort((a, b) => key(b) - key(a) || b.scored - a.scored || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+      sort === "observations" ? row.observations ?? 0 : sort === "updates" ? row.updates : sort === "total" ? row.total : sort === "scored" ? row.scored : row.occupations;
+    return [...filtered].sort((a, b) => key(b) - key(a) || b.updates - a.updates || b.scored - a.scored || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
   }, [rows, query, coverage, sort]);
 
   const filtersOn = query !== "" || coverage !== "all";
@@ -131,6 +135,7 @@ export function MarketsExplorer({
             <div className={x.chipRow} role="group" aria-labelledby={`${searchId}-sort`}>
               {(
                 [
+                  ...(published ? [["observations", c.sortObservations]] : []),
                   ["updates", c.sortUpdates],
                   ["total", c.sortActivities],
                   ["scored", c.sortScored],
@@ -177,6 +182,9 @@ export function MarketsExplorer({
                 <tr>
                   <th scope="col">{c.colMarket}</th>
                   <th scope="col" className="oaw-num">
+                    {c.colObservations}
+                  </th>
+                  <th scope="col" className="oaw-num">
                     {c.colActivities}
                   </th>
                   <th scope="col" className="oaw-num">
@@ -198,6 +206,15 @@ export function MarketsExplorer({
                     <th scope="row" className={x.nameCell}>
                       <Link href={href(language, `/markets/${row.slug}`)}>{row.name}</Link>
                     </th>
+                    <td className="oaw-num">
+                      {row.observations === null ? (
+                        <span title={c.notPublished}>—</span>
+                      ) : row.observations > 0 ? (
+                        <Link href={`${href(language, `/markets/${row.slug}`)}#evidence`}>{count(row.observations)}</Link>
+                      ) : (
+                        count(0)
+                      )}
+                    </td>
                     <td className="oaw-num">{count(row.total)}</td>
                     <td className="oaw-num">{count(row.scored)}</td>
                     <td className="oaw-num">{count(row.updates)}</td>

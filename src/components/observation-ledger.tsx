@@ -6,10 +6,11 @@ import {
   figure,
   ledger,
   ledgerCopy,
+  overview,
   typeMeaning,
   typeName,
 } from "@/lib/observation-view";
-import { EVIDENCE_ORDER, observationDate, type ObservationRow } from "@/lib/snapshot";
+import { EVIDENCE_ORDER, observationDate, type ObservationRow, type ObservationStats } from "@/lib/snapshot";
 import { plural } from "@/lib/plural";
 import l from "./observation-ledger.module.css";
 
@@ -48,17 +49,7 @@ export function ObservationLedger({
               <li key={note}>{note}</li>
             ))}
           </ul>
-          <dl className={l.types}>
-            {EVIDENCE_ORDER.map((type) => (
-              <div key={type} className={`${l.type} ${view.stats.byType[type] === 0 ? l.zero : ""}`}>
-                <dt>{typeName(type, language)}</dt>
-                <dd>
-                  {view.stats.byType[type]}
-                  <small>{typeMeaning(type, language)}</small>
-                </dd>
-              </div>
-            ))}
-          </dl>
+          <EvidenceCounts stats={view.stats} language={language} />
           <p className={l.machine}>{c.machine}</p>
 
           <h3 className={l.h3}>{c.strongest}</h3>
@@ -83,6 +74,58 @@ export function ObservationLedger({
         </>
       )}
     </Block>
+  );
+}
+
+/**
+ * The head of a list page (Issue #32): the same counts by evidence type as a
+ * market or occupation page, over every observation mapped to any of them.
+ */
+export function ObservationOverview({
+  byPage,
+  kind,
+  language,
+}: {
+  byPage: ObservationRow[][];
+  kind: "markets" | "occupations";
+  language: Language;
+}) {
+  const c = ledgerCopy[language];
+  const view = overview(byPage, kind, language);
+  return (
+    <Block id="evidence" title={view.title} lead={c.lead}>
+      {view.state === "unpublished" ? (
+        <p className={l.empty}>{c.notPublished}</p>
+      ) : (
+        <>
+          <p className={l.answer}>{view.answer}</p>
+          <ul className={l.notes}>
+            {view.notes.map((note) => (
+              <li key={note}>{note}</li>
+            ))}
+          </ul>
+          <EvidenceCounts stats={view.stats} language={language} />
+          <p className={l.machine}>{c.machine}</p>
+        </>
+      )}
+    </Block>
+  );
+}
+
+/** The six evidence types side by side, each with its count and what it means; a zero is shown as 0. */
+function EvidenceCounts({ stats, language }: { stats: ObservationStats; language: Language }) {
+  return (
+    <dl className={l.types}>
+      {EVIDENCE_ORDER.map((type) => (
+        <div key={type} className={`${l.type} ${stats.byType[type] === 0 ? l.zero : ""}`}>
+          <dt>{typeName(type, language)}</dt>
+          <dd>
+            {stats.byType[type]}
+            <small>{typeMeaning(type, language)}</small>
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
