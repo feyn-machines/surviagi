@@ -1,5 +1,5 @@
 /* One occupation. The two numbers first, then the hundred squares, then the
-   activity list that opens onto the updates behind each level.
+   activity list that opens onto the updates behind each row.
 
    Durations are --ah-motion-* tokens only, and every animation runs INTO the
    element's default state, so with JavaScript off the page is already finished. */
@@ -169,7 +169,7 @@
 
 .rowButton {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 90px minmax(160px, 22ch) 10ch 3ch;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 16ch) 10ch 3ch;
   align-items: center;
   gap: var(--ah-space-4);
   width: 100%;
@@ -194,8 +194,6 @@
   font-family: var(--ah-font-mono);
   font-size: var(--ah-text-label);
 }
-
-.rowMeter { display: block; }
 
 .rowLevel, .rowTasks {
   font-family: var(--ah-font-mono);
@@ -247,14 +245,6 @@
 
 .panelLink { color: var(--ah-color-signal); text-decoration: underline; text-underline-offset: 4px; }
 
-.gateMark {
-  padding: 2px var(--ah-space-2);
-  border: 1px solid var(--ah-color-warning);
-  border-radius: var(--ah-radius-control);
-  color: var(--ah-color-warning);
-  text-transform: uppercase;
-}
-
 .panelNote {
   margin: 0 0 var(--ah-space-3);
   max-width: 62ch;
@@ -296,15 +286,11 @@
 
 .readingOrg { color: var(--ah-color-text); text-transform: uppercase; }
 
-/* The judge proposed more than the evidence tier allows. Showing the cut with
-   colour alone would hide it; the word "capped" beside it carries the meaning. */
-.readingCut { color: var(--ah-color-warning); }
-.readingTier { color: var(--ah-color-subtle); }
 .readingSource { color: var(--ah-color-signal); text-decoration: underline; text-underline-offset: 4px; }
 
 /* ------------------------------------------------------------- the lists */
 
-.markets, .gates { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--ah-space-2); }
+.markets { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--ah-space-2); }
 
 .marketRow {
   display: grid;
@@ -358,7 +344,7 @@
 
 @media (max-width: 860px) {
   .rowButton { grid-template-columns: minmax(0, 1fr) 12ch 3ch; }
-  .rowMeter, .rowTasks { display: none; }
+  .rowTasks { display: none; }
   .marketRow { grid-template-columns: minmax(0, 1fr) 12ch; }
   .marketMeter { display: none; }
 }

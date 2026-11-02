@@ -7,15 +7,13 @@ import { getLocale } from "@/lib/locale";
 import { breadcrumbLd, pageMetadata } from "@/lib/seo";
 import { JsonLd } from "@/components/json-ld";
 import { siteNavCopy } from "@/lib/site-nav";
-import { href } from "@/lib/routes";
-import { WorkGrid } from "@/components/work-grid";
-import { Bar, Block, Head, Stat, blueprint as bp } from "@/components/blueprint";
+import { activityHref, href } from "@/lib/routes";
+import { WorkGrid, gridCounts } from "@/components/work-grid";
+import { Bar, Block, Stat, blueprint as bp } from "@/components/blueprint";
 import {
   activitiesOfMarket,
   assessedCount,
-  atOrAboveL2,
   evidenceForActivity,
-  gates as allGates,
   groupSlug,
   manifest,
   marketSlug,
@@ -33,6 +31,7 @@ import {
 } from "@/components/data-page";
 import { copy } from "./copy";
 import { detailCopy, fill } from "@/app/[lang]/markets/copy";
+import { updateTimestamp } from "@/lib/update-date";
 import { termNameOrRaw } from "@/components/ontology-labels";
 import { ActivityExplorer, type ExplorerActivity } from "./explorer";
 import s from "./detail.module.css";
@@ -44,10 +43,10 @@ export const dynamic = "force-dynamic";
  * One occupation, read along the path the evidence actually travels:
  * occupation → market → activity → task.
  *
- * The question this page answers is which pieces of this job an update has
- * touched at all, and which ones nobody has looked at. Both numbers are at the
+ * The question this page answers is which pieces of this job a collected update
+ * bears on at all, and which ones nobody has looked at. Both numbers are at the
  * top at display size, the hundred squares show the split, and the activity
- * list below opens onto the updates themselves.
+ * list below opens onto the updates themselves. Nothing here is graded.
  */
 
 type Props = { params: Promise<{ code: string }> };
@@ -99,14 +98,12 @@ export default async function OccupationPage({ params }: Props) {
   const entry = progress()?.occupations?.[id];
   const totalTasks = entry?.tasks ?? 0;
   const assessed = assessedCount(counts);
-  const atL2 = atOrAboveL2(counts);
   const median = occupationMedianShare();
 
   const served = marketsOfOccupation(id);
-  const caps: Record<string, number> = progress()?.tier_caps ?? {};
 
-  // One row per activity, with the readings that produced its level already
-  // joined: the client list only narrows and opens what the server resolved.
+  // One row per activity, with the updates that bear on it already joined: the
+  // client list only narrows and opens what the server resolved.
   const seen = new Set<string>();
   const explorer: ExplorerActivity[] = [];
   const marketRows: { id: string; label: string; slug: string; activities: number }[] = [];
@@ -133,35 +130,28 @@ export default async function OccupationPage({ params }: Props) {
         search: `${activity.label_en} ${activity.label_zh_cn ?? ""} ${marketLabel}`.toLowerCase(),
         marketLabel,
         marketSlug: marketSlug(activity.market_id),
-        level: activity.level,
-        tier: activity.best_tier,
+        href: activityHref(language, activity),
         tasks: activity.tasks,
-        gated: activity.gated,
-        readings: evidenceForActivity(activity.activity_id).flatMap((reading) => [
+        updates: evidenceForActivity(activity.activity_id).flatMap((row) => [
           {
-            eventId: reading.event_id,
-            title: reading.title,
-            date: reading.occurred_at,
-            org: reading.org_name,
-            tier: reading.evidence_tier,
-            observed: reading.observed_level,
-            level: reading.level,
-            url: reading.source_urls?.[0] ?? null,
+            key: row.event_id,
+            eventId: row.event_id as string | null,
+            title: row.title,
+            when: updateTimestamp(row)?.slice(0, 10) ?? null,
+            org: row.org_name,
+            url: row.source_urls?.[0] ?? null,
           },
-          // A post by someone else that confirmed the reading counts toward the level in its own right.
-          ...(reading.confirmations ?? []).map((v) => ({
-            eventId: `${reading.event_id}:${v.source_id}`,
+          // A post by someone else that says the same: recorded, not verified.
+          ...(row.confirmations ?? []).map((v) => ({
+            key: `${row.event_id}:${v.source_id}`,
+            eventId: null,
             title: fill(detailCopy[language].alsoSays, {
               handle: v.handle ?? v.account_key,
               nature: termNameOrRaw("post_nature", v.post_nature, language),
-              title: reading.title,
+              title: row.title,
             }),
-            date: v.posted_at,
+            when: v.posted_at ? v.posted_at.slice(0, 10) : null,
             org: `@${v.handle ?? v.account_key}`,
-            tier: v.evidence_tier,
-            // The list explains a cut by the tier; a cut made by the kind of post is not the tier's, so it is not shown as one.
-            observed: v.level !== null && caps[v.evidence_tier] !== v.level ? v.level : v.observed_level,
-            level: v.level,
             url: v.url,
           })),
         ]),
@@ -170,13 +160,6 @@ export default async function OccupationPage({ params }: Props) {
   }
   marketRows.sort((a, b) => b.activities - a.activities || a.label.localeCompare(b.label));
   const widest = Math.max(1, ...marketRows.map((row) => row.activities));
-
-  const gatesHere = explorer.some((row) => row.gated)
-    ? allGates().filter((gate) => gate.candidate_activities + gate.reviewed_activities > 0)
-    : [];
-
-  const levelWords: Record<string, string> = {};
-  for (const [key, text] of Object.entries(progress()?.levels ?? {})) levelWords[key] = text[language];
 
   const groupId = entry?.group_id ?? null;
   const group = groupId ? progress()?.groups?.[groupId] : undefined;
@@ -202,7 +185,6 @@ export default async function OccupationPage({ params }: Props) {
           .replace("{date}", manifest()?.generated_at.slice(0, 10) ?? "")
           .replace("{name}", name)
           .replace("{total}", formatNumber(totalTasks))
-          .replace("{atL2}", formatNumber(atL2))
           .replace("{assessed}", formatNumber(assessed))
           .replace("{rest}", formatNumber(Math.max(0, totalTasks - assessed)))}
       </p>
@@ -210,26 +192,19 @@ export default async function OccupationPage({ params }: Props) {
       <div className={s.stats}>
         <Stat
           label={c.statReachLabel}
-          tag={levelWords["2"] ? `L2 · ${levelWords["2"]}` : "L2+"}
-          value={atL2}
+          tag={c.tasksTag.replace("{n}", formatNumber(totalTasks))}
+          value={assessed}
           unit={c.ofTotal.replace("{total}", formatNumber(totalTasks))}
-          tone={atL2 === 0 ? "correction" : "signal"}
+          tone={assessed === 0 ? "correction" : "signal"}
           note={<p>{c.statReachNote.replace("{median}", String(median.median))}</p>}
         />
         <Stat
           label={c.statLookedLabel}
           tag={c.tasksTag.replace("{n}", formatNumber(totalTasks))}
-          value={assessed}
+          value={Math.max(0, totalTasks - assessed)}
           unit={c.ofTotal.replace("{total}", formatNumber(totalTasks))}
-          tone={assessed === 0 ? "correction" : "plain"}
-          note={
-            <p>
-              {plural(c.statLookedNote, { assessed, rest: totalTasks - assessed }).replace(
-                "{rest}",
-                formatNumber(totalTasks - assessed),
-              )}
-            </p>
-          }
+          tone="plain"
+          note={<p>{plural(c.statLookedNote, { rest: Math.max(0, totalTasks - assessed) })}</p>}
         />
       </div>
 
@@ -240,17 +215,12 @@ export default async function OccupationPage({ params }: Props) {
             <p className={s.emptyWhy}>{c.gridNoneWhy}</p>
           </div>
         ) : (
-          <WorkGrid counts={counts} language={language} title={c.gridTitle} />
+          <WorkGrid counts={gridCounts(counts)} language={language} title={c.gridTitle} />
         )}
       </Block>
 
       <Block title={c.activitiesTitle}>
-        <ActivityExplorer
-          activities={explorer}
-          language={language}
-          levels={levelWords}
-          tierCaps={progress()?.tier_caps ?? {}}
-        />
+        <ActivityExplorer activities={explorer} language={language} />
       </Block>
 
       <Block title={c.marketsTitle} lead={c.marketsLead}>
@@ -273,29 +243,6 @@ export default async function OccupationPage({ params }: Props) {
                     <span className={s.unit}> {fill(c.marketActivities, { n: row.activities })}</span>
                   </span>
                 </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Block>
-
-      <Block title={c.gatesTitle} lead={c.gatesLead}>
-        {gatesHere.length === 0 ? (
-          <div className={s.empty}>
-            <p className={s.emptyTitle}>{c.gatesNone}</p>
-            <p className={s.emptyWhy}>{c.gatesLead}</p>
-          </div>
-        ) : (
-          <ul className={s.gates}>
-            {gatesHere.map((gate) => (
-              <li key={gate.gate_id}>
-                <Head
-                  label={
-                    (language === "zh-CN" ? gate.label_zh_cn : gate.label_en) ?? gate.label_en
-                  }
-                  tag={gate.gate_type}
-                  tone="warning"
-                />
               </li>
             ))}
           </ul>

@@ -1,6 +1,5 @@
 /* The work grid. Squares, right angles, 1px lines — the design system's own
-   graphic grammar. Stage is an ordinal scale, so it is one hue at increasing
-   weight rather than five different colours; the legend carries the words, so
+   graphic grammar. Two states, one hue; the legend carries the words, so
    colour never states anything on its own. */
 
 .figure {
@@ -18,52 +17,16 @@
   border: 1px solid var(--ah-color-line);
 }
 
-/* L0 is a finding, not a blank: the evidence says AI takes no part. It gets a
-   faint fill so it never reads as "nobody looked", which is the square below. */
-.stage0 {
-  background: color-mix(in srgb, var(--ah-color-signal) 8%, transparent);
-  border-color: color-mix(in srgb, var(--ah-color-line) 100%, transparent);
-}
-
-.stage1 {
-  background: color-mix(in srgb, var(--ah-color-signal) 20%, transparent);
-  border-color: color-mix(in srgb, var(--ah-color-signal) 34%, transparent);
-}
-
-.stage2 {
-  background: color-mix(in srgb, var(--ah-color-signal) 38%, transparent);
-  border-color: color-mix(in srgb, var(--ah-color-signal) 52%, transparent);
-}
-
-.stage3 {
-  background: color-mix(in srgb, var(--ah-color-signal) 60%, transparent);
-  border-color: color-mix(in srgb, var(--ah-color-signal) 72%, transparent);
-}
-
-.stage4 {
+/* Filled: an update bears on this work. Solid, because the chart's point is
+   how much of the job anything has reached. */
+.touched {
   background: var(--ah-color-signal);
   border-color: var(--ah-color-signal);
 }
 
-/* Terminal state: solid and ringed, so it reads as different in kind rather
-   than merely darker. Currently empty everywhere, which is the point. */
-.stage5 {
-  background: var(--ah-color-focus);
-  border-color: var(--ah-color-focus);
-  box-shadow: inset 0 0 0 2px var(--ah-color-bg);
-}
-
-/* Asked and unresolved: part of this work has no evidence either way, so the
-   lowest level cannot be known. Dashed, because something is missing from it. */
-.stageunknown {
-  background: transparent;
-  border-style: dashed;
-  border-color: var(--ah-color-subtle);
-}
-
-/* Never asked. The faintest mark on the chart: no update in the collected
-   window mentions this work, which is a statement about the collection. */
-.stageuntouched {
+/* Not touched: no update in the collected window mentions this work, which is
+   a statement about the collection. The faintest mark on the chart. */
+.untouched {
   background: transparent;
   border-color: color-mix(in srgb, var(--ah-color-line) 55%, transparent);
 }
@@ -108,11 +71,6 @@
   align-items: baseline;
   padding-bottom: var(--ah-space-2);
   border-bottom: 1px solid var(--ah-color-line);
-}
-
-/* An empty bucket stays in the list at full weight: it is the finding. */
-.legendEmpty .legendValue {
-  color: var(--ah-color-warning);
 }
 
 .swatch {

@@ -43,7 +43,7 @@
 }
 
 /* The whole row is the target, and it lifts rather than recolours: a colour
-   change here would compete with the stage scale inside the block. */
+   change here would compete with the filled squares inside the block. */
 .item a.row:hover,
 .item a.row:focus-visible {
   background: var(--ah-color-surface);
@@ -80,27 +80,15 @@
   block-size: var(--cell);
 }
 
-/* Ordinal scale: one hue, increasing weight. The words live in the legend on
-   the grid component, so nothing here depends on colour alone. */
-.stagenone {
+/* Two states, one hue. The words live in the legend on the grid component, so
+   nothing here depends on colour alone. */
+.untouched {
   background: transparent;
   box-shadow: inset 0 0 0 1px var(--ah-color-line);
 }
 
-.stage1 {
-  background: color-mix(in srgb, var(--ah-color-signal) 22%, transparent);
-}
-
-.stage2 {
-  background: color-mix(in srgb, var(--ah-color-signal) 48%, transparent);
-}
-
-.stage3 {
+.touched {
   background: var(--ah-color-signal);
-}
-
-.stage4 {
-  background: var(--ah-color-focus);
 }
 
 .share {

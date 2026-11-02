@@ -2,7 +2,7 @@ import { plural } from "@/lib/plural";
 import type { Route } from "next";
 import Link from "next/link";
 import type { Language } from "@/lib/i18n";
-import { apportion, DRAW_ORDER, STAGE_KEYS, type StageKey, type WorkGridCounts } from "./work-grid-shape";
+import { cellsFor, STAGE_KEYS, type WorkGridCounts } from "./work-grid-shape";
 import s from "./progress-compare.module.css";
 
 /**
@@ -10,8 +10,8 @@ import s from "./progress-compare.module.css";
  *
  * One grid on its own answers "how far". Twenty-two of them sharing a left edge
  * answer "how far compared with what", which is the question somebody deciding
- * where to put their effort actually has. Cells run most-autonomous first, so
- * each row reads as a frontier and the stack reads as a gradient.
+ * where to look first actually has. Touched cells run first, so each row reads
+ * as a bar and the stack reads as a gradient.
  *
  * Alignment is the whole technique: same cell size, same start, same order,
  * sorted once. Break any of those and the rows stop being comparable.
@@ -36,29 +36,27 @@ const COLUMNS = 25;
 
 const COPY = {
   en: {
-    colSector: "Sector",
-    colFrontier: "L5 ← 4 ← 3 ← 2 ← 1 ← 0 ← unknown ← untouched",
-    colShare: "L2+",
+    colSector: "Name",
+    colFrontier: "touched ← not touched",
+    colShare: "Touched",
     tasks: "{n|task|tasks}",
     median: "median",
-    shareNote: "share of tasks AI produces the bulk of, leaving a person to check",
+    shareNote: "share of tasks at least one collected update bears on",
   },
   "zh-CN": {
-    colSector: "领域",
-    colFrontier: "L5 ← 4 ← 3 ← 2 ← 1 ← 0 ← 未知 ← 未触及",
-    colShare: "L2 以上",
+    colSector: "名称",
+    colFrontier: "已触及 ← 未触及",
+    colShare: "已触及",
     tasks: "项任务",
     median: "中位",
-    shareNote: "AI 出主体、人只做复核的任务占比",
+    shareNote: "至少有一条采集到的更新谈到的任务比例",
   },
 } as const;
 
-/** L2 is where a person stops doing the work and starts checking it. */
-function finishedShare(counts: WorkGridCounts, tasks: number) {
+/** Share of tasks an update has touched, as a whole percent. */
+function touchedShareOf(counts: WorkGridCounts, tasks: number) {
   if (!tasks) return 0;
-  const atOrAbove = (["2", "3", "4", "5"] as const)
-    .reduce((sum, key) => sum + (counts[key] ?? 0), 0);
-  return Math.round((atOrAbove / tasks) * 100);
+  return Math.round(((counts.touched ?? 0) / tasks) * 100);
 }
 
 export function ProgressCompare<T extends string>({
@@ -75,16 +73,16 @@ export function ProgressCompare<T extends string>({
    * alone must never be the thing carrying the information.
    */
   mark?: Set<string>;
-  /** `given` keeps the caller's order; the default ranks by how far AI got. */
+  /** `given` keeps the caller's order; the default ranks by how much is touched. */
   order?: "share" | "given";
 }) {
   const c = COPY[language];
   const ranked = order === "given"
     ? rows
     : [...rows].sort(
-        (a, b) => finishedShare(b.counts, b.tasks) - finishedShare(a.counts, a.tasks),
+        (a, b) => touchedShareOf(b.counts, b.tasks) - touchedShareOf(a.counts, a.tasks),
       );
-  const shares = ranked.map((row) => finishedShare(row.counts, row.tasks));
+  const shares = ranked.map((row) => touchedShareOf(row.counts, row.tasks));
   const median = shares.length
     ? shares.slice().sort((x, y) => x - y)[Math.floor(shares.length / 2)]
     : 0;
@@ -99,14 +97,8 @@ export function ProgressCompare<T extends string>({
 
       <ol className={s.list}>
         {ranked.map((row) => {
-          const share = finishedShare(row.counts, row.tasks);
-          const drawn = apportion(row.counts, 100);
-          const cells: StageKey[] = [];
-          // The same order the single grid uses; a second copy is how two
-          // charts of the same data quietly stop being comparable.
-          for (const key of DRAW_ORDER) {
-            for (let i = 0; i < drawn[key]; i += 1) cells.push(key);
-          }
+          const share = touchedShareOf(row.counts, row.tasks);
+          const cells = cellsFor(row.counts);
           const marked = mark ? mark.has(row.id) : false;
           const body = (
             <>
@@ -122,7 +114,7 @@ export function ProgressCompare<T extends string>({
                 style={{ gridTemplateColumns: `repeat(${COLUMNS}, 1fr)` }}
               >
                 {cells.map((key, i) => (
-                  <span key={i} className={`${s.cell} ${s[`stage${key}`]}`} />
+                  <span key={i} className={`${s.cell} ${s[key]}`} />
                 ))}
               </span>
               <span className={s.share}>
@@ -155,4 +147,4 @@ export function ProgressCompare<T extends string>({
   );
 }
 
-export { finishedShare, STAGE_KEYS };
+export { touchedShareOf, STAGE_KEYS };

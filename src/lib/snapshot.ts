@@ -238,22 +238,15 @@ export type Progress = {
   markets: Record<string, MarketProgress>;
 };
 
-/** Work an update has been shown to reach, at any level above none. */
+/** Tasks an update has been shown to reach: any reading at all, whatever it said. */
 export function assessedCount(by: StageCounts): number {
   return (["0", "1", "2", "3", "4", "5"] as const)
     .reduce((sum, key) => sum + (by[key] ?? 0), 0);
 }
 
-/**
- * Work AI produces the bulk of or better: L2 and up.
- *
- * L2 is the line where a person stops doing the work and starts checking it.
- * Below it AI is an assistant; at or above it the output is AI's and the human
- * role is review. That is the threshold a reader is asking about.
- */
-export function atOrAboveL2(by: StageCounts): number {
-  return (["2", "3", "4", "5"] as const)
-    .reduce((sum, key) => sum + (by[key] ?? 0), 0);
+/** Percent of `tasks` that at least one collected update touches. Zero tasks is zero, not a division. */
+export function touchedShare(by: StageCounts, tasks: number): number {
+  return tasks > 0 ? Math.round((assessedCount(by) / tasks) * 100) : 0;
 }
 
 /**
@@ -535,15 +528,14 @@ export const topicBySlug = (slug: string): Topic | undefined => topics().find((t
 /**
  * Where the middle occupation sits, so one occupation's share can be judged.
  *
- * A bare "41%" tells a reader nothing. The same number against a median of 33%
+ * A bare "41%" tells a reader nothing. The same number against a median of 0%
  * across 923 occupations is a judgement they can act on.
  */
 export function occupationMedianShare(): { occupations: number; median: number } {
   const shares: number[] = [];
   for (const entry of Object.values(progress()?.occupations ?? {})) {
-    const total = entry.tasks;
-    if (!total) continue;
-    shares.push((atOrAboveL2(entry.by_stage) / total) * 100);
+    if (!entry.tasks) continue;
+    shares.push((assessedCount(entry.by_stage) / entry.tasks) * 100);
   }
   if (!shares.length) return { occupations: 0, median: 0 };
   shares.sort((x, y) => x - y);
