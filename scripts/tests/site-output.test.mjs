@@ -1044,7 +1044,7 @@ test("MCP: a client initializes with no key, and the public endpoint lists only 
   assert.equal(old.body.result.protocolVersion, "2025-06-18");
   assert.equal((await rpc("/api/mcp", { jsonrpc: "2.0", method: "notifications/initialized" })).status, 202);
   const tools = (await rpc("/api/mcp", { jsonrpc: "2.0", id: 3, method: "tools/list" })).body.result.tools;
-  assert.deepEqual(tools.map((t) => t.name), ["search", "get_record", "query_observations", "occupation_summary"]);
+  assert.deepEqual(tools.map((t) => t.name), ["search", "get_record", "query_observations", "occupation_summary", "changes_since"]);
   assert.deepEqual(tools[0].inputSchema.properties.types.items.enum, ["update", "question", "evidence", "article"]);
   assert.deepEqual(tools[0].inputSchema.properties.status.enum, ["approved", "preview"]);
   for (const t of tools) {
@@ -1137,7 +1137,7 @@ test("MCP: bad arguments and unknown ids are tool errors the agent can read, and
 
 test("MCP submit endpoint without the user database: reading works, submitting is unavailable", async () => {
   const tools = (await rpc("/api/mcp/submit", { jsonrpc: "2.0", id: 1, method: "tools/list" })).body.result.tools;
-  assert.equal(tools.length, 7);
+  assert.equal(tools.length, 8);
   assert.equal((await tool("search", { query: "model" }, "/api/mcp/submit")).isError, undefined);
   const refused = await tool("submit_question", { question: "x" }, "/api/mcp/submit");
   assert.equal(refused.isError, true);
@@ -1307,9 +1307,12 @@ test("the public data contract is served and the agent responses carry its four 
   const list = await get("/api/agent/observations?limit=2");
   const checkList = ajv.compile({ $ref: "api#/components/schemas/ObservationsResponse" });
   assert.ok(checkList(list), JSON.stringify(checkList.errors));
+  const changes = await get("/api/agent/changes?since=2026-01-01");
+  const checkChanges = ajv.compile({ $ref: "api#/components/schemas/ChangesResponse" });
+  assert.ok(checkChanges(changes), JSON.stringify(checkChanges.errors));
   // A release without observations says the counts are unknown, not zero.
   if (!existsSync(join(SNAPSHOT_DIR, "observations.json"))) {
-    assert.deepEqual([summary.state, summary.counts, list.published, list.total, list.counts], ["unpublished", null, false, null, null]);
+    assert.deepEqual([summary.state, summary.counts, list.published, list.total, list.counts, changes.observations], ["unpublished", null, false, null, null, null]);
   }
 });
 
@@ -1340,7 +1343,7 @@ test("market and occupation pages count their observations by evidence type and 
     work_key: fields.concerns[0].concept_id, event_id: null, task: `Task of ${id}`, outcome: "succeeded",
     direction: "ai_takes_on", scale: null, conditions: null, occurred_on: null, announced_at: null,
     observed_at: day(0), review_state: "machine_proposed", reviewed_at: null, extractor: "test", prompt_sha256: null,
-    model: null, schema_version: "2.5.0", created_at: day(0), facts: [], merged_from: [],
+    model: null, schema_version: "2.5.0", created_at: day(1), facts: [], merged_from: [],
     sources: [{ source_ref: `src-${id}`, source_type: "x_post", url: `https://x.com/a/status/${id.length}`, source_id: null, quote: `QUOTE ${id}`, published_at: null }],
     ...fields,
   });
@@ -1351,8 +1354,17 @@ test("market and occupation pages count their observations by evidence type and 
       concerns: [concern(first.id, "work"), concern(second.id, "work"), concern(occupation.id, "occupation")],
       facts: [{ fact_id: "fact-a", value: "48", unit: "%", what: "share of tickets closed", baseline: null, method_note: null, quote: "FIGURE obs-a" }],
     }),
-    row("obs-b", { evidence_type: "measurement", direction: "human_still_needed", outcome: "failed", announced_at: day(60), concerns: [concern(first.id, "work")] }),
-    row("obs-c", { evidence_type: "vendor_claim", concerns: [concern(second.id, "work")] }),
+    row("obs-b", {
+      evidence_type: "measurement", direction: "human_still_needed", outcome: "failed", announced_at: day(60), concerns: [concern(first.id, "work")],
+      created_at: day(30), review_state: "human_confirmed", reviewed_at: day(2),
+    }),
+    row("obs-c", {
+      evidence_type: "vendor_claim", concerns: [concern(second.id, "work")], created_at: day(30),
+      sources: [
+        { source_ref: "src-c1", source_type: "x_post", url: "https://x.com/a/status/31", source_id: null, quote: "QUOTE obs-c", published_at: day(31) },
+        { source_ref: "src-c2", source_type: "x_post", url: "https://x.com/b/status/32", source_id: null, quote: "LATER obs-c", published_at: day(3) },
+      ],
+    }),
     row("obs-d", { evidence_type: "own_use", announced_at: day(1), concerns: [concern(elsewhere.id, "work")] }),
     row("obs-1111111111111111", { evidence_type: "vendor_claim", direction: "neutral", merged_from: ["obs-0000000000000001"], concerns: [concern(elsewhere.id, "work")] }),
   ]));
@@ -1445,6 +1457,40 @@ test("market and occupation pages count their observations by evidence type and 
       body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "occupation_summary", arguments: { market: marketId } } }),
     })).json();
     assert.deepEqual(viaMcp.result.structuredContent.counts, market.counts, "MCP and HTTP answer alike");
+
+    // Issue #29: what is new since a moment, read from the timestamps the loaded release carries.
+    const since = day(10).slice(0, 10);
+    const changes = (await api(`/api/agent/changes?since=${since}`)).body;
+    assert.deepEqual([changes.since.basis, changes.since.at, changes.same_release], ["date", `${since}T00:00:00.000Z`, false]);
+    const recorded = changes.observations.recorded;
+    assert.deepEqual(recorded.results.map((o) => o.id), ["obs-a", "obs-d", "obs-1111111111111111"], "first recorded after the moment, strongest first among equals");
+    assert.deepEqual([recorded.total, recorded.counts.total, recorded.counts.by_evidence_type.production_use, recorded.more], [3, 3, 1, null]);
+    assert.deepEqual(recorded.pages[0], {
+      kind: "market", id: elsewhere.market_id, label: recorded.pages[0].label, label_zh_cn: recorded.pages[0].label_zh_cn, new_observations: 2,
+      url: `https://surviagi.com/markets/${elsewhere.market_id.replace(/^oaw:market:/, "")}`,
+    });
+    assert.deepEqual(changes.observations.new_sources.results.map((o) => [o.id, o.new_source_urls]), [["obs-c", ["https://x.com/b/status/32"]]], "an older observation a newer source also states");
+    assert.deepEqual(changes.observations.reviewed.results.map((o) => [o.id, o.review_state]), [["obs-b", "human_confirmed"]]);
+    assert.equal(changes.updates.basis, "happened_after");
+    assert.ok(changes.updates.results.every((u) => u.date === null || u.date >= since));
+    assert.equal(typeof changes.articles.available, "boolean");
+    const paged = (await api(`/api/agent/changes?since=${since}&limit=1`)).body.observations.recorded;
+    assert.deepEqual([paged.results.length, paged.more.tool, paged.more.arguments.order], [1, "query_observations", "recorded"]);
+    const whole = (await api(`/api/agent/observations?${new URLSearchParams(paged.more.arguments)}`)).body;
+    assert.deepEqual(whole.results.map((o) => o.id), recorded.results.map((o) => o.id), "more pages through the same rows");
+    const scoped = (await api(`/api/agent/changes?since=${since}&market=${marketId}`)).body;
+    assert.deepEqual([scoped.observations.recorded.total, scoped.observations.recorded.pages, scoped.updates, scoped.articles, scoped.scope.market.id], [1, null, null, null, marketId]);
+    const loaded = (await api("/api/agent/search?query=model")).body.versions.data;
+    const same = (await api(`/api/agent/changes?since=${loaded}`)).body;
+    assert.deepEqual([same.since.basis, same.same_release, same.observations.recorded.total, same.observations.new_sources.total], ["release", true, 0, 0]);
+    for (const bad of ["", "?since=yesterday", "?since=2999-01-01", `?since=${since}&limit=0`]) {
+      assert.equal((await api(`/api/agent/changes${bad}`)).status, 400, bad);
+    }
+    const changesMcp = await (await fetch(`${base}/api/mcp`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "changes_since", arguments: { since, market: marketId } } }),
+    })).json();
+    assert.deepEqual(changesMcp.result.structuredContent.observations, scoped.observations, "MCP and HTTP answer alike");
   } finally {
     await stop(proc);
     rmSync(dir, { recursive: true, force: true });

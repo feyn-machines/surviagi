@@ -74,8 +74,8 @@ export async function GET() {
     "",
     `Install the SurviAGI HTTP Skill: ${SITE_URL}/api/agent/packages/surviagi-http.zip (SKILL.md and a Python 3 script; no dependencies or key for reading). Installation guide: ${absoluteUrl("en", "/agents")}#install.`,
     "",
-    `Search and read the published records over MCP (Streamable HTTP) at ${SITE_URL}/api/mcp, no key needed: tools \`search\`, \`get_record\`, \`query_observations\` (observations filtered by occupation, market, organization, evidence type, direction and date, with counts) and \`occupation_summary\` (one occupation's or market's evidence statistics, the numbers its page shows). ` +
-      `The same as HTTP: ${SITE_URL}/api/agent/search?query=..., ${SITE_URL}/api/agent/record?id=..., ${SITE_URL}/api/agent/observations?occupation=... and ${SITE_URL}/api/agent/summary?occupation=... ` +
+    `Search and read the published records over MCP (Streamable HTTP) at ${SITE_URL}/api/mcp, no key needed: tools \`search\`, \`get_record\`, \`query_observations\` (observations filtered by occupation, market, organization, evidence type, direction and date, with counts), \`occupation_summary\` (one occupation's or market's evidence statistics, the numbers its page shows) and \`changes_since\` (what is new since an earlier data release or a date). ` +
+      `The same as HTTP: ${SITE_URL}/api/agent/search?query=..., ${SITE_URL}/api/agent/record?id=..., ${SITE_URL}/api/agent/observations?occupation=..., ${SITE_URL}/api/agent/summary?occupation=... and ${SITE_URL}/api/agent/changes?since=... ` +
       `Submitting research questions or accounts to monitor needs a reader's API key and ${SITE_URL}/api/mcp/submit. ` +
       `Details: [For AI agents](${absoluteUrl("en", "/agents")}).`,
     "",

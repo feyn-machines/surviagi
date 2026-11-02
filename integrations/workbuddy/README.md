@@ -6,7 +6,7 @@ Connector and Skill sources for [WorkBuddy](https://open.workbuddy.cn/docs/conne
 
 | 目录 | 是什么 | 认证 |
 | --- | --- | --- |
-| `surviagi/` | 连接器「SurviAGI 搜索」，远程 MCP `https://surviagi.com/api/mcp`，工具 `search`、`get_record`、`query_observations`、`occupation_summary` | 无 |
+| `surviagi/` | 连接器「SurviAGI 搜索」，远程 MCP `https://surviagi.com/api/mcp`，工具 `search`、`get_record`、`query_observations`、`occupation_summary`、`changes_since` | 无 |
 | `surviagi-submit/` | 连接器「SurviAGI 搜索与提交」，远程 MCP `https://surviagi.com/api/mcp/submit`，另有 `submit_question`、`suggest_account`、`my_submissions` | `auth_mode: token`，`Authorization: Bearer ${SURVIAGI_API_KEY}` |
 | `skill-http/surviagi-http/` | 不用 MCP 的 Skill：`scripts/surviagi.py` 调用 HTTP 接口（只用 Python 标准库） | 提交时读环境变量 `SURVIAGI_API_KEY` |
 

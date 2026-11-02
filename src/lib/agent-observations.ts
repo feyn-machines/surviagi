@@ -34,10 +34,12 @@ export const OBSERVATION_ID = /^obs-[0-9a-f]{16}$/;
 export const DIRECTIONS = ["ai_takes_on", "human_still_needed", "neutral"] as const;
 export const OUTCOMES = ["succeeded", "partly", "failed", "not_stated"] as const;
 export const REVIEW_STATES = ["machine_proposed", "human_confirmed", "human_rejected"] as const;
-export const ORDERS = ["strength", "newest"] as const;
+export const ORDERS = ["strength", "newest", "recorded"] as const;
 
 export const DEFAULT_OBSERVATIONS = 20;
 export const MAX_OBSERVATIONS = 50;
+/** How many items each list of `changes_since` shows. */
+export const DEFAULT_CHANGES = 10;
 /** How many representative ids, products or adopters a summary names. */
 const TOP = 6;
 
@@ -84,10 +86,10 @@ export function candidateView(c: Concept, language: Language) {
   return { id: c.id, label: c.label_en, label_zh_cn: c.label_zh_cn, url: absoluteUrl(language, pagePath(c)) };
 }
 
-const pagePath = (c: Pick<Concept, "kind" | "slug">) => `/${c.kind === "occupation" ? "occupations" : "markets"}/${c.slug}`;
+export const pagePath = (c: Pick<Concept, "kind" | "slug">) => `/${c.kind === "occupation" ? "occupations" : "markets"}/${c.slug}`;
 
 /** The pages that list an observation: each occupation it was mapped to, and each market of its work. */
-function pagesOf(row: ObservationRow): Pick<Concept, "kind" | "slug" | "id">[] {
+export function pagesOf(row: ObservationRow): Pick<Concept, "kind" | "slug" | "id">[] {
   const pages: Pick<Concept, "kind" | "slug" | "id">[] = [];
   for (const c of row.concerns) if (c.kind === "occupation") pages.push({ kind: "occupation", id: c.concept_id, slug: occupationSlug(c.concept_id) });
   const seen = new Set<string>();
@@ -132,6 +134,7 @@ export function observationSummary(row: ObservationRow, language: Language) {
     facts: row.facts.map((f) => ({ value: f.value, unit: f.unit, what: f.what, quote: f.quote })),
     sources: row.sources.map((s) => ({ url: s.url, quote: s.quote, published_at: s.published_at })),
     review_state: row.review_state,
+    recorded_at: row.created_at,
     ...observationUrls(row, language),
   };
 }
@@ -180,6 +183,8 @@ export type ObservationFilter = {
   reviewStates?: (typeof REVIEW_STATES)[number][];
   from?: string | null;
   to?: string | null;
+  /** An instant: only observations first recorded in the ledger after it. */
+  recordedSince?: string | null;
 };
 
 /** The rows a filter selects. Occupation and market select exactly the rows their pages list. */
@@ -191,6 +196,7 @@ export function filterObservations(filter: ObservationFilter): ObservationRow[] 
     const inMarket = new Set(observationsOfMarket(filter.market.id));
     rows = rows.filter((r) => inMarket.has(r));
   }
+  const recordedSince = filter.recordedSince ? Date.parse(filter.recordedSince) : null;
   const organization = fold(filter.organization);
   const subject = fold(filter.subject);
   return rows.filter((r) => {
@@ -204,6 +210,7 @@ export function filterObservations(filter: ObservationFilter): ObservationRow[] 
     const day = observationDate(r);
     if (filter.from && (!day || day < filter.from)) return false;
     if (filter.to && (!day || day > filter.to)) return false;
+    if (recordedSince !== null && !(Date.parse(r.created_at) > recordedSince)) return false;
     return true;
   });
 }
@@ -211,8 +218,11 @@ export function filterObservations(filter: ObservationFilter): ObservationRow[] 
 const byNewest = (a: ObservationRow, b: ObservationRow) =>
   (observationDate(b) ?? "").localeCompare(observationDate(a) ?? "") || a.observation_id.localeCompare(b.observation_id);
 
+/** Last recorded first: what a reader coming back has not seen yet. */
+const byRecorded = (a: ObservationRow, b: ObservationRow) => Date.parse(b.created_at) - Date.parse(a.created_at) || byStrength(a, b);
+
 export function sortObservations(rows: ObservationRow[], order: (typeof ORDERS)[number]): ObservationRow[] {
-  return [...rows].sort(order === "newest" ? byNewest : byStrength);
+  return [...rows].sort(order === "newest" ? byNewest : order === "recorded" ? byRecorded : byStrength);
 }
 
 /** The day counts are taken as of: the release's, as on the pages. */

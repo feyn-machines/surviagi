@@ -13,7 +13,7 @@
 import { schema, termIds, validateSchema } from "./ontology-schema.mjs";
 
 /** The contract's own version. Moves independently of the ontology, the method and the data. */
-export const CONTRACT_VERSION = "1.3.0";
+export const CONTRACT_VERSION = "1.4.0";
 export const CONTRACT_PATH = "contract/v1";
 
 /**
@@ -429,12 +429,28 @@ export function openApi(entityNames) {
               { name, in: "query", schema: { type: "array", items: { type: "string", enum: values } }, style: "form", explode: false, description: "Comma-separated; any of them." })),
             { name: "from", in: "query", schema: { type: "string", format: "date" } },
             { name: "to", in: "query", schema: { type: "string", format: "date" } },
-            { name: "order", in: "query", schema: { type: "string", enum: ["strength", "newest"], default: "strength" } },
+            { name: "recorded_since", in: "query", schema: { type: "string", maxLength: 64 }, description: "Only observations first recorded after this: a data release id, a date (from its start, UTC) or a time with offset." },
+            { name: "order", in: "query", schema: { type: "string", enum: ["strength", "newest", "recorded"], default: "strength" }, description: "recorded: last recorded first." },
             { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 50, default: 20 } },
             { name: "cursor", in: "query", schema: { type: "string" }, description: "`next_cursor` of the previous page." },
             LANGUAGE,
           ],
           responses: { "200": jsonBody(ref("ObservationsResponse"), "One page of matching observations."), ...ERRORS, "404": jsonBody(ref("Error"), "No occupation or market matches; `candidates` lists near matches.") },
+        },
+      },
+      "/api/agent/changes": {
+        get: {
+          operationId: "changesSince",
+          summary: "What is new since an earlier data release or a moment.",
+          description: "Everything listed was recorded or published after `since`, so none of it can be in an earlier release. Updates carry no recorded time: those listed happened after it, a lower bound. With occupation or market, updates and articles are null.",
+          parameters: [
+            { name: "since", in: "query", required: true, schema: { type: "string", minLength: 1, maxLength: 64 }, description: "A data release id (`versions.data` of an earlier answer), a date YYYY-MM-DD (from its start, UTC) or a time with offset." },
+            { name: "occupation", in: "query", schema: { type: "string", maxLength: 200 }, description: "Only what is new for this occupation: id, O*NET code or name." },
+            { name: "market", in: "query", schema: { type: "string", maxLength: 200 }, description: "Only what is new for this market: id, slug or name." },
+            { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 50, default: 10 }, description: "Items per list; totals count all." },
+            LANGUAGE,
+          ],
+          responses: { "200": jsonBody(ref("ChangesResponse"), "What changed."), ...ERRORS, "404": jsonBody(ref("Error"), "No occupation or market matches; `candidates` lists near matches."), "503": jsonBody(ref("Error"), "Article reading is unavailable.") },
         },
       },
       "/api/agent/summary": {
@@ -523,10 +539,50 @@ export function openApi(entityNames) {
             facts: { type: "array", items: { type: "object", properties: { value: S("string"), unit: { type: ["string", "null"] }, what: S("string"), quote: S("string") }, required: ["value", "unit", "what", "quote"] } },
             sources: { type: "array", items: { type: "object", properties: { url: S("string", { format: "uri" }), quote: S("string"), published_at: { type: ["string", "null"] } }, required: ["url", "quote", "published_at"] } },
             review_state: S("string", { enum: OBSERVATION_ENUMS.review_state }),
+            recorded_at: S("string", { description: "When it was first recorded in the ledger." }),
             url: { type: ["string", "null"], format: "uri" },
             markdown_url: { type: ["string", "null"], format: "uri" },
           },
-          required: ["id", "type", "date", "evidence_type", "direction", "outcome", "task", "actor", "subject", "facts", "sources", "review_state", "url", "markdown_url"],
+          required: ["id", "type", "date", "evidence_type", "direction", "outcome", "task", "actor", "subject", "facts", "sources", "review_state", "recorded_at", "url", "markdown_url"],
+        },
+        ChangesResponse: {
+          type: "object",
+          properties: {
+            since: {
+              type: "object",
+              properties: { given: S("string"), basis: S("string", { enum: ["release", "date", "time"] }), at: S("string", { description: "The moment compared against, UTC." }) },
+              required: ["given", "basis", "at"],
+            },
+            scope: { type: "object" },
+            same_release: S("boolean", { description: "The release given is the one loaded: nothing in it is new." }),
+            observations: {
+              type: ["object", "null"],
+              description: "Null when the loaded release carries no observations (unknown, not none).",
+              properties: {
+                recorded: {
+                  type: "object",
+                  properties: {
+                    total: S("integer"),
+                    counts: ref("ObservationCounts"),
+                    pages: { type: ["array", "null"], description: "Occupation and market pages the new observations reach, most first; null when scoped." },
+                    results: { type: "array", items: ref("ObservationSummary") },
+                    more: { type: ["object", "null"], description: "query_observations arguments that page through all of them." },
+                  },
+                  required: ["total", "counts", "pages", "results", "more"],
+                },
+                new_sources: { type: "object", properties: { total: S("integer"), results: { type: "array" } }, required: ["total", "results"] },
+                reviewed: { type: "object", properties: { total: S("integer"), results: { type: "array" } }, required: ["total", "results"] },
+              },
+              required: ["recorded", "new_sources", "reviewed"],
+            },
+            topics: { type: "object", properties: { opened: { type: "object" }, new_claims: { type: "object" } }, required: ["opened", "new_claims"] },
+            updates: { type: ["object", "null"], description: "Updates that happened after `since`; null when scoped." },
+            articles: { type: ["object", "null"], description: "Public article revisions written or approved after `since`; null when scoped." },
+            release: { type: "object" },
+            versions: ref("Versions"),
+            note: S("string"),
+          },
+          required: ["since", "scope", "same_release", "observations", "topics", "updates", "articles", "release", "versions", "note"],
         },
         ObservationsResponse: {
           type: "object",

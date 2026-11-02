@@ -210,3 +210,38 @@ export function parseEditorialRevisionId(id: string): { articleId: string; versi
   const version = Number(match[2]);
   return Number.isSafeInteger(version) ? { articleId: match[1], version } : null;
 }
+
+/**
+ * Public article revisions written or approved after an instant, for `changes_since`. Articles are not in data
+ * releases, so their own times are exact. Only current public pointers count; private review data is never read.
+ */
+export async function editorialChangesSince(at: string, language: Language, limit: number) {
+  const articles = await publicEditorialAgentArticles(language);
+  if (articles === null) return { available: false, total: 0, results: [] };
+  const since = Date.parse(at);
+  const written = (a: PublicEditorialAgentArticle) => Date.parse(a.createdAt) > since;
+  const approved = (a: PublicEditorialAgentArticle) => !!a.approvedAt && Date.parse(a.approvedAt) > since;
+  const latest = (a: PublicEditorialAgentArticle) => Math.max(Date.parse(a.createdAt), a.approvedAt ? Date.parse(a.approvedAt) : 0);
+  const changed = articles.filter((a) => written(a) || approved(a)).sort((a, b) => latest(b) - latest(a) || a.revisionId.localeCompare(b.revisionId));
+  return {
+    available: true,
+    total: changed.length,
+    results: changed.slice(0, limit).map((article) => {
+      const path = articleUrl(article);
+      return {
+        id: article.revisionId,
+        type: ARTICLE_TYPE,
+        title: article.title,
+        status: article.publicationStatus,
+        review: reviewStatus(article.publicationStatus),
+        version: article.version,
+        change: written(article) ? ("new_version" as const) : ("approved" as const),
+        substantive_modified_at: article.createdAt,
+        approved_at: article.approvedAt,
+        evidence_cutoff: article.sourceCutoff,
+        url: absoluteUrl(language, path),
+        markdown_url: absoluteUrl(language, `${path}/raw.md`),
+      };
+    }),
+  };
+}

@@ -1,5 +1,5 @@
 {
-  "contract_version": "1.3.0",
+  "contract_version": "1.4.0",
   "ontology_version": "2.5.0",
   "name": "SurviAGI public data contract",
   "x-name-zh-CN": "SurviAGI 公开数据契约",

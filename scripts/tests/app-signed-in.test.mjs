@@ -542,7 +542,7 @@ t("keys: only a signed-in reader on the site's own origin makes one; the list ne
 
 t("MCP submit: the submit endpoint lists seven tools; a missing, invalid or revoked key is refused and reading still works", async () => {
   const listed = await mcp("/api/mcp/submit", "tools/list", {});
-  assert.deepEqual(listed.body.result.tools.map((tool) => tool.name), ["search", "get_record", "query_observations", "occupation_summary", "submit_question", "suggest_account", "my_submissions"]);
+  assert.deepEqual(listed.body.result.tools.map((tool) => tool.name), ["search", "get_record", "query_observations", "occupation_summary", "changes_since", "submit_question", "suggest_account", "my_submissions"]);
   const missing = await callTool("submit_question", question(), null);
   assert.equal(missing.error, true);
   assert.equal(missing.value.error, "missing_key");

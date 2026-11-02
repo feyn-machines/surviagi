@@ -68,9 +68,16 @@ def main(argv=None) -> int:
         observations.add_argument(f"--{name}")
     observations.add_argument("--from", dest="date_from")
     observations.add_argument("--to", dest="date_to")
-    observations.add_argument("--order", choices=("strength", "newest"))
+    observations.add_argument("--recorded-since")
+    observations.add_argument("--order", choices=("strength", "newest", "recorded"))
     observations.add_argument("--limit", type=int)
     observations.add_argument("--language", choices=("en", "zh-CN"))
+    changes = commands.add_parser("changes")
+    changes.add_argument("since")
+    changes.add_argument("--occupation")
+    changes.add_argument("--market")
+    changes.add_argument("--limit", type=int)
+    changes.add_argument("--language", choices=("en", "zh-CN"))
     question = commands.add_parser("question")
     question.add_argument("--question", required=True)
     question.add_argument("--why", required=True)
@@ -100,7 +107,11 @@ def main(argv=None) -> int:
             "occupation": args.occupation, "market": args.market, "task": args.task, "organization": args.organization,
             "subject": args.subject, "evidence_types": args.evidence_types, "directions": args.directions,
             "outcomes": args.outcomes, "review_states": args.review_states, "from": args.date_from, "to": args.date_to,
-            "order": args.order, "limit": args.limit, "cursor": args.cursor, "language": args.language})
+            "recorded_since": args.recorded_since, "order": args.order, "limit": args.limit, "cursor": args.cursor,
+            "language": args.language})
+    if args.command == "changes":
+        return call("GET", "/api/agent/changes", {"since": args.since, "occupation": args.occupation, "market": args.market,
+                                                   "limit": args.limit, "language": args.language})
     if args.command in ("question", "account") and not args.request_id:
         args.request_id = str(uuid.uuid4())
         print(f"request_id: {args.request_id} (pass --request-id {args.request_id} to retry safely)", file=sys.stderr)
