@@ -1,6 +1,7 @@
 import { termNameOrRaw } from "@/components/ontology-labels";
 import { DEFAULT_LANGUAGE, normalizeLanguage } from "@/lib/i18n";
 import { colon, link, markdownResponse } from "@/lib/markdown-copy";
+import { ledger, ledgerMarkdown } from "@/lib/observation-view";
 import { indexable } from "@/lib/site-pages";
 import {
   activitiesOfMarket,
@@ -9,6 +10,7 @@ import {
   manifest,
   markets,
   marketSlug,
+  observationsOfMarket,
   occupationsOfMarket,
   occupationSlug,
 } from "@/lib/snapshot";
@@ -50,6 +52,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
     "",
     c.lead,
     "",
+    ...ledgerMarkdown(ledger(observationsOfMarket(market.id), name, language), language),
     `## ${c.activitiesTitle}`,
     "",
   ];

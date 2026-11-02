@@ -1302,3 +1302,79 @@ test("the public data contract is served and the agent responses carry its four 
   assert.ok(checkRecord(found), JSON.stringify(checkRecord.errors));
   assert.deepEqual(found.versions, search.versions);
 });
+
+// Issue #32: observations counted by evidence type on market and occupation pages, the same on the page and its copy.
+test("market and occupation pages count their observations by evidence type and list them with their sources", { skip: !HAS_SNAPSHOT, timeout: 60000 }, async () => {
+  const read = (name) => JSON.parse(readFileSync(join(SNAPSHOT_DIR, `${name}.json`), "utf8"));
+  // A release without the collection says so instead of counting zero.
+  if (!existsSync(join(SNAPSHOT_DIR, "observations.json"))) {
+    const market = await (await fetch(`${site.base}/markets/accounting-audit-assurance`)).text();
+    assert.ok(market.includes("This data release does not carry observations yet."));
+  }
+  const dir = mkdtempSync(join(tmpdir(), "surviagi-observations-"));
+  cpSync(SNAPSHOT_DIR, dir, { recursive: true });
+  const work = existsSync(join(SNAPSHOT_DIR, "work.json"))
+    ? read("work").map((w) => ({ id: w.id, market_id: w.market_id }))
+    : read("chain").activities.map((a) => ({ id: a.activity_id, market_id: a.market_id }));
+  const marketId = work.find((w) => work.filter((x) => x.market_id === w.market_id).length >= 2).market_id;
+  const [first, second] = work.filter((w) => w.market_id === marketId);
+  const elsewhere = work.find((w) => w.market_id !== marketId);
+  const occupation = read("occupations").find((o) => (o.tasks ?? 0) > 0);
+  const day = (offset) => {
+    const at = new Date(Date.parse(read("manifest").generated_at.slice(0, 10)) - offset * 86400000);
+    return `${at.toISOString().slice(0, 10)}T08:00:00+00:00`;
+  };
+  const row = (id, fields) => ({
+    observation_id: id, actor_key: `x:${id}`, actor_org_id: null, actor_person_id: null, actor_name: `Actor ${id}`,
+    actor_role: "adopter", subject_key: "unspecified", subject_product_id: null, subject_model_id: null,
+    work_key: fields.concerns[0].concept_id, event_id: null, task: `Task of ${id}`, outcome: "succeeded",
+    direction: "ai_takes_on", scale: null, conditions: null, occurred_on: null, announced_at: null,
+    observed_at: day(0), review_state: "machine_proposed", reviewed_at: null, extractor: "test", prompt_sha256: null,
+    model: null, schema_version: "2.5.0", created_at: day(0), facts: [], merged_from: [],
+    sources: [{ source_ref: `src-${id}`, source_type: "x_post", url: `https://x.com/a/status/${id.length}`, source_id: null, quote: `QUOTE ${id}`, published_at: null }],
+    ...fields,
+  });
+  const concern = (concept_id, kind) => ({ concept_id, kind, label_en: null, label_zh_cn: null, method: "ai_proposed", status: "candidate" });
+  writeFileSync(join(dir, "observations.json"), JSON.stringify([
+    row("obs-a", {
+      evidence_type: "production_use", announced_at: day(5),
+      concerns: [concern(first.id, "work"), concern(second.id, "work"), concern(occupation.id, "occupation")],
+      facts: [{ fact_id: "fact-a", value: "48", unit: "%", what: "share of tickets closed", baseline: null, method_note: null, quote: "FIGURE obs-a" }],
+    }),
+    row("obs-b", { evidence_type: "measurement", direction: "human_still_needed", outcome: "failed", announced_at: day(60), concerns: [concern(first.id, "work")] }),
+    row("obs-c", { evidence_type: "vendor_claim", concerns: [concern(second.id, "work")] }),
+    row("obs-d", { evidence_type: "own_use", announced_at: day(1), concerns: [concern(elsewhere.id, "work")] }),
+  ]));
+  const { base, proc } = await startServer({ SNAPSHOT_DIR: dir });
+  try {
+    const marketPath = `/markets/${marketId.replace(/^oaw:market:/, "")}`;
+    const md = await (await fetch(`${base}${marketPath}/raw.md`)).text();
+    assert.match(md, /3 observations bear on .*: 1 production use, 1 measurement, 1 vendor claim\./);
+    for (const line of ["- Production use: 1", "- Measurement: 1", "- Statistic: 0", "- Own use: 0", "- Demonstration: 0", "- Vendor claim: 1",
+      "1 of them says a person is still needed", "1 said in the 30 days before the data date, 2 in the 90 days.", "1 carries no date.",
+      "### Evidence the other way", "QUOTE obs-a", "48 % — share of tickets closed", "FIGURE obs-a", "`obs-c`"]) {
+      assert.ok(md.includes(line), `market copy lacks ${line}`);
+    }
+    assert.ok(!md.includes("obs-d"), "an observation on another market is counted here");
+    // Strongest first: production use before the vendor claim; the one the other way in its own list.
+    assert.ok(md.indexOf("`obs-a`") < md.indexOf("`obs-c`") && md.indexOf("`obs-c`") < md.indexOf("`obs-b`"));
+    const page = await (await fetch(`${base}${marketPath}`)).text();
+    for (const id of ["obs-a", "obs-b", "obs-c"]) assert.ok(page.includes(`id="${id}"`), `market page lacks ${id}`);
+    assert.ok(page.includes("QUOTE obs-a") && !page.includes("obs-d"));
+    const zh = await (await fetch(`${base}/zh-CN${marketPath}/raw.md`)).text();
+    assert.ok(zh.includes("有 3 条观察涉及") && zh.includes("生产使用 1 条") && zh.includes("- 测量：1"), "Chinese copy");
+
+    const occupationPath = `/occupations/${occupation.id.replace(/^oaw:occupation:/, "")}`;
+    const occ = await (await fetch(`${base}${occupationPath}/raw.md`)).text();
+    assert.match(occ, /1 observation bears on .*: 1 production use\./);
+    assert.ok(occ.includes("None of them says a person is still needed.") && !occ.includes("obs-b"));
+    assert.ok((await (await fetch(`${base}${occupationPath}`)).text()).includes('id="obs-a"'));
+
+    const empty = work.find((w) => ![marketId, elsewhere.market_id].includes(w.market_id)).market_id;
+    const none = await (await fetch(`${base}/markets/${empty.replace(/^oaw:market:/, "")}/raw.md`)).text();
+    assert.ok(none.includes("No observation has been mapped here yet."));
+  } finally {
+    await stop(proc);
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

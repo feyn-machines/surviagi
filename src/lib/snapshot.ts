@@ -494,6 +494,9 @@ type Store = {
   occupations: OccupationRow[];
   occupationById: Map<string, OccupationRow>;
   groups: OccupationGroup[];
+  /** Observations under each market and each occupation they were mapped to; empty when the release has none. */
+  observationsByMarket: Map<string, ObservationRow[]>;
+  observationsByOccupation: Map<string, ObservationRow[]>;
 };
 
 function buildStore(data: Payload | null, release: DataRelease): Store {
@@ -533,6 +536,22 @@ function buildStore(data: Payload | null, release: DataRelease): Store {
     .filter((e) => reach.has(e.event_id))
     .map((e) => ({ ...e, source_urls: e.source_urls ?? [], activities: reach.get(e.event_id)!.activities.size, markets: reach.get(e.event_id)!.markets.size }));
   const { rows: occupations, groups } = data ? occupationsOf(data) : { rows: [], groups: [] };
+  const observationsByMarket = new Map<string, ObservationRow[]>();
+  const observationsByOccupation = new Map<string, ObservationRow[]>();
+  const file = (index: Map<string, ObservationRow[]>, key: string, row: ObservationRow) => {
+    const rows = index.get(key) ?? [];
+    if (rows.at(-1) !== row) rows.push(row);
+    index.set(key, rows);
+  };
+  for (const row of data?.observations ?? []) {
+    // A work item stands for its market; an occupation only for itself. A task
+    // alone does not place an observation on an occupation page: the mapper
+    // names the occupation whenever it names one of its tasks.
+    for (const market of new Set(row.concerns.flatMap((c) => (c.kind === "work" ? [workById.get(c.concept_id)?.market_id ?? null] : [])))) {
+      if (market) file(observationsByMarket, market, row);
+    }
+    for (const c of row.concerns) if (c.kind === "occupation") file(observationsByOccupation, c.concept_id, row);
+  }
   return {
     data,
     release,
@@ -543,6 +562,8 @@ function buildStore(data: Payload | null, release: DataRelease): Store {
     occupations,
     occupationById: new Map(occupations.map((o) => [o.id, o])),
     groups,
+    observationsByMarket,
+    observationsByOccupation,
   };
 }
 
@@ -728,4 +749,72 @@ export function occupations() {
       markets: o.markets.map((m) => m.market_id),
     }));
   return rows.sort((a, b) => b.touched - a.touched || b.tasks - a.tasks);
+}
+
+/** Whether this release publishes observations at all; before Issue #25 a page has none to count, not zero. */
+export const observationsPublished = (): boolean => current().data?.observations !== undefined;
+
+/** Observations mapped to any kind of work in one market, each once. */
+export function observationsOfMarket(marketId: string): ObservationRow[] {
+  return current().observationsByMarket.get(marketId) ?? [];
+}
+
+/** Observations mapped to one occupation. */
+export function observationsOfOccupation(occupationId: string): ObservationRow[] {
+  return current().observationsByOccupation.get(occupationId) ?? [];
+}
+
+export type EvidenceType = ObservationRow["evidence_type"];
+
+/**
+ * The evidence types from the hardest to fake to the easiest: a named adopter
+ * running it in production, a test or a count by someone other than the
+ * vendor, a practitioner's own use, then what the vendor shows and says.
+ */
+export const EVIDENCE_ORDER: EvidenceType[] = ["production_use", "measurement", "statistic", "own_use", "demonstration", "vendor_claim"];
+
+/** When an observation was said in public: the post's date, else the day it says the thing happened. */
+export function observationDate(row: ObservationRow): string | null {
+  return row.announced_at?.slice(0, 10) ?? row.occurred_on ?? null;
+}
+
+export type ObservationStats = {
+  total: number;
+  byType: Record<EvidenceType, number>;
+  /** Said within 30 and 90 days before `asOf`; an observation with no date is in neither. */
+  last30: number;
+  last90: number;
+  undated: number;
+  /** Observations saying a person is still needed, or that AI failed. */
+  against: number;
+};
+
+/** Counts over a set of observations, as of a day (the release's, so a page says the same thing all day). */
+export function observationStats(rows: ObservationRow[], asOf: string | null): ObservationStats {
+  const byType = Object.fromEntries(EVIDENCE_ORDER.map((t) => [t, 0])) as Record<EvidenceType, number>;
+  const end = asOf ? Date.parse(asOf.slice(0, 10)) : NaN;
+  const stats: ObservationStats = { total: rows.length, byType, last30: 0, last90: 0, undated: 0, against: 0 };
+  for (const row of rows) {
+    byType[row.evidence_type] += 1;
+    if (row.direction === "human_still_needed") stats.against += 1;
+    const day = observationDate(row);
+    if (!day) {
+      stats.undated += 1;
+      continue;
+    }
+    const age = (end - Date.parse(day)) / 86_400_000;
+    if (age >= 0 && age < 30) stats.last30 += 1;
+    if (age >= 0 && age < 90) stats.last90 += 1;
+  }
+  return stats;
+}
+
+/** Strongest evidence first, then the ones with figures, then the newest. */
+export function byStrength(a: ObservationRow, b: ObservationRow): number {
+  return (
+    EVIDENCE_ORDER.indexOf(a.evidence_type) - EVIDENCE_ORDER.indexOf(b.evidence_type) ||
+    b.facts.length - a.facts.length ||
+    (observationDate(b) ?? "").localeCompare(observationDate(a) ?? "") ||
+    a.observation_id.localeCompare(b.observation_id)
+  );
 }
