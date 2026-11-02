@@ -578,11 +578,25 @@ export function activityById(id: string): Activity | undefined {
   return current().activityIndex.get(id);
 }
 
-/** Every activity of one market, strongest evidence first, blanks last. */
+/** Every activity of one market, the ones most updates bear on first, those none reached last. */
 export function activitiesOfMarket(marketId: string): Activity[] {
   return activities()
     .filter((a) => a.market_id === marketId)
-    .sort((x, y) => (y.level ?? -1) - (x.level ?? -1));
+    .sort((x, y) => (y.evidence_rows ?? 0) - (x.evidence_rows ?? 0) || x.label_en.localeCompare(y.label_en));
+}
+
+/** Updates that bear on at least one kind of work in each market, counted once per market. */
+export function updateCountByMarket(): Map<string, number> {
+  const marketOf = new Map(activities().map((a) => [a.activity_id, a.market_id]));
+  const seen = new Map<string, Set<string>>();
+  for (const row of evidence()) {
+    const market = marketOf.get(row.activity_id);
+    if (!market) continue;
+    const set = seen.get(market) ?? new Set<string>();
+    set.add(row.event_id);
+    seen.set(market, set);
+  }
+  return new Map([...seen].map(([market, events]) => [market, events.size]));
 }
 
 /** The markets, folded out of the activity rows so there is one source for both. */

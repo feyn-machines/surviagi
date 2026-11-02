@@ -2,7 +2,7 @@ import { LEVEL_NAMES } from "@/components/home/sections/levels";
 import { count, fill } from "@/app/[lang]/markets/copy";
 import { DEFAULT_LANGUAGE, normalizeLanguage } from "@/lib/i18n";
 import { colon, link, markdownResponse } from "@/lib/markdown-copy";
-import { workSlug } from "@/lib/routes";
+import { activityAnchor } from "@/lib/anchors";
 import {
   activitiesOfMarket,
   assessedCount,
@@ -55,7 +55,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
         reached.push({
           label: (zh ? activity.label_zh_cn : activity.label_en) ?? activity.label_en,
           market,
-          slug: workSlug(activity.activity_id),
+          slug: `${marketSlug(edge.market_id)}#${activityAnchor(activity.activity_id, edge.market_id)}`,
           level: Math.round(activity.level),
         });
       } else unread += 1;
@@ -81,7 +81,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
   ];
   if (reached.length === 0) body.push(c.gridNone);
   for (const row of reached) {
-    body.push(`- ${link(language, row.label, `/work/${row.slug}`)}${zh ? `（${row.market}）` : ` (${row.market})`}${sep}L${row.level} ${levels[row.level]}`);
+    body.push(`- ${link(language, row.label, `/markets/${row.slug}`)}${zh ? `（${row.market}）` : ` (${row.market})`}${sep}L${row.level} ${levels[row.level]}`);
   }
   if (unread > 0) body.push("", fill(c.unread, { n: count(unread) }));
 

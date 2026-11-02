@@ -1,4 +1,5 @@
 import type { Route } from "next";
+import { activityAnchor } from "./anchors";
 import { localizedPath, type Language } from "./i18n";
 
 /**
@@ -14,8 +15,9 @@ export function href<T extends string>(language: Language, path: T & SitePath<T>
 }
 
 export const workSlug = (activityId: string) => activityId.replace(/^oaw:market:/, "");
-export const workHref = (language: Language, activityId: string) =>
-  localizedPath(language, `/work/${workSlug(activityId)}`) as Route;
+/** A kind of work lives on its market's page, at the row that opens onto its updates. */
+export const activityHref = (language: Language, work: { activity_id: string; market_id: string }) =>
+  `${localizedPath(language, `/markets/${work.market_id.replace(/^oaw:market:/, "")}`)}#${activityAnchor(work.activity_id, work.market_id)}` as Route;
 export const updateHref = (language: Language, eventId: string) =>
   localizedPath(language, `/updates/${eventId}`) as Route;
 export const topicHref = (language: Language, slug: string) =>

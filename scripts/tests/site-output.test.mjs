@@ -303,7 +303,7 @@ test("a path the proxy skips is not a page under some other language segment", a
 
 test("with a snapshot, a detail page of each kind answers", { skip: !HAS_SNAPSHOT }, async () => {
   const locs = [...files.get("sitemap.xml").matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
-  for (const section of ["markets", "occupations/g", "occupations", "updates", "work"]) {
+  for (const section of ["markets", "occupations/g", "occupations", "updates"]) {
     for (const prefix of ["https://surviagi.com", "https://surviagi.com/zh-CN"]) {
       const loc = locs.find((l) =>
         l.startsWith(`${prefix}/${section}/`) && (section !== "occupations" || !l.startsWith(`${prefix}/occupations/g/`)));
@@ -338,10 +338,10 @@ test("market, occupation and sector pages open with one dated sentence that answ
   }
 });
 
-test("work, market, occupation and topic pages name a Markdown copy that says what the page says", { skip: !HAS_SNAPSHOT }, async () => {
+test("market, occupation and topic pages name a Markdown copy that says what the page says", { skip: !HAS_SNAPSHOT }, async () => {
   const locs = [...files.get("sitemap.xml").matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname);
   const text = (page) => page.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&#x27;|&#39;/g, "'").replace(/&quot;/g, '"');
-  for (const section of ["/work/", "/markets/", "/occupations/", "/topics/"]) {
+  for (const section of ["/markets/", "/occupations/", "/topics/"]) {
     const path = locs.find((l) => l.startsWith(section) && !l.startsWith("/occupations/g/"));
     assert.ok(path, `no ${section} page in the sitemap`);
     for (const prefix of ["", "/zh-CN"]) {
@@ -364,7 +364,7 @@ test("work, market, occupation and topic pages name a Markdown copy that says wh
       assert.match(md, prefix ? /由机器提出/ : /Machine-proposed/);
     }
   }
-  for (const missing of ["/work/no-such-work/raw.md", "/markets/no-such-market/raw.md", "/occupations/00-0000.00/raw.md", "/topics/no-such-topic/raw.md"]) {
+  for (const missing of ["/work/no-such-work/raw.md", "/work/no-such-work", "/markets/no-such-market/raw.md", "/occupations/00-0000.00/raw.md", "/topics/no-such-topic/raw.md"]) {
     assert.equal((await fetch(`${site.base}${missing}`)).status, 404, missing);
   }
   const example = body("llms.txt").match(/https:\/\/surviagi\.com(\/markets\/[^ ]+\/raw\.md)/)?.[1];
@@ -378,7 +378,7 @@ test("work, market, occupation and topic pages name a Markdown copy that says wh
   }
 });
 
-test("announcement chronology reaches lists, timelines, work pages and sitemap without inventing an occurrence", { skip: !HAS_SNAPSHOT, timeout: 60000 }, async () => {
+test("announcement chronology reaches lists, timelines, market pages and sitemap without inventing an occurrence", { skip: !HAS_SNAPSHOT, timeout: 60000 }, async () => {
   const dir = mkdtempSync(join(tmpdir(), "surviagi-announced-"));
   cpSync(SNAPSHOT_DIR, dir, { recursive: true });
   const chain = JSON.parse(readFileSync(join(dir, "chain.json"), "utf8"));
@@ -414,10 +414,10 @@ test("announcement chronology reaches lists, timelines, work pages and sitemap w
       assert.ok(timeline?.includes(event.event_id), `${prefix}: announcement is absent from the latest timeline day`);
       assert.ok(timeline.includes(line));
       assert.ok(home.includes(day));
-      const workId = activity.activity_id.replace(/^oaw:market:/, "");
+      const marketPath = `/markets/${activity.market_id.replace(/^oaw:market:/, "")}`;
       for (const suffix of ["", "/raw.md"]) {
-        const work = await (await fetch(`${base}${prefix}/work/${workId}${suffix}`)).text();
-        assert.ok(work.includes(line), `${prefix}/work/${workId}${suffix}: no announcement label`);
+        const market = await (await fetch(`${base}${prefix}${marketPath}${suffix}`)).text();
+        assert.ok(market.includes(line), `${prefix}${marketPath}${suffix}: no announcement label`);
       }
     }
     const sitemap = await (await fetch(`${base}/sitemap.xml`)).text();
@@ -466,60 +466,44 @@ test("update pages and the whitepaper name a Markdown copy that points back at t
   }
 });
 
-test("a work's level is the highest reading published under it, and the posts that confirmed one are on its page", { skip: !HAS_SNAPSHOT }, async () => {
+// The fragment a market page gives each kind of work; the same rule as src/lib/anchors.ts.
+const anchorOf = (work) => `a-${work.activity_id.startsWith(`${work.market_id}-`) ? work.activity_id.slice(work.market_id.length + 1) : work.activity_id.replace(/^oaw:market:/, "")}`;
+
+test("a kind of work has no page of its own: its old address moves permanently to its row on the market page", { skip: !HAS_SNAPSHOT }, async () => {
   const chain = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "chain.json"), "utf8"));
-  const levels = new Map();
-  for (const row of chain.evidence) {
-    for (const level of [row.level, ...(row.confirmations ?? []).map((v) => v.level)]) {
-      if (level !== null) levels.set(row.activity_id, Math.max(levels.get(row.activity_id) ?? 0, level));
-    }
+  const work = chain.activities.find((a) => a.evidence_rows);
+  assert.ok(work, "no work with an update");
+  const slug = work.activity_id.replace(/^oaw:market:/, "");
+  const market = `/markets/${work.market_id.replace(/^oaw:market:/, "")}`;
+  for (const prefix of ["", "/zh-CN"]) {
+    const page = await fetch(`${site.base}${prefix}/work/${slug}`, { redirect: "manual" });
+    assert.equal(page.status, 301, `${prefix}/work/${slug}`);
+    assert.equal(page.headers.get("location"), `${prefix}${market}#${anchorOf(work)}`);
+    const copy = await fetch(`${site.base}${prefix}/work/${slug}/raw.md`, { redirect: "manual" });
+    assert.equal(copy.status, 301);
+    assert.equal(copy.headers.get("location"), `${prefix}${market}/raw.md`);
   }
-  // Until 2026-10-16 the confirmations were counted and not published: a page stood at L3 over L2 readings.
-  for (const activity of chain.activities.filter((a) => a.level !== null)) {
-    const shown = levels.get(activity.activity_id);
-    assert.ok(shown !== undefined && (activity.gated ? Math.min(shown, 3) : shown) === activity.level,
-      `${activity.activity_id} stands at L${activity.level} over readings that reach L${shown}`);
-  }
+  // Nothing in the sitemap points at the old address.
+  assert.ok(!/<loc>[^<]*\/work\//.test(body("sitemap.xml")), "the sitemap still lists a /work/ address");
+});
+
+test("a market page lists the updates that bear on each kind of work, and the posts that also say so, and ranks nothing", { skip: !HAS_SNAPSHOT }, async () => {
+  const chain = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "chain.json"), "utf8"));
   const confirmed = chain.evidence.find((row) => row.confirmations?.length);
   if (!confirmed) return;
   const [first] = confirmed.confirmations;
-  const path = `/work/${confirmed.activity_id.replace(/^oaw:market:/, "")}`;
+  const work = chain.activities.find((a) => a.activity_id === confirmed.activity_id);
+  const path = `/markets/${work.market_id.replace(/^oaw:market:/, "")}`;
   const page = await (await fetch(`${site.base}${path}`)).text();
-  assert.ok(page.includes(`href="${first.url}"`), `${path} does not link the post that confirmed it`);
+  assert.ok(page.includes(`href="${first.url}"`), `${path} does not link the post that also says so`);
+  assert.ok(page.includes(`id="${anchorOf(work)}"`), `${path} has no row for the work`);
   const md = await (await fetch(`${site.base}/zh-CN${path}/raw.md`)).text();
-  assert.ok(md.includes(`第三方印证：[@${first.handle}](${first.url})`), `${path}/raw.md does not name the confirmation`);
-});
-
-test("a work page says when its level was first reached, and its history ends where the work stands", { skip: !HAS_SNAPSHOT }, async () => {
-  const chain = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "chain.json"), "utf8"));
-  const confirmed = new Set(chain.evidence.filter((row) => row.confirmations?.length).map((row) => row.activity_id));
-  const reached = chain.activities.filter((a) => a.evidence_rows && a.level);
-  // One a confirmation carried, if there is one, and a plain one.
-  const sample = [reached.find((a) => confirmed.has(a.activity_id)), reached.find((a) => !confirmed.has(a.activity_id))].filter(Boolean);
-  assert.ok(sample.length > 0, "no work with a level");
-  for (const work of sample) {
-    const path = `/work/${work.activity_id.replace(/^oaw:market:/, "")}`;
-    for (const [prefix, heading, sentence] of [["", "## How it got here", /It first reached L(\d) on (\d{4}-\d\d-\d\d)\./], ["/zh-CN", "## 它是怎么走到这里的", /它在 (\d{4}-\d\d-\d\d) 首次达到 L(\d)。/]]) {
-      const md = await (await fetch(`${site.base}${prefix}${path}/raw.md`)).text();
-      const section = md.split(heading)[1]?.split("\n## ")[0];
-      assert.ok(section, `${prefix}${path}/raw.md has no history`);
-      const steps = section.split("\n").filter((line) => line.startsWith("- "));
-      assert.ok(steps.length > 0, `${prefix}${path}: an empty history`);
-      // Each step rises, and the last one ends at the work's level.
-      // The rise closes the line, so its level is the last "L<n> " on it.
-      const tops = steps.map((line) => Number([...line.matchAll(/L(\d) /g)].at(-1)?.[1]));
-      assert.deepEqual(tops, [...tops].sort((a, b) => a - b), `${prefix}${path}: a step that does not rise`);
-      assert.equal(tops.at(-1), work.level, `${prefix}${path}: the history ends at L${tops.at(-1)}, the work stands at L${work.level}`);
-      const said = section.match(sentence);
-      if (said) {
-        const [level, date] = prefix ? [said[2], said[1]] : [said[1], said[2]];
-        assert.equal(Number(level), work.level);
-        assert.ok(steps.at(-1).includes(date), `${prefix}${path}: first reached on ${date}, but the last step is ${steps.at(-1)}`);
-        const page = await (await fetch(`${site.base}${prefix}${path}`)).text();
-        assert.ok(page.includes(said[0]), `${prefix}${path}: the page does not say ${said[0]}`);
-      }
-    }
+  assert.ok(md.includes(`](${first.url})`), `${path}/raw.md does not link the post that also says so`);
+  assert.ok(md.includes("也这么说"), `${path}/raw.md does not say it`);
+  for (const [prefix, text] of [["", page], ["/zh-CN", await (await fetch(`${site.base}/zh-CN${path}`)).text()]]) {
+    assert.ok(!/>L[0-5]</.test(text), `${prefix}${path} still shows a level`);
   }
+  assert.ok(!/\bL[0-5]\b/.test(md), `${path}/raw.md still shows a level`);
 });
 
 test("document-backed pages stay static while live editorial pages render per request", () => {
@@ -741,7 +725,6 @@ test("a detail page's lastmod is when its newest dated evidence happened, never 
     let m;
     if ((m = path.match(/^\/updates\/(.+)$/))) return occurred.get(m[1]) ?? null;
     if ((m = path.match(/^\/topics\/(.+)$/))) return topicDates.get(m[1]) ?? null;
-    if ((m = path.match(/^\/work\/(.+)$/))) return byActivity.get(`oaw:market:${m[1]}`);
     if ((m = path.match(/^\/markets\/(.+)$/))) return byMarket.get(`oaw:market:${m[1]}`);
     if ((m = path.match(/^\/occupations\/g\/(.+)$/))) return byGroup.get(`oaw:occupation-group:${m[1]}`);
     if ((m = path.match(/^\/occupations\/(.+)$/))) return byOccupation.get(`oaw:occupation:${m[1]}`);

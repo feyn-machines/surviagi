@@ -151,7 +151,7 @@ export default async function OccupationPage({ params }: Props) {
           // A post by someone else that confirmed the reading counts toward the level in its own right.
           ...(reading.confirmations ?? []).map((v) => ({
             eventId: `${reading.event_id}:${v.source_id}`,
-            title: fill(detailCopy[language].confirms, {
+            title: fill(detailCopy[language].alsoSays, {
               handle: v.handle ?? v.account_key,
               nature: termNameOrRaw("post_nature", v.post_nature, language),
               title: reading.title,

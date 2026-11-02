@@ -3,8 +3,8 @@ import { vocabularyTerm } from "@/components/ontology-labels";
 import { plural } from "@/lib/plural";
 import { DEFAULT_LANGUAGE, normalizeLanguage } from "@/lib/i18n";
 import { colon, link, markdownResponse } from "@/lib/markdown-copy";
-import { workSlug } from "@/lib/routes";
-import { activityById, chainEvents, events as allEvents, evidenceForEvent } from "@/lib/snapshot";
+import { activityAnchor } from "@/lib/anchors";
+import { activityById, chainEvents, events as allEvents, evidenceForEvent, marketSlug } from "@/lib/snapshot";
 import { copy, updateDate } from "../copy";
 
 /** Rendered per request from the loaded data release, like the page. */
@@ -46,8 +46,9 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
     const work = activityById(r.activity_id);
     const name = (zh ? r.activity_zh_cn : r.activity_en) ?? r.activity_en;
     const market = work ? (zh ? work.market_zh_cn : work.market_en) ?? work.market_en : "";
-    // Only a work with a level of its own has a page, as on the update page.
-    const named = work?.evidence_rows && work.level ? link(language, name, `/work/${workSlug(r.activity_id)}`) : name;
+    const named = work
+      ? link(language, name, `/markets/${marketSlug(work.market_id)}#${activityAnchor(work.activity_id, work.market_id)}`)
+      : name;
     const accepted = r.level ?? 0;
     const level = (r.observed_level ?? 0) > accepted
       ? c.claimed.replace("{c}", String(r.observed_level)).replace("{a}", String(accepted))
