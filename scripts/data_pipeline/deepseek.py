@@ -32,7 +32,7 @@ DEFAULT_BASE_URL = "https://api.deepseek.com"
 EXTRACTION_VERSION_TAG = "deepseek-events-5"
 
 
-def system_prompt(official=False, observations=False):
+def system_prompt(official=False):
     """The extraction prompt, built from the schema instead of hand-typed.
 
     There are two: one for posts by companies' official accounts and one for
@@ -44,12 +44,7 @@ def system_prompt(official=False, observations=False):
     the identity rule, the bases and results - is rendered from
     datasets/ontology/schema/schema.json. A boundary changes in one place, and
     `prompt_sha256` moves when it does. The list of known updates a run attaches
-    posts to is data, not part of the prompt: `known_events_message` renders it.
-
-    With `observations` the same call also returns what the posts show about AI
-    doing real work (Issue #25): the observation section is appended and the
-    output object gains an `observations` list. Off, the prompt is unchanged.
-    """
+    posts to is data, not part of the prompt: `known_events_message` renders it.    """
     schema = ontology_schema.load_schema()
     use_kinds = ", ".join(schema["properties"]["Event.task"]["applies_to_kinds"])
     rules = {rule["id"]: rule for rule in schema["constraints"]}
@@ -100,7 +95,7 @@ def system_prompt(official=False, observations=False):
             "model have made two events, one each, with their own numbers. Merge only several posts by "
             "the SAME author about the same thing.",
         ]
-    lines = [
+    return "\n".join([
         who,
         "",
         "Every post you are given ends in exactly one of three places:",
@@ -180,11 +175,7 @@ def system_prompt(official=False, observations=False):
         "",
         "Rules: use only the given posts as evidence; never invent a number, a name or a result. "
         "Every given post id appears exactly once across the three lists. Output ONLY the JSON object.",
-    ]
-    if observations:
-        from .observation_extraction import prompt_section
-        lines += ["", *prompt_section(schema)]
-    return "\n".join(lines)
+    ])
 
 
 def known_events_message(known):
@@ -212,12 +203,9 @@ def prompt_sha256():
 
 
 def observation_prompt_sha256():
-    """Version anchor of the prompt that also asks for observations."""
-    from .observation_extraction import EXTRACTOR
-    return digest({"system": system_prompt(observations=True),
-                   "system_official": system_prompt(official=True, observations=True),
-                   "schema": EXTRACTION_VERSION_TAG, "observations": EXTRACTOR,
-                   "rubric_sha256": ontology_schema.rubric_sha256(),
+    """Version anchor of the observation prompt (recorded on every run)."""
+    from .observation_extraction import EXTRACTOR, system_prompt as observation_prompt
+    return digest({"system": observation_prompt(), "observations": EXTRACTOR,
                    "schema_version": ontology_schema.SCHEMA_VERSION})
 
 
@@ -299,37 +287,19 @@ def chat(messages, cfg, timeout=120, usage=None):
         raise DeepSeekError("model did not return valid JSON") from None
 
 
-def extract_events(candidates, cfg=None, batch_size=25, progress=None, max_attempts=3,
-                   known=None, workers=1, observations=False, usage=None):
-    """Extract events from candidates in batches. Returns (batches, failures).
+def _run_batches(chunks, messages_for, names, cfg, progress, max_attempts, workers, usage):
+    """Send each chunk as one call; returns (batches, failures) in chunk order.
 
-    Each batch is retried up to `max_attempts` on a DeepSeekError with backoff; a batch
-    that still fails is recorded in `failures` and skipped (empty), so one bad call does
-    not lose the whole run. Output is deterministic-shaped ({"events": [...]}) so
-    `assemble_extraction` can turn it into an immutable document.
-
-    `known` is the list of stored updates a post may attach to. `workers` runs
-    that many batches at once; the result keeps batch order either way.
-    `observations` asks the same calls for observations too; `usage` collects
-    the token counts of every call, retries included.
+    Each call is retried up to `max_attempts` on a DeepSeekError with backoff; a
+    chunk that still fails is recorded in `failures` and comes back empty, so one
+    bad call does not lose the whole run. A batch holds exactly the lists named in
+    `names`, empty when the model left one out.
     """
-    cfg = cfg or config_from_env()
-    prompts = {official: system_prompt(official=official, observations=observations)
-               for official in (True, False)}
-    names = ("events", "attachments", "dropped") + (("observations",) if observations else ())
-    known_message = known_events_message(known)
-    # Official accounts and everyone else are read in separate batches, each
-    # under its own prompt; the order of posts inside a group is kept.
-    chunks = []
-    for official in (True, False):
-        group = [c for c in candidates if bool(c.get("official")) == official]
-        chunks += [group[index:index + batch_size] for index in range(0, len(group), batch_size)]
     total = len(chunks)
 
     def one(numbered):
         number, chunk = numbered
-        messages = [{"role": "system", "content": prompts[bool(chunk[0].get("official"))]},
-                    {"role": "user", "content": known_message + "\n\n" + _post_message(chunk)}]
+        messages = messages_for(chunk)
         result, error = None, None
         for attempt in range(max_attempts):
             try:
@@ -341,12 +311,12 @@ def extract_events(candidates, cfg=None, batch_size=25, progress=None, max_attem
         if result is None:
             if progress:
                 progress(number, total, 0)
-            return {"events": []}, {"batch": number, "error": str(error)}
+            return {name: [] for name in names}, {"batch": number, "error": str(error)}
         result = result if isinstance(result, dict) else {}
         batch = {name: result.get(name) if isinstance(result.get(name), list) else []
                  for name in names}
         if progress:
-            progress(number, total, len(batch["events"]))
+            progress(number, total, len(batch[names[0]]))
         return batch, None
 
     numbered = list(enumerate(chunks, 1))
@@ -356,9 +326,53 @@ def extract_events(candidates, cfg=None, batch_size=25, progress=None, max_attem
             done = list(pool.map(one, numbered))
     else:
         done = [one(item) for item in numbered]
-    batches = [batch for batch, _ in done]
-    failures = [failure for _, failure in done if failure]
-    return batches, failures
+    return [batch for batch, _ in done], [failure for _, failure in done if failure]
+
+
+def extract_events(candidates, cfg=None, batch_size=25, progress=None, max_attempts=3,
+                   known=None, workers=1, usage=None):
+    """Extract events from candidates in batches. Returns (batches, failures).
+
+    Output is deterministic-shaped ({"events": [...], ...}) so
+    `assemble_extraction` can turn it into an immutable document.
+
+    `known` is the list of stored updates a post may attach to. `workers` runs
+    that many batches at once; the result keeps batch order either way. `usage`
+    collects the token counts of every call, retries included.
+    """
+    cfg = cfg or config_from_env()
+    prompts = {True: system_prompt(official=True), False: system_prompt()}
+    known_message = known_events_message(known)
+    # Official accounts and everyone else are read in separate batches, each
+    # under its own prompt; the order of posts inside a group is kept.
+    chunks = []
+    for official in (True, False):
+        group = [c for c in candidates if bool(c.get("official")) == official]
+        chunks += [group[index:index + batch_size] for index in range(0, len(group), batch_size)]
+    return _run_batches(
+        chunks, lambda chunk: [{"role": "system", "content": prompts[bool(chunk[0].get("official"))]},
+                               {"role": "user", "content": known_message + "\n\n" + _post_message(chunk)}],
+        ("events", "attachments", "dropped"), cfg, progress, max_attempts, workers, usage)
+
+
+def extract_observations(candidates, cfg=None, batch_size=25, progress=None, max_attempts=3,
+                         workers=1, usage=None):
+    """Read observations from candidates in batches, in a call of their own.
+
+    Asked in the same call as updates, the model filed a person's own use as an
+    observation instead of an update and dropped some updates altogether: on the
+    500-post sample of 2026-11-03 it returned 17-20 updates where the update
+    prompt alone returned 28-29. A call of its own leaves updates as they were and
+    needs no list of known updates.
+    """
+    from .observation_extraction import system_prompt as observation_prompt
+    cfg = cfg or config_from_env()
+    prompt = observation_prompt()
+    chunks = [candidates[index:index + batch_size] for index in range(0, len(candidates), batch_size)]
+    return _run_batches(
+        chunks, lambda chunk: [{"role": "system", "content": prompt},
+                               {"role": "user", "content": _post_message(chunk)}],
+        ("observations",), cfg, progress, max_attempts, workers, usage)
 
 
 # USD per million tokens, from https://api-docs.deepseek.com/quick_start/pricing

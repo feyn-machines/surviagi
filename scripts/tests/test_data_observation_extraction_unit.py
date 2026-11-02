@@ -11,7 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from data_pipeline import deepseek  # noqa: E402
 from data_pipeline.observation_extraction import (  # noqa: E402
-    ACTOR_ROLES, DIRECTIONS, assemble_observations, observation_id, prefilter)
+    ACTOR_ROLES, DIRECTIONS, assemble_observations, observation_id, prefilter, system_prompt)
 
 TEXT = ("We moved month-end close to the agent. Reconciliation now takes 2 days instead of 6, "
         "but a person still signs off every entry.")
@@ -46,19 +46,34 @@ class Prefilter(unittest.TestCase):
 
 
 class Prompt(unittest.TestCase):
-    def test_observations_extend_the_prompt_and_leave_the_daily_one_alone(self):
-        plain, extended = deepseek.system_prompt(), deepseek.system_prompt(observations=True)
-        self.assertTrue(extended.startswith(plain))
-        self.assertNotIn("OBSERVATIONS", plain)
+    def test_observations_are_asked_in_a_call_of_their_own(self):
+        prompt = system_prompt()
         for term in ACTOR_ROLES | DIRECTIONS:
-            self.assertIn(f"- {term}:", extended)
+            self.assertIn(f"- {term}:", prompt)
+        self.assertIn('{"observations": [...]}', prompt)
+        self.assertNotIn("OBSERVATIONS", deepseek.system_prompt())
         self.assertNotEqual(deepseek.prompt_sha256(), deepseek.observation_prompt_sha256())
 
     def test_the_prompt_asks_for_every_basis_and_for_failures(self):
-        extended = deepseek.system_prompt(observations=True)
+        prompt = system_prompt()
         for basis in ("vendor_claim", "production_use", "own_use", "measurement", "statistic"):
-            self.assertIn(f"({basis}", extended)
-        self.assertIn("acting without being asked", extended)
+            self.assertIn(f"({basis}", prompt)
+        self.assertIn("acting without being asked", prompt)
+
+    def test_the_call_carries_no_known_updates_and_returns_only_observations(self):
+        seen = []
+        original = deepseek.chat
+        deepseek.chat = lambda messages, cfg, timeout=120, usage=None: (
+            seen.append(messages) or {"observations": [item()], "events": [{"title": "x"}]})
+        try:
+            batches, failures = deepseek.extract_observations([post("1"), post("2")], cfg={"model": "m"},
+                                                              batch_size=1)
+        finally:
+            deepseek.chat = original
+        self.assertEqual(failures, [])
+        self.assertEqual([list(batch) for batch in batches], [["observations"], ["observations"]])
+        self.assertEqual(seen[0][0]["content"], system_prompt())
+        self.assertNotIn("Known updates", seen[0][1]["content"])
 
 
 class Assembly(unittest.TestCase):
