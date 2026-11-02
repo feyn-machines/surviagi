@@ -3,6 +3,7 @@
 import { dateLabel } from "@/lib/update-date";
 import { plural } from "@/lib/plural";
 import { useMemo, useState } from "react";
+import type { Route } from "next";
 import Link from "next/link";
 import type { Language } from "@/lib/i18n";
 import { updateHref } from "@/lib/routes";
@@ -21,14 +22,12 @@ import s from "./updates.module.css";
  * component shows is resolved and localised on the server and handed down.
  */
 
-/** One reading an update produced, already worded for the reader's language. */
+/** One kind of work an update bears on, already worded for the reader's language. */
 export type ReadingRow = {
   activity: string;
   market: string | null;
-  /** `L2 · <the ladder's own word>`, built from progress.levels. */
-  level: string | null;
-  /** `T3 → L2` when the evidence tier held the reading below the proposal. */
-  cap: string | null;
+  /** The work's row on its market page, which lists every update that bears on it. */
+  href: Route | null;
 };
 
 export type UpdateRow = {
@@ -46,8 +45,6 @@ export type UpdateRow = {
   url: string | null;
   activities: number;
   markets: number;
-  /** `L2 · <word>`; null when the update bore on no activity. */
-  level: string | null;
   readings: ReadingRow[];
 };
 
@@ -78,15 +75,13 @@ export type BrowserCopy = {
   colUpdate: string;
   colFrom: string;
   colLanded: string;
-  colTop: string;
   openSource: string;
   readingsOpen: string;
   readingsClose: string;
   noDate: string;
   noOrg: string;
   noSource: string;
-  noLevel: string;
-  capNote: string;
+  onMarket: string;
 };
 
 type Landed = "all" | "landed" | "silent";
@@ -242,7 +237,6 @@ export function UpdatesBrowser({
                   <th scope="col">{copy.colUpdate}</th>
                   <th scope="col">{copy.colFrom}</th>
                   <th scope="col">{copy.colLanded}</th>
-                  <th scope="col">{copy.colTop}</th>
                 </tr>
               </thead>
               <tbody key={signature} className={s.rows}>
@@ -305,17 +299,10 @@ export function UpdatesBrowser({
                           </span>
                         </span>
                       </td>
-                      <td>
-                        {row.level ? (
-                          <span className={s.level}>{row.level}</span>
-                        ) : (
-                          <span className={s.levelNone}>{copy.noLevel}</span>
-                        )}
-                      </td>
                     </tr>,
                     isOpen ? (
                       <tr key={`${row.id}-readings`} className={s.detailRow}>
-                        <td colSpan={5} id={`readings-${row.id}`}>
+                        <td colSpan={4} id={`readings-${row.id}`}>
                           <ul className={s.readings}>
                             {row.readings.map((reading, i) => (
                               <li key={`${reading.activity}-${i}`} className={s.reading}>
@@ -325,18 +312,11 @@ export function UpdatesBrowser({
                                     <span className={s.readingMarket}>{reading.market}</span>
                                   ) : null}
                                 </span>
-                                <span className={s.readingRight}>
-                                  {reading.level ? (
-                                    <span className={s.level}>{reading.level}</span>
-                                  ) : (
-                                    <Blank reason={copy.noLevel} />
-                                  )}
-                                  {reading.cap ? (
-                                    <span className={s.cap}>
-                                      {copy.capNote.replace("{cap}", reading.cap)}
-                                    </span>
-                                  ) : null}
-                                </span>
+                                {reading.href ? (
+                                  <Link className={s.readingLink} href={reading.href}>
+                                    {copy.onMarket} →
+                                  </Link>
+                                ) : null}
                               </li>
                             ))}
                           </ul>

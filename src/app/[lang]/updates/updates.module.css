@@ -410,20 +410,6 @@
   color: var(--ah-color-correction);
 }
 
-.level {
-  color: var(--ah-color-signal);
-  font-family: var(--ah-font-mono);
-  font-size: var(--ah-text-label);
-  letter-spacing: var(--ah-tracking-label);
-}
-
-.levelNone {
-  color: var(--ah-color-subtle);
-  font-family: var(--ah-font-mono);
-  font-size: var(--ah-text-label);
-  letter-spacing: var(--ah-tracking-label);
-}
-
 .missing {
   color: var(--ah-color-subtle);
   font-family: var(--ah-font-mono);
@@ -474,24 +460,18 @@
   font-size: var(--ah-text-label);
 }
 
-.readingRight {
-  display: grid;
-  justify-items: end;
-  gap: var(--ah-space-1);
-  text-align: right;
-}
-
-/* A tier that held the reading below what the judge proposed. */
-.cap {
-  color: var(--ah-color-warning);
+.readingLink {
+  color: var(--ah-color-signal);
   font-family: var(--ah-font-mono);
   font-size: var(--ah-text-label);
   letter-spacing: var(--ah-tracking-label);
+  text-decoration: underline;
+  text-underline-offset: 4px;
   white-space: nowrap;
 }
 
-/* A phone shows each update as a card instead of five columns in a frame that scrolls sideways:
-   at 390px the 860px table cut every title off mid-word and hid the publisher, the reach and the level.
+/* A phone shows each update as a card instead of four columns in a frame that scrolls sideways:
+   at 390px the 860px table cut every title off mid-word and hid the publisher and the reach.
    The header row stays for screen readers; every cell stays in its row. */
 @media (max-width: 720px) {
   /* Two classes: the global .oaw-table (min-width: 860px) has one, and in the built site its sheet can
@@ -515,7 +495,7 @@
     grid-template-areas:
       "when from"
       "update update"
-      "landed top";
+      "landed landed";
     align-items: center;
     gap: var(--ah-space-2) var(--ah-space-4);
     padding: var(--ah-space-4);
@@ -545,11 +525,6 @@
 
   .rows > tr > td:nth-child(4) {
     grid-area: landed;
-  }
-
-  .rows > tr > td:nth-child(5) {
-    grid-area: top;
-    justify-self: end;
   }
 
   .cellLanded {

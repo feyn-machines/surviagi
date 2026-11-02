@@ -2,7 +2,6 @@ import { plural } from "@/lib/plural";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { LEVEL_NAMES, TIER_NAMES, levelClass } from "@/components/home/sections/levels";
 import { vocabularyTerm } from "@/components/ontology-labels";
 import s from "@/components/detail.module.css";
 import { getLocale } from "@/lib/locale";
@@ -19,8 +18,8 @@ export const dynamic = "force-dynamic";
 
 /**
  * One update: what it said, where it was published, and every kind of work it
- * bears on with the level claimed and the level accepted. Only an update that
- * bears on some work has a page.
+ * bears on, by market. Nothing is graded. Only an update that bears on some
+ * work has a page.
  */
 
 type Props = { params: Promise<{ id: string }> };
@@ -49,12 +48,21 @@ export default async function UpdatePage({ params }: Props) {
   const zh = language === "zh-CN";
   const more = allEvents().find((e) => e.event_id === update.event_id);
   const kind = vocabularyTerm("event_kind", more?.kind);
-  const rows = evidenceForEvent(update.event_id).filter((r) => r.level !== null);
-  const markets = new Set(rows.map((r) => r.market_id));
-  const top = Math.max(0, ...rows.map((r) => r.level ?? 0));
+  const rows = evidenceForEvent(update.event_id)
+    .map((r) => {
+      const work = activityById(r.activity_id);
+      return {
+        id: r.activity_id,
+        work,
+        marketId: r.market_id,
+        market: work ? ((zh ? work.market_zh_cn : work.market_en) ?? work.market_en) : "",
+        name: (zh ? r.activity_zh_cn : r.activity_en) ?? r.activity_en,
+      };
+    })
+    .sort((a, b) => a.market.localeCompare(b.market, language) || a.name.localeCompare(b.name, language));
+  const markets = new Set(rows.map((r) => r.marketId));
   const views = more?.attention?.views ?? null;
-  const levelText = `L${top} ${LEVEL_NAMES[language][top]}`;
-  const say = plural(c.say, { n: rows.length, m: markets.size }).replace("{n}", String(rows.length)).replace("{m}", String(markets.size)).split("{level}");
+  const say = plural(c.say, { n: rows.length, m: markets.size }).replace("{n}", String(rows.length)).replace("{m}", String(markets.size));
 
   const path = `/updates/${update.event_id}`;
   const ld = [
@@ -75,37 +83,29 @@ export default async function UpdatePage({ params }: Props) {
       <div className={s.eyebrow}>{update.org_name} · {updateDate(c, update)}{kind ? ` · ${zh ? kind["zh-CN"] ?? kind.en : kind.en}` : ""}</div>
       <h1 className={s.title}>{update.title}{zh && <em>{c.original}</em>}</h1>
       <p className={s.say}>{update.summary}</p>
-      <p className={s.say}>{say[0]}<b>{levelText}</b>{say[1]}</p>
+      <p className={s.say}>{say}</p>
 
       <dl className={s.facts}>
-        <div className={s.fact}><dt>{c.top}</dt><dd className={top >= 3 ? s.sig : ""}>L{top}<small>{LEVEL_NAMES[language][top]}</small></dd></div>
         <div className={s.fact}><dt>{c.work}</dt><dd>{rows.length}</dd></div>
         <div className={s.fact}><dt>{c.markets}</dt><dd>{markets.size}</dd></div>
+        <div className={s.fact}><dt>{c.sourcesFact}</dt><dd>{update.source_urls.length}</dd></div>
         <div className={s.fact}><dt>{c.views}</dt><dd>{views ? compact(views, zh) : "—"}</dd></div>
       </dl>
 
       <h2 className={s.h2}>{c.listTitle}</h2>
       <p className={s.sub}>{c.listSub}</p>
       <ul className={s.list}>
-        {rows.map((r) => {
-          const work = activityById(r.activity_id);
-          const market = work ? (zh ? work.market_zh_cn : work.market_en) ?? work.market_en : "";
-                    const name = (zh ? r.activity_zh_cn : r.activity_en) ?? r.activity_en;
-          return (
-            <li key={r.activity_id} className={s.row}>
-              <div className={s.when}><b>L{r.level}</b>{LEVEL_NAMES[language][r.level ?? 0]}</div>
-              <div className={s.what}>
-                {work ? <Link className={s.name} href={activityHref(language, work)}>{name}</Link> : <span className={s.name}>{name}</span>}
-                {work && <small><Link href={marketHref(language, work.market_id)}>{market}</Link></small>}
-              </div>
-              <div className={s.how}>
-                <span className={`${s.tag} ${s[levelClass(r.level ?? 0)]}`}>L{r.level} {LEVEL_NAMES[language][r.level ?? 0]}</span>
-                {(r.observed_level ?? 0) > (r.level ?? 0) && <span className={s.warn}>{c.claimed.replace("{c}", String(r.observed_level)).replace("{a}", String(r.level))}</span>}
-                <span>{TIER_NAMES[language][r.evidence_tier] ?? r.evidence_tier}</span>
-              </div>
-            </li>
-          );
-        })}
+        {rows.map((r) => (
+          <li key={r.id} className={s.row}>
+            <div className={s.when}>{r.work ? <Link href={marketHref(language, r.work.market_id)}>{r.market}</Link> : r.market}</div>
+            <div className={s.what}>
+              {r.work ? <Link className={s.name} href={activityHref(language, r.work)}>{r.name}</Link> : <span className={s.name}>{r.name}</span>}
+            </div>
+            <div className={s.how}>
+              {r.work && <Link className={s.out} href={activityHref(language, r.work)}>{c.onMarket} →</Link>}
+            </div>
+          </li>
+        ))}
       </ul>
 
       {update.source_urls.length > 0 && (

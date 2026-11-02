@@ -1,8 +1,7 @@
-import { LEVEL_NAMES, TIER_NAMES } from "@/components/home/sections/levels";
 import { vocabularyTerm } from "@/components/ontology-labels";
 import { plural } from "@/lib/plural";
 import { DEFAULT_LANGUAGE, normalizeLanguage } from "@/lib/i18n";
-import { colon, link, markdownResponse } from "@/lib/markdown-copy";
+import { link, markdownResponse } from "@/lib/markdown-copy";
 import { activityAnchor } from "@/lib/anchors";
 import { activityById, chainEvents, events as allEvents, evidenceForEvent, marketSlug } from "@/lib/snapshot";
 import { copy, updateDate } from "../copy";
@@ -19,18 +18,23 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
 
   const c = copy[language];
   const zh = language === "zh-CN";
-  const sep = colon(language);
-  const levels = LEVEL_NAMES[language];
-  const tiers = TIER_NAMES[language];
   const more = allEvents().find((e) => e.event_id === update.event_id);
   const kind = vocabularyTerm("event_kind", more?.kind);
-  const rows = evidenceForEvent(update.event_id).filter((r) => r.level !== null);
+  const label = (r: ReturnType<typeof evidenceForEvent>[number]) => {
+    const work = activityById(r.activity_id);
+    return {
+      market: work ? (zh ? work.market_zh_cn : work.market_en) ?? work.market_en : "",
+      name: (zh ? r.activity_zh_cn : r.activity_en) ?? r.activity_en,
+    };
+  };
+  // By market, so the order says nothing about how much any update achieved.
+  const rows = evidenceForEvent(update.event_id).sort(
+    (a, b) => label(a).market.localeCompare(label(b).market, language) || label(a).name.localeCompare(label(b).name, language),
+  );
   const markets = new Set(rows.map((r) => r.market_id));
-  const top = Math.max(0, ...rows.map((r) => r.level ?? 0));
   const say = plural(c.say, { n: rows.length, m: markets.size })
     .replace("{n}", String(rows.length))
-    .replace("{m}", String(markets.size))
-    .replace("{level}", `L${top} ${levels[top]}`);
+    .replace("{m}", String(markets.size));
 
   const body = [
     `${update.org_name ?? ""} · ${updateDate(c, update)}` +
@@ -49,11 +53,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
     const named = work
       ? link(language, name, `/markets/${marketSlug(work.market_id)}#${activityAnchor(work.activity_id, work.market_id)}`)
       : name;
-    const accepted = r.level ?? 0;
-    const level = (r.observed_level ?? 0) > accepted
-      ? c.claimed.replace("{c}", String(r.observed_level)).replace("{a}", String(accepted))
-      : `L${accepted} ${levels[accepted]}`;
-    body.push(`- ${named}${market ? (zh ? `（${market}）` : ` (${market})`) : ""}${sep}${level} · ${tiers[r.evidence_tier] ?? r.evidence_tier}`);
+    body.push(`- ${named}${market ? (zh ? `（${market}）` : ` (${market})`) : ""}`);
   }
   if (update.source_urls.length > 0) {
     body.push("", `## ${c.sources}`, "");
