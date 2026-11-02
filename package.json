@@ -26,6 +26,7 @@
     "ontology:test": "node --test scripts/tests/ontology-data.test.mjs scripts/tests/ontology-release.test.mjs scripts/tests/ontology-package.test.mjs scripts/tests/public-contract.test.mjs",
     "ontology:seal": "node scripts/seal-ontology.mjs",
     "ontology:projections": "node scripts/build-ontology-projections.mjs",
+    "ontology:alt-labels": "python3 scripts/build-occupation-alt-labels.py",
     "ontology:check": "node scripts/check-ontology.mjs && node scripts/check-ontology-schema.mjs",
     "data:setup": "python3 scripts/data-local.py setup",
     "data:models": "python3 scripts/data-local.py models",

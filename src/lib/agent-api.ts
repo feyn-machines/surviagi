@@ -201,6 +201,7 @@ export async function runSearch(args: Args): Promise<Outcome> {
     query: query.value,
     total,
     results,
+    aliases: found.aliases,
     release: found.release,
     versions: versionsInfo(),
     content_kinds: found.content_kinds,
@@ -256,7 +257,7 @@ function conceptArg(args: Args, kind: "occupation" | "market", language: Languag
     ok: false,
     outcome: fail(404, "not_found", found.candidates.length
       ? `Several ${kind}s match "${given.value}"; call again with one of the candidates' ids.`
-      : `No ${kind} matches "${given.value}". Give its id, the slug in its page address, or its name in English or Chinese.`,
+      : `No ${kind} matches "${given.value}". Give its id, the slug in its page address, its name in English or Chinese, or another name it is known by ("software engineer", "程序员").`,
     { candidates: found.candidates.map((c) => candidateView(c, language)) }),
   };
 }
@@ -610,6 +611,7 @@ export const READ_TOOLS = [
     description:
       "Search SurviAGI's published records of AI progress: updates, questions, observations (dated statements that AI did or did not do a piece of work, with their source words) and public bilingual editorial articles (deprecated: evidence readings, only when asked for with types). " +
       "A Chinese query finds English records through the occupation, market and work names they carry in both languages; each result's matched says which field and terms it matched, and title_language whether its title is Chinese. " +
+      "Another name of an occupation counts as its name (\"software engineer\", \"码农\" find Software Developers); aliases lists the ones the query used. " +
       "Use types to select article; articles can be filtered by status approved or preview. Results include exact revision IDs, sources, " +
       "evidence cutoff and the true publication status. A preview is public but not approved. Search returns only public article pointers; " +
       "private drafts and reviewer identities or notes are never exposed. Summaries are machine-proposed and unreviewed; quote sources, cite the url. " +
@@ -697,7 +699,7 @@ export const READ_TOOLS = [
     inputSchema: {
       type: "object",
       properties: {
-        occupation: { type: "string", maxLength: 200, description: "An occupation: oaw:occupation:<O*NET code>, the code alone or its name in English or Chinese." },
+        occupation: { type: "string", maxLength: 200, description: "An occupation: oaw:occupation:<O*NET code>, the code alone, its name in English or Chinese, or another name it is known by (\"software engineer\", \"程序员\")." },
         market: { type: "string", maxLength: 200, description: "A market: oaw:market:<slug>, the slug alone or its name. Give this or occupation, not both." },
         language: LANGUAGE_SCHEMA,
       },
@@ -719,7 +721,7 @@ export const READ_TOOLS = [
       type: "object",
       properties: {
         since: { type: "string", minLength: 1, maxLength: 64, description: "A data release id (e.g. 20261102T081500Z-1a2b3c4d, from versions.data), a date YYYY-MM-DD (from its start, UTC) or a time with offset." },
-        occupation: { type: "string", maxLength: 200, description: "Only what is new for this occupation: id, O*NET code or name in English or Chinese." },
+        occupation: { type: "string", maxLength: 200, description: "Only what is new for this occupation: id, O*NET code, name in English or Chinese, or another name it is known by." },
         market: { type: "string", maxLength: 200, description: "Only what is new for this market: id, slug or name." },
         limit: { type: "integer", minimum: 1, maximum: MAX_OBSERVATIONS, default: DEFAULT_CHANGES, description: "How many items each list shows; totals count all." },
         language: LANGUAGE_SCHEMA,

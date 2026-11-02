@@ -237,6 +237,15 @@ export function validateSchema(model = schema) {
     for (const language of ["en", "zh-CN"]) {
       if (!body.definition?.[language]) add(`property ${key} is missing definition.${language}`);
     }
+    // A property sealed in a file of its own is a list of objects, one row each, beside a concept class.
+    if (body.storage !== undefined) {
+      if (!/^sealed:[a-z_]+\.jsonl$/.test(body.storage) || model.classes[domain]?.storage !== "sealed:concepts.jsonl" || domain === "Concept") {
+        add(`property ${key} must be sealed:<file>.jsonl on a concept class`);
+      }
+      if (body.range !== "object" || !body.fields || body.max !== "*" || "column" in body) add(`property ${key} must be a list of objects with fields and no column`);
+      for (const field of body.optional_fields ?? []) if (!(field in (body.fields ?? {}))) add(`property ${key} lists unknown optional field ${field}`);
+      for (const [field, range] of Object.entries(body.fields ?? {})) if (!knownRange(range)) add(`property ${key}.${field} has unknown range ${range}`);
+    }
   }
   const CARDINALITY = new Set(["1", "0..1", "0..*", "1..*"]);
   for (const [name, body] of Object.entries(model.relations)) {

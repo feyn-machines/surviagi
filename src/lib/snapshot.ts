@@ -105,6 +105,12 @@ export type OccupationRow = {
   tasks: number;
   touched_tasks: number;
   markets: { market_id: string; confidence: number | null; status: string }[];
+  /**
+   * Other names to find it by (Occupation.alt_label, contract 1.6.0, Issue #30): O*NET reported titles, and their
+   * Chinese translations and common Chinese names. Absent or null in a release that carries none.
+   */
+  alt_labels_en?: string[] | null;
+  alt_labels_zh_cn?: string[] | null;
 };
 
 /** One observation as `observations.json` carries it (contract 1.2.0, Issue #25). Only heads of merges. */
@@ -633,6 +639,14 @@ export function occupationById(id: string): OccupationRow | undefined {
 }
 
 /**
+ * The first few other names of an occupation in one language, the names people say first (Issue #30). They help
+ * find it and do not define it (rule:alternative-names-find-not-define); empty when the release carries none.
+ */
+export function alsoCalled(row: OccupationRow | undefined, language: "en" | "zh-CN", max = 8): string[] {
+  return ((language === "zh-CN" ? row?.alt_labels_zh_cn : row?.alt_labels_en) ?? []).slice(0, max);
+}
+
+/**
  * Where the middle occupation sits, so one occupation's share can be judged.
  *
  * A bare "41%" tells a reader nothing. The same number against a median of 0%
@@ -749,6 +763,8 @@ export function occupations() {
       group_id: o.group_id,
       label_en: o.label_en,
       label_zh_cn: o.label_zh_cn,
+      alt_labels_en: o.alt_labels_en ?? null,
+      alt_labels_zh_cn: o.alt_labels_zh_cn ?? null,
       tasks: o.tasks,
       touched: o.touched_tasks,
       markets: o.markets.map((m) => m.market_id),

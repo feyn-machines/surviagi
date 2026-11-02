@@ -272,7 +272,85 @@ function buildLexicon(): Set<string> {
 /** No name piece is looked up longer than this many characters. */
 const LONGEST_NAME = 16;
 
-let cached: { key: string; docs: Doc[]; texts: string[]; lexicon: Set<string> } | null = null;
+/** An occupation an alternative name can stand for, with the names records carry for it. */
+type AliasTarget = { id: string; label_en: string; label_zh_cn: string | null };
+
+/** An alternative name found in a query, the occupations it stands for, and every text that counts as naming them. */
+export type FoundAlias = { term: string; occupations: AliasTarget[]; texts: string[] };
+
+/** A name shared by more occupations than this ("讲师", "engineer") stands for none of them. */
+const ALIAS_OCCUPATIONS = 3;
+/** Longest alternative name looked up, in words (Latin) or characters (Chinese). */
+const ALIAS_WORDS = 6;
+
+/**
+ * The release's alternative names of occupations (Occupation.alt_label, Issue #30), folded, each with the
+ * occupations it names. "CEO (Chief Executive Officer)" is kept as both of its halves. A Chinese name needs two
+ * characters; an English one two words, since one word is either part of the occupation's own name already
+ * ("accountant") or a word AI news uses otherwise ("agent", "model", "developer"). A name of more than three
+ * occupations is left out.
+ */
+export function buildAliases(rows: { occupation_id: string; label_en: string; label_zh_cn: string | null; alt_labels_en: string[] | null; alt_labels_zh_cn: string[] | null }[]): Map<string, AliasTarget[]> {
+  const index = new Map<string, AliasTarget[]>();
+  for (const o of rows) {
+    const target = { id: o.occupation_id, label_en: o.label_en, label_zh_cn: o.label_zh_cn };
+    for (const label of [...(o.alt_labels_en ?? []), ...(o.alt_labels_zh_cn ?? [])]) {
+      for (const part of label.split(/\s*[()（）]\s*/u)) {
+        const key = lower(part).replace(/\s+/g, " ").trim();
+        if (isCjk(key) ? [...key].length < 2 : !key.includes(" ")) continue;
+        const listed = index.get(key) ?? [];
+        if (!listed.some((x) => x.id === target.id)) index.set(key, [...listed, target]);
+      }
+    }
+  }
+  for (const [key, targets] of index) if (targets.length > ALIAS_OCCUPATIONS) index.delete(key);
+  return index;
+}
+
+/**
+ * The alternative names in a query, longest first from the left: "码农" in "码农会被取代吗", "software engineer" in
+ * "will AI replace software engineers". An English name matches whole words, with a plural "s" allowed. Each
+ * stands for its occupations: a record that names any of them, in either language, holds the term
+ * (rule:alternative-names-find-not-define: the record is found by the alias, and still named by its own name).
+ */
+export function findAliases(query: string, index: Map<string, AliasTarget[]>): FoundAlias[] {
+  const found = new Map<string, AliasTarget[]>();
+  const text = lower(query);
+  for (const run of text.match(CJK_RUN) ?? []) {
+    const chars = [...run];
+    let i = 0;
+    while (i < chars.length - 1) {
+      let end = Math.min(chars.length, i + LONGEST_NAME);
+      while (end >= i + 2 && !index.has(chars.slice(i, end).join(""))) end -= 1;
+      if (end >= i + 2) {
+        const key = chars.slice(i, end).join("");
+        found.set(key, index.get(key)!);
+        i = end;
+      } else i += 1;
+    }
+  }
+  const words = text.match(/[a-z0-9][a-z0-9.+#&'-]*/g) ?? [];
+  let i = 0;
+  while (i < words.length) {
+    let hit = 0;
+    for (let n = Math.min(ALIAS_WORDS, words.length - i); n >= 1 && !hit; n -= 1) {
+      const phrase = words.slice(i, i + n).join(" ");
+      const key = index.has(phrase) ? phrase : phrase.endsWith("s") && index.has(phrase.slice(0, -1)) ? phrase.slice(0, -1) : null;
+      if (key) {
+        found.set(key, index.get(key)!);
+        hit = n;
+      }
+    }
+    i += hit || 1;
+  }
+  return [...found].map(([term, occupations]) => ({
+    term,
+    occupations,
+    texts: [...new Set([term, ...occupations.flatMap((o) => [lower(o.label_en), lower(o.label_zh_cn)]).filter(Boolean)])],
+  }));
+}
+
+let cached: { key: string; docs: Doc[]; texts: string[]; lexicon: Set<string>; aliases: Map<string, AliasTarget[]> } | null = null;
 
 /** The documents of the loaded release, built once per release, with each one's fields joined for counting terms. */
 function corpus() {
@@ -280,7 +358,7 @@ function corpus() {
   const key = `${release.releaseId}|${release.loadedAt}`;
   if (cached?.key !== key) {
     const built = buildDocs();
-    cached = { key, docs: built, texts: built.map((d) => d.fields.map((f) => f.text).join("\n")), lexicon: buildLexicon() };
+    cached = { key, docs: built, texts: built.map((d) => d.fields.map((f) => f.text).join("\n")), lexicon: buildLexicon(), aliases: buildAliases(occupations()) };
   }
   return cached;
 }
@@ -387,22 +465,33 @@ export type RankedSearchResult = { result: SearchResult; score: number };
  * an observation's occupations, markets and tasks, a question's subject), so a Chinese query finds English
  * records through them; `matched` says which field it was.
  */
-export function rankedSearch(input: SearchInput): { query: string; total: number; results: RankedSearchResult[]; release: ReturnType<typeof releaseInfo>; content_kinds: typeof CONTENT_KINDS } {
-  const { docs, texts, lexicon } = corpus();
+export function rankedSearch(input: SearchInput): { query: string; total: number; results: RankedSearchResult[]; aliases: { term: string; occupations: AliasTarget[] }[]; release: ReturnType<typeof releaseInfo>; content_kinds: typeof CONTENT_KINDS } {
+  const { docs, texts, lexicon, aliases: aliasIndex } = corpus();
+  // An alternative name stands for its occupations' own names; the pieces of the query inside it are not asked again.
+  const aliases = findAliases(input.query, aliasIndex).filter((a) => texts.some((text) => a.texts.some((t) => text.includes(t))));
+  const inAlias = (word: string) => aliases.some((a) => a.term.includes(word));
   const named = namedTerms(input.query, lexicon).filter((word) => texts.some((text) => text.includes(word)));
-  const all = [...new Set([...terms(input.query), ...named])];
+  const all = [...new Set([...terms(input.query), ...named])].filter((word) => !inAlias(word));
   const weights = termWeights(all, texts);
   const words = all.filter((word, i) => weights[i] > 0 || !isCjk(word));
   const rarity = words.map((word) => weights[all.indexOf(word)]);
+  const aliasRarity = aliases.map((a) => {
+    const df = texts.filter((text) => a.texts.some((t) => text.includes(t))).length;
+    return Math.min(1.5, Math.max(0.25, Math.log(Math.max(1, texts.length) / df) / Math.log(100)));
+  });
+  const naming = [...named.filter((word) => !inAlias(word)).map((word) => [word]), ...aliases.map((a) => a.texts)];
   const phrase = lower(input.query).trim();
   const limit = Math.min(MAX_RESULTS, Math.max(1, input.limit ?? DEFAULT_RESULTS));
   const types = new Set<RecordType>(input.types ?? DEFAULT_RECORD_TYPES);
   const language = input.language ?? "en";
-  const total = rarity.reduce((sum, r) => sum + r, 0);
+  const total = [...rarity, ...aliasRarity].reduce((sum, r) => sum + r, 0);
+  const asked = words.length + aliases.length;
+  // A query that names an occupation is about it: a record that names it qualifies, and the way the question is
+  // asked ("还有前途吗", "会被取代吗") only ranks.
   const enough = (count: number, held: number) =>
-    count > 0 && (words.length <= 2 ? count === words.length : count >= Math.ceil(words.length / 2) || held >= total / 2);
+    count > 0 && (naming.length > 0 || (asked <= 2 ? count === asked : count >= Math.ceil(asked / 2) || held >= total / 2));
   const scored: { doc: Doc; score: number; matched: Map<string, string[]> }[] = [];
-  for (const doc of words.length === 0 ? [] : docs) {
+  for (const doc of asked === 0 ? [] : docs) {
     if (!types.has(doc.type)) continue;
     if (input.from && (!doc.date || doc.date.slice(0, 10) < input.from)) continue;
     if (input.to && (!doc.date || doc.date.slice(0, 10) > input.to)) continue;
@@ -419,8 +508,17 @@ export function rankedSearch(input: SearchInput): { query: string; total: number
       score += best.weight * rarity[i];
       matched.set(best.name, [...(matched.get(best.name) ?? []), word]);
     });
+    aliases.forEach((alias, i) => {
+      let best: Field | null = null;
+      for (const field of doc.fields) if (field.weight > (best?.weight ?? 0) && alias.texts.some((t) => field.text.includes(t))) best = field;
+      if (!best) return;
+      count += 1;
+      held += aliasRarity[i];
+      score += best.weight * aliasRarity[i];
+      matched.set(best.name, [...(matched.get(best.name) ?? []), alias.term]);
+    });
     if (!enough(count, held)) continue;
-    if (named.length && !named.some((word) => doc.fields.some((field) => field.text.includes(word)))) continue;
+    if (naming.length && !naming.some((any) => any.some((word) => doc.fields.some((field) => field.text.includes(word))))) continue;
     if (phrase.length > 2 && doc.fields.some((field) => field.text.includes(phrase))) score += 5;
     scored.push({ doc, score: score + count / Math.max(1, words.length), matched });
   }
@@ -452,6 +550,7 @@ export function rankedSearch(input: SearchInput): { query: string; total: number
         },
       };
     }),
+    aliases: aliases.map(({ term, occupations }) => ({ term, occupations })),
     release: releaseInfo(),
     content_kinds: CONTENT_KINDS,
   };

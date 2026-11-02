@@ -1,6 +1,6 @@
 # Public data contract / 对外数据契约
 
-Issue #27, part of the evidence-ledger redesign (#34). Contract version **1.2.0**, ontology schema **2.5.0**.
+Issue #27, part of the evidence-ledger redesign (#34). Contract version **1.6.0**, ontology schema **2.6.0**.
 
 The ontology schema is the one type definition. The public contract is generated from it, so an agent can learn from one place which entities exist, what each field means, how far it can be trusted, and how the format evolves.
 
@@ -61,6 +61,10 @@ A field added in a minor version is optional for readers to use. A field is depr
 
 ## Changes / 变更
 
+- 1.6.0 — `occupations.json` rows carry `alt_labels_en` and `alt_labels_zh_cn` (Occupation.alt_label, ontology 2.6.0, #30): O*NET reported job titles as written, and their AI translations and model-proposed common Chinese names. They find an occupation and do not define it; one name can belong to several occupations. `null` when the release carries none. The snapshot manifest records which sealed release they came from (`alt_labels_from`). Search responses list the other names a query used under `aliases`, and the `occupation` argument accepts them.
+- 1.5.0 — search returns observations; each result carries `matched` and `title_language` (#30).
+- 1.4.0 — `changes_since`; `query_observations` takes `recorded_since` and `order=recorded` (#29).
+- 1.3.0 — `query_observations`, `occupation_summary`, and `get_record` for observation ids (#29).
 - 1.2.0 — `observations.json`: Observation rows with `sources`, `facts`, `concerns` (candidate market work items, occupations and O*NET tasks) and `merged_from` (redirects). Additive: a reader of 1.1.0 is unaffected.
 - 1.1.0 — `work.json` and `occupations.json` without levels; `Event.work` links (#35).
 - 1.0.0 — first contract (#27).

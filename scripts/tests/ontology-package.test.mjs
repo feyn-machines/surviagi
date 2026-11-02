@@ -94,3 +94,37 @@ test("a relation must join the classes it declares", () => {
   assert.throws(() => conformance(schema, { concepts, relations: [relation("names_model", "a", "b")] }), /undeclared kind/);
   assert.throws(() => conformance(schema, { concepts, relations: [relation("has_work", "a", "b", "occupations")] }), /wrong view/);
 });
+
+test("an occupation's alternative names are sealed in their own file and must fit the property", async (t) => {
+  const out = await sealed(t);
+  const result = await verifyPackage(out, { previousDir: v1 });
+  const file = result.manifest.files.find((f) => f.path === "occupation_alt_labels.jsonl");
+  assert.equal(file.rows, result.counts.occupation_alt_labels);
+  assert.ok(file.rows > 0);
+  const format = JSON.parse(await readFile(join(out, "data-format.json"), "utf8")).properties.occupation_alt_labels.items;
+  assert.deepEqual(format.required, ["concept_id", "label", "language", "basis"]);
+  assert.match(await readFile(join(out, "ontology.ttl"), "utf8"), /rdfs:subPropertyOf skos:altLabel/);
+
+  const concepts = [{ id: "o", kind: "occupation", origin: "onet_projection", translation_status: "ai_translated", scope_status: "defined" },
+                    { id: "m", kind: "market", origin: "editorial_ai", translation_status: "pending", scope_status: "defined" }];
+  const check = (rows) => conformance(schema, { concepts, relations: [], sealed: { occupation_alt_labels: rows } });
+  const row = { concept_id: "o", label: "程序员", language: "zh-CN", basis: "common_name" };
+  assert.equal(check([row]).occupation_alt_labels, 1);
+  assert.throws(() => check([{ ...row, concept_id: "m" }]), /is not on a Occupation/);
+  assert.throws(() => check([{ ...row, basis: "guess" }]), /outside its vocabulary/);
+  assert.throws(() => check([{ ...row, language: "zh" }]), /language zh/);
+  assert.throws(() => check([{ ...row, note: "x" }]), /unknown field note/);
+  assert.throws(() => check([row, { ...row }]), /listed twice/);
+});
+
+test("a sealed property file is inherited as it is, never changed in place", async (t) => {
+  const out = await sealed(t);
+  const dir = await mkdtemp(join(tmpdir(), "ontology-data-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  for (const name of ["gates.json", "organizations.json"]) await writeFile(join(dir, name), await readFile(join(dataDir, name)));
+  await writeFile(join(dir, "occupation_alt_labels.jsonl"), "");
+  const next = structuredClone(schema);
+  next.version = "9.9.9";
+  await assert.rejects(sealPackage({ schema: next, previousDir: out, dataDir: dir, outputDir: join(dirname(out), "v9.9.9"), attachments: {} }),
+                       /differs from the file it inherits/);
+});

@@ -1342,6 +1342,55 @@ test("search: the evaluation set finds a record about what each question asks in
   assert.ok(zh.length && zh.every((r) => r.titles_in_language > 0), "a Chinese query returns Chinese titles where a record has them");
 });
 
+// Issue #30: an occupation's other names (ontology 2.6.0) are shown on its page and find it in search and in the summary.
+test("an occupation's other names are on its page, and a query or a summary that uses one finds the occupation", { skip: !HAS_SNAPSHOT, timeout: 60000 }, async () => {
+  const read = (name) => JSON.parse(readFileSync(join(SNAPSHOT_DIR, `${name}.json`), "utf8"));
+  const dir = mkdtempSync(join(tmpdir(), "surviagi-alt-labels-"));
+  cpSync(SNAPSHOT_DIR, dir, { recursive: true });
+  const rows = read("occupations");
+  const listed = rows.filter((o) => (o.tasks ?? 0) > 0);
+  const [occupation, ...others] = listed;
+  for (const o of rows) Object.assign(o, { alt_labels_en: [], alt_labels_zh_cn: [] });
+  Object.assign(occupation, { alt_labels_en: ["Quill Wrangler", "Ink Specialist"], alt_labels_zh_cn: ["羽笔匠", "墨水专员"] });
+  // A name of four occupations stands for none of them.
+  for (const o of others.slice(0, 3)) o.alt_labels_zh_cn = ["共享叫法"];
+  others[0].alt_labels_zh_cn.push("墨水专员");
+  occupation.alt_labels_zh_cn.push("共享叫法");
+  writeFileSync(join(dir, "occupations.json"), JSON.stringify(rows));
+  const topicRows = read("topics");
+  topicRows[0].about = { id: occupation.id, kind: "occupation", en: occupation.label_en, "zh-CN": occupation.label_zh_cn };
+  writeFileSync(join(dir, "topics.json"), JSON.stringify(topicRows));
+  const { base, proc } = await startServer({ SNAPSHOT_DIR: dir });
+  try {
+    const code = occupation.id.replace(/^oaw:occupation:/, "");
+    const en = await (await fetch(`${base}/occupations/${code}`)).text();
+    assert.ok(en.includes("Also called: Quill Wrangler, Ink Specialist."), "the English page lists the other names");
+    const zh = await (await fetch(`${base}/zh-CN/occupations/${code}`)).text();
+    assert.ok(zh.includes("也叫：羽笔匠、墨水专员、共享叫法。"), "the Chinese page lists the Chinese names");
+    assert.ok((await (await fetch(`${base}/occupations/${code}/raw.md`)).text()).includes("Also called: Quill Wrangler, Ink Specialist."));
+    const plain = await (await fetch(`${base}/occupations/${others[3].id.replace(/^oaw:occupation:/, "")}`)).text();
+    assert.ok(!plain.includes("Also called"), "an occupation without other names says nothing about them");
+
+    const search = async (query, language = "en") => (await fetch(`${base}/api/agent/search?${new URLSearchParams({ query, language, types: "question" })}`, { headers: { "cf-connecting-ip": "198.51.100.31" } })).json();
+    const found = await search("羽笔匠会被取代吗", "zh-CN");
+    assert.deepEqual(found.aliases.map((a) => [a.term, a.occupations.map((o) => o.id)]), [["羽笔匠", [occupation.id]]]);
+    assert.equal(found.results[0].id, topicRows[0].topic_id);
+    assert.ok(found.results[0].matched.some((m) => m.terms.includes("羽笔匠")), "the result says the alias matched");
+    assert.deepEqual((await search("will AI replace quill wranglers")).aliases.map((a) => a.term), ["quill wrangler"]);
+    assert.deepEqual((await search("墨水专员")).aliases.map((a) => a.occupations.length), [2]);
+    assert.deepEqual((await search("共享叫法")).aliases, [], "a name of four occupations stands for none");
+
+    const summary = async (name) => fetch(`${base}/api/agent/summary?${new URLSearchParams({ occupation: name })}`, { headers: { "cf-connecting-ip": "198.51.100.31" } });
+    assert.equal((await (await summary("羽笔匠")).json()).id, occupation.id);
+    const several = await summary("墨水专员");
+    assert.equal(several.status, 404);
+    assert.equal((await several.json()).candidates.length, 2);
+  } finally {
+    await stop(proc);
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 // Issue #32: observations counted by evidence type on market and occupation pages, the same on the page and its copy.
 test("market and occupation pages count their observations by evidence type and list them with their sources", { skip: !HAS_SNAPSHOT, timeout: 60000 }, async () => {
   const read = (name) => JSON.parse(readFileSync(join(SNAPSHOT_DIR, `${name}.json`), "utf8"));

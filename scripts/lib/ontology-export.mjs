@@ -83,6 +83,8 @@ export function toTurtle(schema = currentSchema) {
         constraint.push(`sh:datatype ${XSD[body.range]}`);
       }
     }
+    // A property that is a standard one under our name, such as an alternative name (skos:altLabel).
+    if (body.equivalent) lines.push(`rdfs:subPropertyOf ${body.equivalent}`);
     block(iri.property(key), lines);
     shapes.get(body.domain).push(`sh:property [ ${constraint.join(" ; ")} ]`);
   }
@@ -130,6 +132,12 @@ export function exportCounts(schema = currentSchema) {
     terms: Object.values(schema.vocabularies).reduce((n, body) => n + Object.keys(body.terms).length, 0),
   };
 }
+
+/** The file a property is sealed in on its own (`sealed:<file>.jsonl`), or null. */
+export const sealedFile = (body) => (body.storage?.startsWith("sealed:") && body.domain !== "Concept" ? body.storage.slice(7) : null);
+
+/** Properties that have a sealed file of their own, as [key, body]. */
+export const sealedProperties = (schema) => Object.entries(schema.properties).filter(([, body]) => sealedFile(body));
 
 const TYPES = {
   string: { type: "string", minLength: 1 }, text: { type: "string", minLength: 1 }, boolean: { type: "boolean" },
@@ -192,6 +200,12 @@ export function dataFormat(schema, inherited) {
       status: rangeFormat(mapping.status, schema), explanation: TYPES.string,
     }, ["explanation"])),
   };
+  // A property kept in a sealed file of its own: one row per value, naming the concept it belongs to.
+  for (const [, body] of sealedProperties(schema)) {
+    const fields = Object.fromEntries(Object.entries(body.fields).map(([field, range]) =>
+      [field, field === "language" ? { enum: ["en", "zh-CN"] } : rangeFormat(range, schema)]));
+    rows[sealedFile(body).slice(0, -6)] = array(object({ concept_id: TYPES.string, ...fields }, body.optional_fields ?? []));
+  }
   return {
     $schema: "https://json-schema.org/draft/2020-12/schema",
     $id: `https://openaiwill.com/schemas/ontology/${schema.version}/data-format.json`,

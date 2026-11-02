@@ -1,6 +1,6 @@
 {
   "generated_from": "datasets/ontology/schema/schema.json",
-  "schema_version": "2.5.0",
+  "schema_version": "2.6.0",
   "classes": {
     "Concept": {
       "en": "Concept",
@@ -1541,6 +1541,38 @@
           "definition": {
             "en": "The label is the source's own wording.",
             "zh-CN": "名称是来源的原文。"
+          }
+        }
+      }
+    },
+    "alt_label_basis": {
+      "label": {
+        "en": "Basis of an alternative name",
+        "zh-CN": "别名的来源"
+      },
+      "terms": {
+        "onet_reported_title": {
+          "en": "O*NET reported title",
+          "zh-CN": "O*NET 报告职称",
+          "definition": {
+            "en": "A job title workers in the occupation reported, from O*NET's sample of reported titles, as written there.",
+            "zh-CN": "该职业从业者报告的职称，取自 O*NET 的报告职称样本，原样保留。"
+          }
+        },
+        "reported_title_translation": {
+          "en": "Translation of a reported title",
+          "zh-CN": "报告职称的翻译",
+          "definition": {
+            "en": "An AI translation of a reported title into Chinese; source_label holds the title it translates.",
+            "zh-CN": "报告职称的中文 AI 翻译；source_label 是被翻译的原职称。"
+          }
+        },
+        "common_name": {
+          "en": "Common Chinese name",
+          "zh-CN": "中文常用叫法",
+          "definition": {
+            "en": "A name Chinese speakers commonly use for the occupation, proposed by a model; never a broader category that also covers other occupations.",
+            "zh-CN": "中文里对这个职业的常用叫法，由模型提出；不收同时涵盖其他职业的更宽的类别名。"
           }
         }
       }

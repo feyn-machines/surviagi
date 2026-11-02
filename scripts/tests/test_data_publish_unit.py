@@ -1101,5 +1101,47 @@ class ObservationsTests(unittest.TestCase):
         self.assertEqual((row["sources"], row["facts"]), ([], []))
 
 
+class AltLabelTests(unittest.TestCase):
+    """Other names of occupations come from the newest sealed release that carries them (Issue #30)."""
+
+    def release(self, root, version, rows=None, tamper=False):
+        import hashlib
+        folder = Path(root) / f"v{version}"
+        folder.mkdir()
+        files = []
+        if rows is not None:
+            data = "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows).encode()
+            (folder / "occupation_alt_labels.jsonl").write_bytes(data + (b"x" if tamper else b""))
+            files.append({"path": "occupation_alt_labels.jsonl", "sha256": hashlib.sha256(data).hexdigest(), "rows": len(rows)})
+        manifest = json.dumps({"version": version, "files": files}).encode()
+        (folder / "manifest.json").write_bytes(manifest)
+        (folder / "manifest.sha256").write_text(f"{hashlib.sha256(manifest).hexdigest()}  manifest.json\n")
+
+    def test_names_come_from_the_newest_release_that_has_them_common_names_first(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as root:
+            row = lambda label, language, basis: {"concept_id": "oaw:occupation:15-1252.00", "label": label, "language": language, "basis": basis}
+            self.release(root, "2.6.0", [row("Software Engineer", "en", "onet_reported_title"),
+                                         row("软件工程师", "zh-CN", "reported_title_translation"),
+                                         row("程序员", "zh-CN", "common_name")])
+            self.release(root, "2.10.0")
+            names, source = publish.occupation_alt_labels(Path(root))
+        self.assertEqual(names["oaw:occupation:15-1252.00"], {"en": ["Software Engineer"], "zh_cn": ["程序员", "软件工程师"]})
+        self.assertEqual((source["ontology_version"], source["rows"]), ("2.6.0", 3))
+
+    def test_no_release_with_names_publishes_null_not_empty(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as root:
+            self.release(root, "2.5.0")
+            self.assertEqual(publish.occupation_alt_labels(Path(root)), ({}, None))
+
+    def test_a_changed_file_is_refused(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as root:
+            self.release(root, "2.6.0", [{"concept_id": "x", "label": "a b", "language": "en", "basis": "onet_reported_title"}], tamper=True)
+            with self.assertRaisesRegex(ValueError, "does not match its manifest"):
+                publish.occupation_alt_labels(Path(root))
+
+
 if __name__ == "__main__":
     unittest.main()

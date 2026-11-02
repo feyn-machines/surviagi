@@ -7,6 +7,7 @@ import { topicsAbout, topicsMarkdown } from "@/lib/topic-evidence";
 import { activityAnchor } from "@/lib/anchors";
 import {
   activitiesOfMarket,
+  alsoCalled,
   manifest,
   marketSlug,
   marketsOfOccupation,
@@ -74,6 +75,9 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
     "",
     c.lead,
     "",
+    ...(alsoCalled(occupationById(id), language).length
+      ? [fill(c.alsoCalled, { names: alsoCalled(occupationById(id), language).join(zh ? "、" : ", ") }), ""]
+      : []),
     ...ledgerMarkdown(ledger(observationsOfOccupation(id), name, language), language),
     ...topicsMarkdown(topicsAbout("occupation", id), language),
     `## ${c.activitiesTitle}`,
