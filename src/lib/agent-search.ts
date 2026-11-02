@@ -273,7 +273,7 @@ function buildLexicon(): Set<string> {
 const LONGEST_NAME = 16;
 
 /** An occupation an alternative name can stand for, with the names records carry for it. */
-type AliasTarget = { id: string; label_en: string; label_zh_cn: string | null };
+export type AliasTarget = { id: string; label_en: string; label_zh_cn: string | null };
 
 /** An alternative name found in a query, the occupations it stands for, and every text that counts as naming them. */
 export type FoundAlias = { term: string; occupations: AliasTarget[]; texts: string[] };

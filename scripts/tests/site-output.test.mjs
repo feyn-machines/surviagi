@@ -1391,6 +1391,77 @@ test("an occupation's other names are on its page, and a query or a summary that
   }
 });
 
+// Issue #32: what the home page's two questions land on. An occupation is found by its other names (客服 is
+// Customer Service Representatives, not the passenger attendants whose name holds the two characters), a
+// market by its name and its kinds of work, and the asking words around a name do not count.
+test("a question from the home page lands on the occupation or market it names, by other names and kinds of work too", { skip: !HAS_SNAPSHOT, timeout: 60000 }, async () => {
+  const read = (name) => JSON.parse(readFileSync(join(SNAPSHOT_DIR, `${name}.json`), "utf8"));
+  const block = (page) => page.match(/<section[^>]*aria-labelledby="entry-matches"[\s\S]*?<\/section>/)?.[0] ?? null;
+  const names = (page) => [...(block(page) ?? "").matchAll(/<a[^>]*href="([^"]+)"[^>]*>([^<]+)<\/a>/g)].map((m) => ({ href: m[1], name: m[2] }));
+  const dir = mkdtempSync(join(tmpdir(), "surviagi-entry-"));
+  cpSync(SNAPSHOT_DIR, dir, { recursive: true });
+  const rows = read("occupations");
+  const listed = rows.filter((o) => (o.tasks ?? 0) > 0);
+  const [occupation, other] = listed;
+  for (const o of rows) Object.assign(o, { alt_labels_en: o.alt_labels_en ?? [], alt_labels_zh_cn: o.alt_labels_zh_cn ?? [] });
+  occupation.alt_labels_zh_cn = [...occupation.alt_labels_zh_cn, "羽笔匠"];
+  occupation.alt_labels_en = [...occupation.alt_labels_en, "Quill Wrangler"];
+  writeFileSync(join(dir, "occupations.json"), JSON.stringify(rows));
+  const { base, proc } = await startServer({ SNAPSHOT_DIR: dir });
+  const get = async (path, q) => (await fetch(`${base}${path}?${new URLSearchParams({ q })}`)).text();
+  try {
+    const code = occupation.id.replace(/^oaw:occupation:/, "");
+    const zh = await get("/zh-CN/occupations", "羽笔匠会被取代吗");
+    assert.equal(names(zh)[0]?.name, occupation.label_zh_cn ?? occupation.label_en, "an other name in a Chinese question finds its occupation first");
+    assert.ok(names(zh)[0].href.startsWith(`/zh-CN/occupations/${code}`));
+    assert.ok(block(zh).includes("也叫“羽笔匠”"), "the match says which other name found it");
+    const en = await get("/occupations", "will AI replace quill wranglers");
+    assert.equal(names(en)[0]?.name, occupation.label_en);
+    assert.ok(block(en).includes("also called “quill wrangler”"));
+    // An occupation's own English name finds it, and it needs no other name to explain it.
+    const own = await get("/occupations", other.label_en);
+    assert.equal(names(own)[0]?.name, other.label_en);
+    assert.ok(!block(own).match(/<li[\s\S]*?<\/li>/)[0].includes("also called"));
+    // Once the matches answer, the list below is not filtered by the question.
+    assert.match(zh, /<input[^>]*type="search"[^>]*value=""/, "the occupation list keeps the question as its filter");
+
+    // A market by a word of one of its kinds of work that no market name holds.
+    const work = read("work");
+    const marketNames = [...new Set(work.map((w) => `${w.market_en} ${w.market_zh_cn ?? ""}`.toLowerCase()))].join(" ");
+    const word = (text) => (text.toLowerCase().match(/[a-z]{6,}/g) ?? []).find((w) =>
+      !marketNames.includes(w) && work.filter((x) => x.label_en.toLowerCase().includes(w)).every((x, _, all) => x.market_id === all[0].market_id));
+    const target = work.find((w) => word(w.label_en));
+    const byWork = await get("/markets", word(target.label_en));
+    assert.equal(names(byWork)[0]?.name, target.market_en, `"${word(target.label_en)}" finds the market of "${target.label_en}"`);
+    const byName = await get("/zh-CN/markets", `开${target.market_zh_cn}还值得吗`);
+    assert.equal(names(byName)[0]?.name, target.market_zh_cn, "a Chinese question with a market's name finds that market");
+    // Nothing matched: no block, and the list keeps the words as its filter.
+    const none = await get("/markets", "zzqxv");
+    assert.equal(block(none), null);
+    assert.match(none, /<input[^>]*value="zzqxv"/);
+  } finally {
+    await stop(proc);
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("each example under the home page's questions finds something", { skip: !HAS_SNAPSHOT }, async () => {
+  const withNames = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "occupations.json"), "utf8")).some((o) => o.alt_labels_zh_cn?.length);
+  for (const [language, prefix] of [["en", ""], ["zh-CN", "/zh-CN"]]) {
+    const page = html(language, "");
+    for (const [id, target] of [["home-jobs", "/occupations"], ["home-markets", "/markets"]]) {
+      // An other name ("码农") is found only in a release that carries other names (ontology 2.6.0).
+      if (target === "/occupations" && !withNames) continue;
+      const placeholder = page.match(new RegExp(`<input[^>]*id="${id}"[^>]*placeholder="([^"]+)"`))?.[1] ?? page.match(new RegExp(`<input[^>]*placeholder="([^"]+)"[^>]*id="${id}"`))?.[1];
+      assert.ok(placeholder, `${language}: no examples under ${id}`);
+      for (const example of placeholder.replace(/…$/, "").split(/[,、]\s*/)) {
+        const found = await (await fetch(`${site.base}${prefix}${target}?${new URLSearchParams({ q: example })}`)).text();
+        assert.match(found, /aria-labelledby="entry-matches"/, `${language}: the example "${example}" finds no ${target.slice(1)}`);
+      }
+    }
+  }
+});
+
 // Issue #32: observations counted by evidence type on market and occupation pages, the same on the page and its copy.
 test("market and occupation pages count their observations by evidence type and list them with their sources", { skip: !HAS_SNAPSHOT, timeout: 60000 }, async () => {
   const read = (name) => JSON.parse(readFileSync(join(SNAPSHOT_DIR, `${name}.json`), "utf8"));
