@@ -1,7 +1,7 @@
 import { count, fill } from "@/app/[lang]/markets/copy";
 import { DEFAULT_LANGUAGE, normalizeLanguage } from "@/lib/i18n";
 import { colon, link, markdownResponse } from "@/lib/markdown-copy";
-import { ledger, ledgerMarkdown, pageQuestion } from "@/lib/observation-view";
+import { ledger, ledgerMarkdown, pageQuestion, taskLedger, taskLedgerMarkdown } from "@/lib/observation-view";
 import { indexable } from "@/lib/site-pages";
 import { topicsAbout, topicsMarkdown } from "@/lib/topic-evidence";
 import { activityAnchor } from "@/lib/anchors";
@@ -79,6 +79,8 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
       ? [fill(c.alsoCalled, { names: alsoCalled(occupationById(id), language).join(zh ? "、" : ", ") }), ""]
       : []),
     ...ledgerMarkdown(ledger(observationsOfOccupation(id), name, language), language),
+    // Grouped by its tasks only when there is something to group; the ledger already says when there is not.
+    ...(observationsOfOccupation(id).length > 0 ? taskLedgerMarkdown(taskLedger(observationsOfOccupation(id), id, total), language) : []),
     ...topicsMarkdown(topicsAbout("occupation", id), language),
     `## ${c.activitiesTitle}`,
     "",

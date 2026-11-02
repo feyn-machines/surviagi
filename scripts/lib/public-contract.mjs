@@ -13,7 +13,7 @@
 import { schema, termIds, validateSchema } from "./ontology-schema.mjs";
 
 /** The contract's own version. Moves independently of the ontology, the method and the data. */
-export const CONTRACT_VERSION = "1.6.0";
+export const CONTRACT_VERSION = "1.7.0";
 export const CONTRACT_PATH = "contract/v1";
 
 /**
@@ -186,7 +186,7 @@ export const ENTITIES = [
     view: {
       sources: view("array", "quote", "Where it was said: source_ref, source_type, url, source_id (the collected post, for X), the quote checked against the source, and its publication time. Includes the sources of observations merged into this one.", "出处：source_ref、来源类型、地址、source_id（X 帖子的采集编号）、与来源核对过的原话及发布时间。含并入本条的观察的出处。"),
       facts: view("array", "excerpt", "Numbers the source states: fact_id, value, unit, what it counts, baseline, method note, and the quote that states it.", "来源给出的数值：fact_id、值、单位、指什么、比较基线、口径说明及出处原话。"),
-      concerns: view("array", "machine", "Catalog entries the work was put on: concept_id, kind (`work` market work item, `occupation`, `task` O*NET task), English and Chinese labels, method and status. Machine-proposed candidates unless status says `reviewed`. Empty when nothing fit (`work_key` is then `unmapped`).", "这项工作被归到的目录条目：concept_id、类别（`work` 赛道工作项、`occupation` 职业、`task` O*NET 任务）、中英名称、方法与状态。除非状态为 `reviewed`，均为机器提出的候选。都对不上时为空（此时 `work_key` 为 `unmapped`）。"),
+      concerns: view("array", "machine", "Catalog entries the work was put on: concept_id, kind (`work` market work item, `occupation`, `task` O*NET task), English and Chinese labels, `occupation_id` (1.7.0: the occupation a task belongs to; null for other kinds, absent in older releases), method and status. Machine-proposed candidates unless status says `reviewed`. Empty when nothing fit (`work_key` is then `unmapped`).", "这项工作被归到的目录条目：concept_id、类别（`work` 赛道工作项、`occupation` 职业、`task` O*NET 任务）、中英名称、`occupation_id`（1.7.0：任务所属的职业；其他类别为 null，旧版本没有此字段）、方法与状态。除非状态为 `reviewed`，均为机器提出的候选。都对不上时为空（此时 `work_key` 为 `unmapped`）。"),
       merged_from: view("array", "record", "Ids of observations found to be this same one. They are not published as rows of their own; an id here redirects to this row.", "被判定与本条是同一件事的观察编号。它们不再单独发布；这里的编号都重定向到本条。", { itemType: "string" }),
     },
   },

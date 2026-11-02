@@ -143,7 +143,7 @@ def squeeze(sql):
 ROUTES = (
     # Observations: the head query names the merges table in a subselect, so it
     # is matched before the merges query.
-    ("observation_entries", "AS edge FROM public.ontology_concepts c"),
+    ("observation_entries", "AS occupation_id FROM public.ontology_concepts c"),
     ("observations", "FROM public.observations o"),
     ("observation_concepts", "FROM public.observation_concepts"),
     ("observation_merges", "FROM public.observation_merges ORDER BY"),
@@ -1090,14 +1090,22 @@ class ObservationsTests(unittest.TestCase):
             "observation_merges": [{"observation_id": "obs-b", "merged_into": "obs-a"},
                                    {"observation_id": "obs-c", "merged_into": "obs-b"}],
             "observation_concepts": [{"observation_id": "obs-a", "concept_id": "w:x", "method": "ai_proposed",
+                                      "status": "candidate"},
+                                     {"observation_id": "obs-a", "concept_id": "t:y", "method": "ai_proposed",
                                       "status": "candidate"}],
             "observation_entries": [{"id": "w:x", "kind": "work", "label_en": "X", "label_zh_cn": None,
-                                     "edge": "has_work"}],
+                                     "edge": "has_work", "occupation_id": None},
+                                    {"id": "t:y", "kind": "work", "label_en": "Y", "label_zh_cn": None,
+                                     "edge": "has_task", "occupation_id": "o:z"}],
         })
         (row,) = publish.observations(conn, "v")
         self.assertEqual(row["merged_from"], ["obs-b", "obs-c"])
-        self.assertEqual(row["concerns"], [{"concept_id": "w:x", "kind": "work", "label_en": "X", "label_zh_cn": None,
-                                            "method": "ai_proposed", "status": "candidate"}])
+        # A task names the occupation it belongs to (contract 1.7.0); other entries do not.
+        self.assertEqual(row["concerns"], [
+            {"concept_id": "w:x", "kind": "work", "label_en": "X", "label_zh_cn": None, "occupation_id": None,
+             "method": "ai_proposed", "status": "candidate"},
+            {"concept_id": "t:y", "kind": "task", "label_en": "Y", "label_zh_cn": None, "occupation_id": "o:z",
+             "method": "ai_proposed", "status": "candidate"}])
         self.assertEqual((row["sources"], row["facts"]), ([], []))
 
 

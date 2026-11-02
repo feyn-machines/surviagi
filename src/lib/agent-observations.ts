@@ -1,5 +1,6 @@
 import type { Language } from "./i18n";
 import { absoluteUrl } from "./seo";
+import { taskLedger } from "./observation-view";
 import { termNameOrRaw, type VocabularyName } from "@/components/ontology-labels";
 import {
   activityById,
@@ -288,7 +289,7 @@ export function conceptSummary(concept: Concept, language: Language) {
     counts: observationCounts(rows),
     strongest: forward.slice(0, TOP).map((r) => observationSummary(r, language)),
     other_way: otherWay.slice(0, TOP).map((r) => observationSummary(r, language)),
-    tasks: concept.kind === "occupation" ? taskCounts(rows) : null,
+    tasks: concept.kind === "occupation" ? taskCounts(rows, concept.id) : null,
     products: top(rows, (r) => (r.subject_key === "unspecified" ? null : r.subject_key), (r) => ({ product_id: r.subject_product_id, model_id: r.subject_model_id })),
     adopters: top(rows.filter((r) => r.actor_role === "adopter"), (r) => r.actor_key, (r) => ({ name: r.actor_name, organization_id: r.actor_org_id })),
     external_indices: null,
@@ -298,20 +299,14 @@ export function conceptSummary(concept: Concept, language: Language) {
   };
 }
 
-/** The tasks of an occupation its observations were mapped to, most observed first. */
-function taskCounts(rows: ObservationRow[]) {
-  const counts = new Map<string, { n: number; label: string | null; label_zh_cn: string | null }>();
-  for (const r of rows) {
-    for (const c of new Map(r.concerns.filter((c) => c.kind === "task").map((c) => [c.concept_id, c])).values()) {
-      const seen = counts.get(c.concept_id) ?? { n: 0, label: c.label_en, label_zh_cn: c.label_zh_cn };
-      seen.n += 1;
-      counts.set(c.concept_id, seen);
-    }
-  }
-  return [...counts.entries()]
-    .sort((a, b) => b[1].n - a[1].n || a[0].localeCompare(b[0]))
-    .slice(0, 20)
-    .map(([id, v]) => ({ id, label: v.label, label_zh_cn: v.label_zh_cn, observations: v.n }));
+/**
+ * The tasks of an occupation its observations were mapped to, most observed
+ * first: the groups its page shows, and only tasks of this occupation.
+ */
+function taskCounts(rows: ObservationRow[], occupationId: string) {
+  return taskLedger(rows, occupationId, 0)
+    .tasks.slice(0, 20)
+    .map((t) => ({ id: t.id, label: t.label_en, label_zh_cn: t.label_zh_cn, observations: t.rows.length }));
 }
 
 /** A cursor is the release it was handed out for and the offset of the next row. */

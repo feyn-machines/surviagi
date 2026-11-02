@@ -12,6 +12,7 @@ import {
   observationStats,
   observationsPublished,
   sources,
+  tasksOfObservation,
   type EvidenceType,
   type ObservationRow,
   type ObservationStats,
@@ -74,6 +75,12 @@ export const ledgerCopy = bilingual({
     practitionerShare: "{share}% come from individual practitioners; {n} name an organisation that adopted it.",
     leans: "English posts and AI companies' own accounts dominate what is read, so the counts lean toward what vendors announce.",
     absence: "A market or occupation with no observation has not been read about; that is not evidence that nothing changed.",
+    tasksTitle: "Which of its tasks the evidence is about",
+    tasksLead: "The occupation's O*NET tasks the observations above were mapped to, most observed first. A task no observation was mapped to is not listed.",
+    tasksAnswer: "{n} of its {total} tasks {n|has|have} at least one observation.",
+    tasksUntasked: "{n} {n|observation names|observations name} the occupation but none of its tasks.",
+    tasksNone: "None of the observations above was mapped to one of its tasks.",
+    taskCount: "{n} {n|observation|observations}: {types}",
   },
   "zh-CN": {
     title: "证据怎么说",
@@ -120,6 +127,12 @@ export const ledgerCopy = bilingual({
     practitionerShare: "{share}% 来自从业者个人；{n} 条点名了采用它的机构。",
     leans: "读到的以英文帖子和 AI 公司自己的账号为主，所以计数偏向厂商宣布的内容。",
     absence: "没有观察的赛道或职业只是还没读到相关内容，不说明什么都没变。",
+    tasksTitle: "按任务看：证据涉及它的哪些任务",
+    tasksLead: "上面的观察被映射到这个职业的哪些 O*NET 任务，按条数排列；任务描述是 O*NET 英文原文。没有观察的任务不列出。",
+    tasksAnswer: "它的 {total} 项任务中，有 {n} 项至少有一条观察。",
+    tasksUntasked: "另有 {n} 条观察涉及这个职业，但没有归到它的某项任务。",
+    tasksNone: "上面的观察都没有归到它的某项任务。",
+    taskCount: "{n} 条：{types}",
   },
 });
 
@@ -193,6 +206,80 @@ export function ledger(rows: ObservationRow[], name: string, language: Language)
     rest: remaining.slice(0, FOLDED),
     unlisted: Math.max(0, remaining.length - FOLDED),
   };
+}
+
+/** One task of an occupation with the observations mapped to it, strongest first. */
+export type TaskGroup = {
+  id: string;
+  label_en: string | null;
+  label_zh_cn: string | null;
+  rows: ObservationRow[];
+  stats: ObservationStats;
+};
+
+export type TaskLedger = {
+  /** Tasks with at least one observation, most observed first. */
+  tasks: TaskGroup[];
+  /** Tasks of the occupation in the catalog. */
+  total: number;
+  /** Observations of the occupation tied to none of its tasks. */
+  untasked: number;
+};
+
+/**
+ * The observations of an occupation page grouped by its O*NET tasks (Issue
+ * #32): a task no observation was mapped to is left out, and an observation on
+ * several tasks counts under each. The page, its Markdown copy and
+ * `occupation_summary` read the same groups.
+ */
+export function taskLedger(rows: ObservationRow[], occupationId: string, total: number): TaskLedger {
+  const groups = new Map<string, TaskGroup>();
+  let untasked = 0;
+  for (const row of rows) {
+    const tasks = tasksOfObservation(row, occupationId);
+    if (tasks.length === 0) untasked += 1;
+    for (const c of tasks) {
+      const group = groups.get(c.concept_id) ?? { id: c.concept_id, label_en: c.label_en, label_zh_cn: c.label_zh_cn, rows: [], stats: observationStats([], null) };
+      group.rows.push(row);
+      groups.set(c.concept_id, group);
+    }
+  }
+  const tasks = [...groups.values()].map((g) => {
+    const sorted = [...g.rows].sort(byStrength);
+    return { ...g, rows: sorted, stats: observationStats(sorted, null) };
+  });
+  // Most observed first; between equals, the one whose strongest observation is stronger.
+  tasks.sort((a, b) => b.rows.length - a.rows.length || byStrength(a.rows[0], b.rows[0]) || a.id.localeCompare(b.id));
+  return { tasks, total, untasked };
+}
+
+/** "3 observations: 1 production use, 2 own use" / "3 条：生产使用 1 条、亲自使用 2 条", then how many point the other way. */
+export function taskLine(group: TaskGroup, language: Language): string {
+  const c = ledgerCopy[language];
+  const line = fill(c.taskCount, { n: group.stats.total, types: typesLine(group.stats, language) });
+  return group.stats.against > 0 ? `${line} · ${fill(c.againstShort, { n: group.stats.against })}` : line;
+}
+
+/** One observation under its task, as a short line: date, type and what was done. */
+export function taskObservationLine(row: ObservationRow, language: Language): string {
+  return `${observationDate(row) ?? "—"} · ${typeName(row.evidence_type, language)} — ${row.task}`;
+}
+
+const escape = (text: string) => text.replace(/([[\]])/g, "\\$1");
+
+/** The task groups as Markdown lines, under a heading of the page's level two. */
+export function taskLedgerMarkdown(view: TaskLedger, language: Language): string[] {
+  const c = ledgerCopy[language];
+  const body = [`## ${c.tasksTitle}`, "", c.tasksLead, ""];
+  body.push(view.tasks.length > 0 ? fill(c.tasksAnswer, { n: view.tasks.length, total: view.total }) : c.tasksNone);
+  if (view.tasks.length > 0 && view.untasked > 0) body.push("", fill(c.tasksUntasked, { n: view.untasked }));
+  body.push("");
+  for (const task of view.tasks) {
+    body.push(`- **${escape(task.label_en ?? task.id)}** — ${taskLine(task, language)}`);
+    for (const row of task.rows) body.push(`  - ${taskObservationLine(row, language)} \`${row.observation_id}\``);
+  }
+  if (view.tasks.length > 0) body.push("");
+  return body;
 }
 
 export type Month = { month: string | null; total: number; against: number; byType: Record<EvidenceType, number> };
@@ -335,8 +422,6 @@ export function actorLine(row: ObservationRow, language: Language): string {
     role: termNameOrRaw("observation_actor_role", row.actor_role, language),
   });
 }
-
-const escape = (text: string) => text.replace(/([[\]])/g, "\\$1");
 
 export function observationMarkdown(row: ObservationRow, language: Language): string[] {
   const c = ledgerCopy[language];

@@ -61,6 +61,7 @@ A field added in a minor version is optional for readers to use. A field is depr
 
 ## Changes / 变更
 
+- 1.7.0 — each `concerns` entry of an observation carries `occupation_id`: the occupation a `task` belongs to, `null` for other kinds (#32). Occupation pages and `occupation_summary.tasks` count a task only under its own occupation; with an older release, a task counts under an occupation only when it is the observation's one occupation.
 - 1.6.0 — `occupations.json` rows carry `alt_labels_en` and `alt_labels_zh_cn` (Occupation.alt_label, ontology 2.6.0, #30): O*NET reported job titles as written, and their AI translations and model-proposed common Chinese names. They find an occupation and do not define it; one name can belong to several occupations. `null` when the release carries none. The snapshot manifest records which sealed release they came from (`alt_labels_from`). Search responses list the other names a query used under `aliases`, and the `occupation` argument accepts them.
 - 1.5.0 — search returns observations; each result carries `matched` and `title_language` (#30).
 - 1.4.0 — `changes_since`; `query_observations` takes `recorded_since` and `order=recorded` (#29).

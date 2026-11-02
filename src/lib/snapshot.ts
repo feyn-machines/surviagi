@@ -144,7 +144,16 @@ export type ObservationRow = {
   created_at: string;
   sources: { source_ref: string; source_type: string; url: string; source_id: string | null; quote: string; published_at: string | null }[];
   facts: { fact_id: string; value: string; unit: string | null; what: string; baseline: string | null; method_note: string | null; quote: string }[];
-  concerns: { concept_id: string; kind: "work" | "occupation" | "task" | null; label_en: string | null; label_zh_cn: string | null; method: string; status: string }[];
+  concerns: {
+    concept_id: string;
+    kind: "work" | "occupation" | "task" | null;
+    label_en: string | null;
+    label_zh_cn: string | null;
+    /** The occupation a task belongs to (contract 1.7.0); null for other kinds, absent in older releases. */
+    occupation_id?: string | null;
+    method: string;
+    status: string;
+  }[];
   merged_from: string[];
 };
 
@@ -790,6 +799,24 @@ export function observationsOfMarket(marketId: string): ObservationRow[] {
 /** Observations mapped to one occupation. */
 export function observationsOfOccupation(occupationId: string): ObservationRow[] {
   return current().observationsByOccupation.get(occupationId) ?? [];
+}
+
+/**
+ * The tasks of one occupation an observation was mapped to, each once. A task
+ * names its occupation from contract 1.7.0; in an older release a task is
+ * placed only when the observation names that occupation and no other, since
+ * the mapper picks a task only under an occupation it also picks.
+ */
+export function tasksOfObservation(row: ObservationRow, occupationId: string): ObservationRow["concerns"] {
+  const named = row.concerns.filter((c) => c.kind === "occupation").map((c) => c.concept_id);
+  const alone = named.length === 1 && named[0] === occupationId;
+  const seen = new Set<string>();
+  return row.concerns.filter((c) => {
+    if (c.kind !== "task" || seen.has(c.concept_id)) return false;
+    if (!(c.occupation_id ? c.occupation_id === occupationId : alone)) return false;
+    seen.add(c.concept_id);
+    return true;
+  });
 }
 
 export type EvidenceType = ObservationRow["evidence_type"];

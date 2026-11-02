@@ -6,7 +6,7 @@ import { type Language } from "@/lib/i18n";
 import { getLocale } from "@/lib/locale";
 import { breadcrumbLd, pageMetadata } from "@/lib/seo";
 import { JsonLd } from "@/components/json-ld";
-import { ObservationLedger, RelatedTopics } from "@/components/observation-ledger";
+import { ObservationLedger, RelatedTopics, TaskObservations } from "@/components/observation-ledger";
 import { evidenceLd, ledger, pageQuestion } from "@/lib/observation-view";
 import { siteNavCopy } from "@/lib/site-nav";
 import { indexable } from "@/lib/site-pages";
@@ -238,6 +238,7 @@ export default async function OccupationPage({ params }: Props) {
       </div>
 
       <ObservationLedger rows={observationsOfOccupation(id)} name={name} language={language} />
+      <TaskObservations rows={observationsOfOccupation(id)} occupationId={id} total={totalTasks} language={language} />
       <RelatedTopics list={topicsAbout("occupation", id)} language={language} />
 
       <Block title={c.gridTitle} lead={c.gridLead}>

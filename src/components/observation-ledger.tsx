@@ -12,6 +12,9 @@ import {
   ledgerCopy,
   monthTypes,
   overview,
+  taskLedger,
+  taskLine,
+  taskObservationLine,
   typeMeaning,
   typeName,
   type Overview,
@@ -79,6 +82,68 @@ export function ObservationLedger({
             </details>
           ) : null}
           {view.unlisted > 0 ? <p className={l.sub}>{c.more.replace("{n}", String(view.unlisted))}</p> : null}
+        </>
+      )}
+    </Block>
+  );
+}
+
+/**
+ * An occupation page's observations grouped by its O*NET tasks (Issue #32),
+ * after the ledger: each task an observation was mapped to, with its counts
+ * and its observations linked to their entries above. Nothing when the
+ * occupation has no observation; the ledger already says so.
+ */
+export function TaskObservations({
+  rows,
+  occupationId,
+  total,
+  language,
+}: {
+  rows: ObservationRow[];
+  occupationId: string;
+  total: number;
+  language: Language;
+}) {
+  if (rows.length === 0) return null;
+  const c = ledgerCopy[language];
+  const view = taskLedger(rows, occupationId, total);
+  // Only the observations the ledger lists have an entry to link to.
+  const listed = ledger(rows, "", language);
+  const linked = new Set(
+    listed.state === "some" ? [...listed.strongest, ...listed.otherWay, ...listed.rest].map((r) => r.observation_id) : [],
+  );
+  return (
+    <Block id="tasks" title={c.tasksTitle} lead={c.tasksLead}>
+      {view.tasks.length === 0 ? (
+        <p className={l.empty}>{c.tasksNone}</p>
+      ) : (
+        <>
+          <p className={l.answer}>{fill(c.tasksAnswer, { n: view.tasks.length, total: view.total })}</p>
+          {view.untasked > 0 ? (
+            <ul className={l.notes}>
+              <li>{fill(c.tasksUntasked, { n: view.untasked })}</li>
+            </ul>
+          ) : null}
+          <ol className={l.tasks}>
+            {view.tasks.map((task) => (
+              <li key={task.id} id={`task-${task.id.split(":").pop()}`}>
+                <p className={l.taskName} lang="en">{task.label_en ?? task.id}</p>
+                <p className={l.taskCount}>{taskLine(task, language)}</p>
+                <ul>
+                  {task.rows.map((row) => (
+                    <li key={row.observation_id} className={row.direction === "human_still_needed" ? l.against : undefined}>
+                      {linked.has(row.observation_id) ? (
+                        <a href={`#${row.observation_id}`}>{taskObservationLine(row, language)}</a>
+                      ) : (
+                        taskObservationLine(row, language)
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ol>
         </>
       )}
     </Block>

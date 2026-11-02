@@ -269,7 +269,8 @@ def observations(conn, ontology_version: str) -> list[dict]:
     there). One a person rejected is not published.
 
     `concerns` are the catalog entries the observation was put on: market work
-    items, occupations and O*NET tasks. They are machine-proposed candidates
+    items, occupations and O*NET tasks, a task with the occupation it belongs
+    to (contract 1.7.0). They are machine-proposed candidates
     (rule:work-mapping-stays-a-candidate) and say so; one rejected is dropped.
     An observation no entry fit keeps work_key 'unmapped' and no concerns.
     """
@@ -277,7 +278,10 @@ def observations(conn, ontology_version: str) -> list[dict]:
         SELECT c.id, c.kind, c.label_en, c.label_zh_cn,
                (SELECT min(r.kind) FROM public.ontology_relations r
                  WHERE r.ontology_version = c.ontology_version AND r.child_id = c.id
-                   AND r.kind IN ('has_work', 'has_task')) AS edge
+                   AND r.kind IN ('has_work', 'has_task')) AS edge,
+               (SELECT min(r.parent_id) FROM public.ontology_relations r
+                 WHERE r.ontology_version = c.ontology_version AND r.child_id = c.id
+                   AND r.kind = 'has_task') AS occupation_id
           FROM public.ontology_concepts c
          WHERE c.ontology_version = %s AND c.kind IN ('work', 'occupation')""", (ontology_version,))}
     kind_of = {"has_work": "work", "has_task": "task"}
@@ -291,6 +295,7 @@ def observations(conn, ontology_version: str) -> list[dict]:
         concerns.setdefault(r["observation_id"], []).append({
             "concept_id": r["concept_id"], "kind": kind,
             "label_en": entry.get("label_en"), "label_zh_cn": entry.get("label_zh_cn"),
+            "occupation_id": entry.get("occupation_id") if kind == "task" else None,
             "method": r["method"], "status": r["status"],
         })
     # A head merged later into another hands its redirects on: each id points at the published end of its chain.
