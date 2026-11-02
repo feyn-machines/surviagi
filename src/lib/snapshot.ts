@@ -497,6 +497,8 @@ type Store = {
   /** Observations under each market and each occupation they were mapped to; empty when the release has none. */
   observationsByMarket: Map<string, ObservationRow[]>;
   observationsByOccupation: Map<string, ObservationRow[]>;
+  /** Every published observation by its id, and by each id merged into it. */
+  observationById: Map<string, ObservationRow>;
 };
 
 function buildStore(data: Payload | null, release: DataRelease): Store {
@@ -543,7 +545,9 @@ function buildStore(data: Payload | null, release: DataRelease): Store {
     if (rows.at(-1) !== row) rows.push(row);
     index.set(key, rows);
   };
+  const observationById = new Map<string, ObservationRow>();
   for (const row of data?.observations ?? []) {
+    for (const id of [...row.merged_from, row.observation_id]) observationById.set(id, row);
     // A work item stands for its market; an occupation only for itself. A task
     // alone does not place an observation on an occupation page: the mapper
     // names the occupation whenever it names one of its tasks.
@@ -564,6 +568,7 @@ function buildStore(data: Payload | null, release: DataRelease): Store {
     groups,
     observationsByMarket,
     observationsByOccupation,
+    observationById,
   };
 }
 
@@ -753,6 +758,13 @@ export function occupations() {
 
 /** Whether this release publishes observations at all; before Issue #25 a page has none to count, not zero. */
 export const observationsPublished = (): boolean => current().data?.observations !== undefined;
+
+export const observations = (): ObservationRow[] => current().data?.observations ?? [];
+
+/** An observation by its id, or the one it was merged into; the row's own id says which. */
+export function observationById(id: string): ObservationRow | undefined {
+  return current().observationById.get(id);
+}
 
 /** Observations mapped to any kind of work in one market, each once. */
 export function observationsOfMarket(marketId: string): ObservationRow[] {

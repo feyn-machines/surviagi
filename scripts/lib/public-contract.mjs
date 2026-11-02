@@ -13,7 +13,7 @@
 import { schema, termIds, validateSchema } from "./ontology-schema.mjs";
 
 /** The contract's own version. Moves independently of the ontology, the method and the data. */
-export const CONTRACT_VERSION = "1.2.0";
+export const CONTRACT_VERSION = "1.3.0";
 export const CONTRACT_PATH = "contract/v1";
 
 /**
@@ -337,6 +337,14 @@ export function entitySchema(entity) {
 }
 
 const ref = (name) => ({ $ref: `#/components/schemas/${name}` });
+
+/** The vocabularies observations are filtered by, as the agent API accepts them. */
+const OBSERVATION_ENUMS = {
+  evidence_type: termIds("event_basis"),
+  direction: termIds("observation_direction"),
+  outcome: termIds("event_result"),
+  review_state: termIds("observation_review"),
+};
 const jsonBody = (schemaRef, description) => ({ description, content: { "application/json": { schema: schemaRef } } });
 
 const LANGUAGE = { name: "language", in: "query", required: false, schema: { type: "string", enum: ["en", "zh-CN"], default: "en" }, description: "Language of page links and labels." };
@@ -406,6 +414,41 @@ export function openApi(entityNames) {
           responses: { "200": jsonBody(ref("RecordResponse"), "The record."), ...ERRORS, "404": jsonBody(ref("Error"), "No record with this id in the loaded release.") },
         },
       },
+      "/api/agent/observations": {
+        get: {
+          operationId: "queryObservations",
+          summary: "List observations, filtered, with counts over everything that matches.",
+          description: "Occupation and market select exactly the observations their pages list, so the counts equal the page's. Pages through the rows with `cursor`; a cursor of an earlier data release is refused.",
+          parameters: [
+            { name: "occupation", in: "query", schema: { type: "string", maxLength: 200 }, description: "Occupation id, O*NET code or name (English or Chinese)." },
+            { name: "market", in: "query", schema: { type: "string", maxLength: 200 }, description: "Market id, slug or name." },
+            { name: "task", in: "query", schema: { type: "string", maxLength: 120 }, description: "Task id, e.g. oaw:task:21593." },
+            { name: "organization", in: "query", schema: { type: "string", maxLength: 200 }, description: "Organization id, actor key or exact actor name." },
+            { name: "subject", in: "query", schema: { type: "string", maxLength: 200 }, description: "Product or model key or id." },
+            ...[["evidence_types", OBSERVATION_ENUMS.evidence_type], ["directions", OBSERVATION_ENUMS.direction], ["outcomes", OBSERVATION_ENUMS.outcome], ["review_states", OBSERVATION_ENUMS.review_state]].map(([name, values]) => (
+              { name, in: "query", schema: { type: "array", items: { type: "string", enum: values } }, style: "form", explode: false, description: "Comma-separated; any of them." })),
+            { name: "from", in: "query", schema: { type: "string", format: "date" } },
+            { name: "to", in: "query", schema: { type: "string", format: "date" } },
+            { name: "order", in: "query", schema: { type: "string", enum: ["strength", "newest"], default: "strength" } },
+            { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 50, default: 20 } },
+            { name: "cursor", in: "query", schema: { type: "string" }, description: "`next_cursor` of the previous page." },
+            LANGUAGE,
+          ],
+          responses: { "200": jsonBody(ref("ObservationsResponse"), "One page of matching observations."), ...ERRORS, "404": jsonBody(ref("Error"), "No occupation or market matches; `candidates` lists near matches.") },
+        },
+      },
+      "/api/agent/summary": {
+        get: {
+          operationId: "occupationSummary",
+          summary: "Evidence statistics of one occupation or market, as its page states them.",
+          parameters: [
+            { name: "occupation", in: "query", schema: { type: "string", maxLength: 200 }, description: "Occupation id, O*NET code or name. Give this or market." },
+            { name: "market", in: "query", schema: { type: "string", maxLength: 200 }, description: "Market id, slug or name." },
+            LANGUAGE,
+          ],
+          responses: { "200": jsonBody(ref("SummaryResponse"), "The statistics."), ...ERRORS, "404": jsonBody(ref("Error"), "No occupation or market matches; `candidates` lists near matches.") },
+        },
+      },
     },
     components: {
       schemas: {
@@ -446,6 +489,77 @@ export function openApi(entityNames) {
             note: S("string"),
           },
           required: ["query", "total", "results", "release", "versions", "content_kinds", "editorial_articles", "note"],
+        },
+        ObservationCounts: {
+          type: ["object", "null"],
+          description: "Counts as of the data release's date; null when the release carries no observations (unknown, not zero).",
+          properties: {
+            as_of: NULLABLE_DESC("string", "The release date the 30/90-day windows end on."),
+            total: S("integer"),
+            by_evidence_type: { type: "object", additionalProperties: S("integer") },
+            by_direction: { type: "object", additionalProperties: S("integer") },
+            by_outcome: { type: "object", additionalProperties: S("integer") },
+            against: S("integer", { description: "Saying a person is still needed, or that the AI fell short." }),
+            last_30_days: S("integer"),
+            last_90_days: S("integer"),
+            undated: S("integer"),
+          },
+          required: ["as_of", "total", "by_evidence_type", "by_direction", "by_outcome", "against", "last_30_days", "last_90_days", "undated"],
+        },
+        ObservationSummary: {
+          type: "object",
+          description: "One observation as a list shows it. Read it in full with /api/agent/record.",
+          properties: {
+            id: S("string"),
+            type: S("string", { enum: ["observation"] }),
+            date: NULLABLE_DESC("string", "When it was said in public."),
+            evidence_type: S("string", { enum: OBSERVATION_ENUMS.evidence_type }),
+            evidence_type_label: S("string"),
+            direction: S("string", { enum: OBSERVATION_ENUMS.direction }),
+            outcome: S("string", { enum: OBSERVATION_ENUMS.outcome }),
+            task: S("string", { description: "Machine-written: what was done." }),
+            actor: { type: "object" },
+            subject: { type: ["string", "null"] },
+            facts: { type: "array", items: { type: "object", properties: { value: S("string"), unit: { type: ["string", "null"] }, what: S("string"), quote: S("string") }, required: ["value", "unit", "what", "quote"] } },
+            sources: { type: "array", items: { type: "object", properties: { url: S("string", { format: "uri" }), quote: S("string"), published_at: { type: ["string", "null"] } }, required: ["url", "quote", "published_at"] } },
+            review_state: S("string", { enum: OBSERVATION_ENUMS.review_state }),
+            url: { type: ["string", "null"], format: "uri" },
+            markdown_url: { type: ["string", "null"], format: "uri" },
+          },
+          required: ["id", "type", "date", "evidence_type", "direction", "outcome", "task", "actor", "subject", "facts", "sources", "review_state", "url", "markdown_url"],
+        },
+        ObservationsResponse: {
+          type: "object",
+          properties: {
+            published: S("boolean", { description: "Whether the loaded release carries observations at all." }),
+            filters: { type: "object" },
+            total: { type: ["integer", "null"] },
+            counts: ref("ObservationCounts"),
+            results: { type: "array", items: ref("ObservationSummary") },
+            next_cursor: { type: ["string", "null"] },
+            release: { type: "object" },
+            versions: ref("Versions"),
+            note: S("string"),
+          },
+          required: ["published", "filters", "total", "counts", "results", "next_cursor", "release", "versions", "note"],
+        },
+        SummaryResponse: {
+          type: "object",
+          properties: {
+            kind: S("string", { enum: ["occupation", "market"] }),
+            id: S("string"),
+            label: S("string"),
+            label_zh_cn: { type: ["string", "null"] },
+            url: S("string", { format: "uri" }),
+            markdown_url: S("string", { format: "uri" }),
+            state: S("string", { enum: ["unpublished", "none", "some"] }),
+            counts: ref("ObservationCounts"),
+            strongest: { type: "array", items: ref("ObservationSummary") },
+            other_way: { type: "array", items: ref("ObservationSummary") },
+            versions: ref("Versions"),
+            note: S("string"),
+          },
+          required: ["kind", "id", "label", "url", "markdown_url", "state", "counts", "versions", "note"],
         },
         RecordResponse: {
           type: "object",

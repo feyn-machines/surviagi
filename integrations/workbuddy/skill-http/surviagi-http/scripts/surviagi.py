@@ -58,6 +58,19 @@ def main(argv=None) -> int:
     record = commands.add_parser("record")
     record.add_argument("id")
     record.add_argument("--language", choices=("en", "zh-CN"))
+    summary = commands.add_parser("summary")
+    summary.add_argument("--occupation")
+    summary.add_argument("--market")
+    summary.add_argument("--language", choices=("en", "zh-CN"))
+    observations = commands.add_parser("observations")
+    for name in ("occupation", "market", "task", "organization", "subject", "evidence-types", "directions", "outcomes",
+                 "review-states", "cursor"):
+        observations.add_argument(f"--{name}")
+    observations.add_argument("--from", dest="date_from")
+    observations.add_argument("--to", dest="date_to")
+    observations.add_argument("--order", choices=("strength", "newest"))
+    observations.add_argument("--limit", type=int)
+    observations.add_argument("--language", choices=("en", "zh-CN"))
     question = commands.add_parser("question")
     question.add_argument("--question", required=True)
     question.add_argument("--why", required=True)
@@ -80,6 +93,14 @@ def main(argv=None) -> int:
                                                   "status": args.status, "from": args.date_from, "to": args.date_to, "language": args.language})
     if args.command == "record":
         return call("GET", "/api/agent/record", {"id": args.id, "language": args.language})
+    if args.command == "summary":
+        return call("GET", "/api/agent/summary", {"occupation": args.occupation, "market": args.market, "language": args.language})
+    if args.command == "observations":
+        return call("GET", "/api/agent/observations", {
+            "occupation": args.occupation, "market": args.market, "task": args.task, "organization": args.organization,
+            "subject": args.subject, "evidence_types": args.evidence_types, "directions": args.directions,
+            "outcomes": args.outcomes, "review_states": args.review_states, "from": args.date_from, "to": args.date_to,
+            "order": args.order, "limit": args.limit, "cursor": args.cursor, "language": args.language})
     if args.command in ("question", "account") and not args.request_id:
         args.request_id = str(uuid.uuid4())
         print(f"request_id: {args.request_id} (pass --request-id {args.request_id} to retry safely)", file=sys.stderr)

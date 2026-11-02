@@ -27,9 +27,29 @@ import {
   RECORD_TYPES,
   DEFAULT_RECORD_TYPES,
   type RecordType,
+  releaseInfo,
   versionsInfo,
 } from "./agent-search";
-import { sources } from "./snapshot";
+import { EVIDENCE_ORDER, observationsPublished, sources, type EvidenceType } from "./snapshot";
+import {
+  candidateView,
+  conceptSummary,
+  decodeCursor,
+  DEFAULT_OBSERVATIONS,
+  DIRECTIONS,
+  encodeCursor,
+  filterObservations,
+  MAX_OBSERVATIONS,
+  OBSERVATION_CONTENT,
+  observationCounts,
+  observationSummary,
+  ORDERS,
+  OUTCOMES,
+  resolveConcept,
+  REVIEW_STATES,
+  sortObservations,
+  type ObservationFilter,
+} from "./agent-observations";
 import { EDITORIAL_STATUSES, getEditorialArticleRecord, parseEditorialRevisionId, searchEditorialArticles } from "./editorial-agent";
 
 /**
@@ -204,10 +224,136 @@ export async function runRecord(args: Args): Promise<Outcome> {
       return fail(503, "unavailable", "Public article reading is unavailable right now. Try again later.");
     }
   }
-  if (!isRecordId(id)) return fail(400, "invalid", "`id` must be an id returned by search (an update, question, evidence or article revision id).");
+  if (!isRecordId(id)) return fail(400, "invalid", "`id` must be an id returned by search or query_observations (an update, question, observation, evidence or article revision id).");
   const found = record(id, language ?? "en");
   if (!found) return fail(404, "not_found", "The loaded data release holds no record with this id. Ids of earlier releases may be gone; search again.");
   return ok(found, true);
+}
+
+/** A list argument: an array, or one comma-separated string as a query parameter gives it. */
+function listArg<T extends string>(args: Args, name: string, allowed: readonly T[]): { ok: true; value: T[] | undefined } | { ok: false; message: string } {
+  const value = args[name];
+  if (value === undefined || value === null || value === "") return { ok: true, value: undefined };
+  const list = typeof value === "string" ? value.split(",").map((v) => v.trim()).filter(Boolean) : value;
+  if (!Array.isArray(list) || list.some((v) => !(allowed as readonly unknown[]).includes(v))) {
+    return { ok: false, message: `\`${name}\` must be a list of: ${allowed.join(", ")}.` };
+  }
+  return { ok: true, value: list.length ? [...new Set(list as T[])] : undefined };
+}
+
+type Concept = Extract<ReturnType<typeof resolveConcept>, { ok: true }>["concept"];
+
+/** An occupation or market argument, resolved; an unknown or ambiguous name is a 404 listing what matched. */
+function conceptArg(args: Args, kind: "occupation" | "market", language: Language): { ok: true; value: Concept | undefined } | { ok: false; outcome: Outcome } {
+  const given = text(args, kind, 1, 200, false);
+  if (!given.ok) return { ok: false, outcome: fail(400, "invalid", given.message) };
+  if (given.value === null) return { ok: true, value: undefined };
+  const found = resolveConcept(kind, given.value);
+  if (found.ok) return { ok: true, value: found.concept };
+  return {
+    ok: false,
+    outcome: fail(404, "not_found", found.candidates.length
+      ? `Several ${kind}s match "${given.value}"; call again with one of the candidates' ids.`
+      : `No ${kind} matches "${given.value}". Give its id, the slug in its page address, or its name in English or Chinese.`,
+    { candidates: found.candidates.map((c) => candidateView(c, language)) }),
+  };
+}
+
+function dateArgs(args: Args): string | null {
+  for (const name of ["from", "to"] as const) {
+    const value = args[name];
+    if (value !== undefined && value !== null && (typeof value !== "string" || !DATE.test(value))) return `\`${name}\` must be a date written YYYY-MM-DD.`;
+  }
+  return null;
+}
+
+const UNPUBLISHED = "This data release does not carry observations yet: counts are unknown, not zero.";
+
+export function runQueryObservations(args: Args): Outcome {
+  const language = languageArg(args);
+  if (language === null) return fail(400, "invalid", "`language` must be en or zh-CN.");
+  const lang = language ?? "en";
+  const occupation = conceptArg(args, "occupation", lang);
+  if (!occupation.ok) return occupation.outcome;
+  const market = conceptArg(args, "market", lang);
+  if (!market.ok) return market.outcome;
+  const task = text(args, "task", 1, 120, false);
+  if (!task.ok) return fail(400, "invalid", task.message);
+  const organization = text(args, "organization", 1, 200, false);
+  if (!organization.ok) return fail(400, "invalid", organization.message);
+  const subject = text(args, "subject", 1, 200, false);
+  if (!subject.ok) return fail(400, "invalid", subject.message);
+  const evidenceTypes = listArg<EvidenceType>(args, "evidence_types", EVIDENCE_ORDER);
+  if (!evidenceTypes.ok) return fail(400, "invalid", evidenceTypes.message);
+  const directions = listArg(args, "directions", DIRECTIONS);
+  if (!directions.ok) return fail(400, "invalid", directions.message);
+  const outcomes = listArg(args, "outcomes", OUTCOMES);
+  if (!outcomes.ok) return fail(400, "invalid", outcomes.message);
+  const reviewStates = listArg(args, "review_states", REVIEW_STATES);
+  if (!reviewStates.ok) return fail(400, "invalid", reviewStates.message);
+  const badDate = dateArgs(args);
+  if (badDate) return fail(400, "invalid", badDate);
+  const order = args.order ?? "strength";
+  if (typeof order !== "string" || !(ORDERS as readonly string[]).includes(order)) return fail(400, "invalid", `\`order\` must be one of: ${ORDERS.join(", ")}.`);
+  let limit = DEFAULT_OBSERVATIONS;
+  if (args.limit !== undefined && args.limit !== null) {
+    const n = typeof args.limit === "string" ? Number(args.limit) : args.limit;
+    if (typeof n !== "number" || !Number.isInteger(n) || n < 1 || n > MAX_OBSERVATIONS) {
+      return fail(400, "invalid", `\`limit\` must be a whole number from 1 to ${MAX_OBSERVATIONS}.`);
+    }
+    limit = n;
+  }
+  let offset = 0;
+  if (args.cursor !== undefined && args.cursor !== null && args.cursor !== "") {
+    const decoded = typeof args.cursor === "string" ? decodeCursor(args.cursor) : { ok: false as const, stale: false };
+    if (!decoded.ok) {
+      return fail(400, "invalid", decoded.stale
+        ? "`cursor` belongs to an earlier data release; run the query again without it."
+        : "`cursor` must be the next_cursor of an earlier answer.");
+    }
+    offset = decoded.offset;
+  }
+  const filter: ObservationFilter = {
+    occupation: occupation.value, market: market.value, task: task.value ?? undefined,
+    organization: organization.value ?? undefined, subject: subject.value ?? undefined,
+    evidenceTypes: evidenceTypes.value, directions: directions.value, outcomes: outcomes.value, reviewStates: reviewStates.value,
+    from: (args.from as string | undefined) ?? null, to: (args.to as string | undefined) ?? null,
+  };
+  const published = observationsPublished();
+  const rows = sortObservations(filterObservations(filter), order as (typeof ORDERS)[number]);
+  const page = rows.slice(offset, offset + limit);
+  const next = offset + limit < rows.length ? encodeCursor(offset + limit) : null;
+  return ok({
+    published,
+    filters: {
+      occupation: occupation.value ? candidateView(occupation.value, lang) : null,
+      market: market.value ? candidateView(market.value, lang) : null,
+      task: filter.task ?? null, organization: filter.organization ?? null, subject: filter.subject ?? null,
+      evidence_types: filter.evidenceTypes ?? null, directions: filter.directions ?? null, outcomes: filter.outcomes ?? null,
+      review_states: filter.reviewStates ?? null, from: filter.from, to: filter.to, order,
+    },
+    total: published ? rows.length : null,
+    counts: published ? observationCounts(rows) : null,
+    results: page.map((row) => observationSummary(row, lang)),
+    next_cursor: next,
+    content: OBSERVATION_CONTENT,
+    release: releaseInfo(),
+    versions: versionsInfo(),
+    note: !published ? UNPUBLISHED
+      : rows.length === 0 ? "No published observation matches. That describes what was collected and read, not the work itself; a query starts no research or collection."
+      : "Observations are read by a model from collected posts and unreviewed unless review_state says otherwise. Cite each result's url and source urls; quote the sources' words, not the task line.",
+  });
+}
+
+export function runSummary(args: Args): Outcome {
+  const language = languageArg(args);
+  if (language === null) return fail(400, "invalid", "`language` must be en or zh-CN.");
+  const lang = language ?? "en";
+  const given = (["occupation", "market"] as const).filter((name) => typeof args[name] === "string" && (args[name] as string).trim() !== "");
+  if (given.length !== 1) return fail(400, "invalid", "Give exactly one of `occupation` or `market`.");
+  const concept = conceptArg(args, given[0], lang);
+  if (!concept.ok) return concept.outcome;
+  return ok({ ...conceptSummary(concept.value!, lang), content: OBSERVATION_CONTENT, release: releaseInfo(), versions: versionsInfo() });
 }
 
 type Owner = { userId: string; keyId: string };
@@ -431,15 +577,69 @@ export const READ_TOOLS = [
       "Read one published record by the id search returned: a public article revision returns its full Markdown, bilingual link, sources, evidence cutoff, exact version and real approval scope/status; " +
       "an update with its source posts and every reading of it; " +
       "a question with its answer options, the posts that argued them (with short quotes of the posts' own words) and the " +
-      "updates that weigh on them; or one evidence reading (deprecated: its level is from the retired L0–L5 scale) with rationale and sources. Each text says whether " +
+      "updates that weigh on them; an observation (obs-…, from query_observations or occupation_summary) with its figures, the source words each was read from, " +
+      "who did it, the occupations, tasks and markets it was mapped to and the method that read it (a merged id returns the observation it was merged into); or one evidence reading (deprecated: its level is from the retired L0–L5 scale) with rationale and sources. Each text says whether " +
       "it is our summary or the source's words. The full text of source posts is not published: open the source URLs. No key needed.",
     inputSchema: {
       type: "object",
       properties: {
-        id: { type: "string", minLength: 1, maxLength: 260, description: "An id from search: ev-…, topic:…, evidence:… or article:<slug>:v<version>." },
+        id: { type: "string", minLength: 1, maxLength: 260, description: "An id from search or query_observations: ev-…, topic:…, obs-…, evidence:… or article:<slug>:v<version>." },
         language: LANGUAGE_SCHEMA,
       },
       required: ["id"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, openWorldHint: false, idempotentHint: true },
+  },
+  {
+    name: "query_observations",
+    title: "List SurviAGI observations",
+    description:
+      "List observations: single dated statements, read from collected posts, that AI did (or did not do) a piece of work, each with what it rests on " +
+      "(production_use by a named adopter, measurement or statistic by someone other than the vendor, a practitioner's own_use, a demonstration, a vendor_claim), " +
+      "its direction (ai_takes_on, human_still_needed, neutral), its figures with the source words, and source links. " +
+      "Filter by occupation or market (id, page slug or name, English or Chinese), task id, organization, product or model, evidence type, direction, outcome, " +
+      "review state and date. Returns the counts over everything that matches (the same counts the occupation and market pages show) and one page of rows; " +
+      "pass next_cursor back for the next page. Use occupation_summary for one occupation's or market's statistics. Every observation is machine-read and " +
+      "unreviewed unless review_state says otherwise; quote the source words and cite the url. No key needed.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        occupation: { type: "string", maxLength: 200, description: "An occupation: oaw:occupation:<O*NET code>, the code alone (13-2011.00) or its name (Accountants and Auditors, 会计师与审计师)." },
+        market: { type: "string", maxLength: 200, description: "A market (a kind of business): oaw:market:<slug>, the slug alone or its name." },
+        task: { type: "string", maxLength: 120, description: "An O*NET task id as observations carry it, e.g. oaw:task:21593." },
+        organization: { type: "string", maxLength: 200, description: "Who did it: an organization id (org:anthropic), an actor key (x:handle) or the exact name." },
+        subject: { type: "string", maxLength: 200, description: "The product or model used: its key, product id or model id." },
+        evidence_types: { type: "array", items: { type: "string", enum: [...EVIDENCE_ORDER] }, description: "Only these evidence types." },
+        directions: { type: "array", items: { type: "string", enum: [...DIRECTIONS] }, description: "Only these directions. human_still_needed lists the evidence the other way." },
+        outcomes: { type: "array", items: { type: "string", enum: [...OUTCOMES] }, description: "Only these outcomes." },
+        review_states: { type: "array", items: { type: "string", enum: [...REVIEW_STATES] }, description: "Only these review states." },
+        from: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "Only observations said on or after this day (YYYY-MM-DD). An undated observation passes no date filter." },
+        to: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "Only observations said on or before this day (YYYY-MM-DD)." },
+        order: { type: "string", enum: [...ORDERS], default: "strength", description: "strength: production use and independent measurement first, vendor claims last, as the pages list them; newest: by date." },
+        limit: { type: "integer", minimum: 1, maximum: MAX_OBSERVATIONS, default: DEFAULT_OBSERVATIONS, description: "Rows per page." },
+        cursor: { type: "string", maxLength: 200, description: "next_cursor from the previous page of the same query." },
+        language: LANGUAGE_SCHEMA,
+      },
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, openWorldHint: false, idempotentHint: true },
+  },
+  {
+    name: "occupation_summary",
+    title: "Evidence statistics of an occupation or market",
+    description:
+      "The evidence on one occupation (\"will AI take over accountants?\") or one market (\"will AI change call centres as a business?\"): observations counted " +
+      "by evidence type, by direction and by outcome, how many were said in the 30 and 90 days before the data date, the strongest observations and those " +
+      "pointing the other way, the products and adopters named most, and for an occupation the tasks most observed. The numbers are the ones its page " +
+      "shows, as of the data release. A release without observations says so (counts null), and a page with none counts zero. No key needed.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        occupation: { type: "string", maxLength: 200, description: "An occupation: oaw:occupation:<O*NET code>, the code alone or its name in English or Chinese." },
+        market: { type: "string", maxLength: 200, description: "A market: oaw:market:<slug>, the slug alone or its name. Give this or occupation, not both." },
+        language: LANGUAGE_SCHEMA,
+      },
       additionalProperties: false,
     },
     annotations: { readOnlyHint: true, openWorldHint: false, idempotentHint: true },
@@ -512,6 +712,10 @@ export async function runTool(request: Request, name: string, args: Args, scope:
       return runSearch(args);
     case "get_record":
       return runRecord(args);
+    case "query_observations":
+      return runQueryObservations(args);
+    case "occupation_summary":
+      return runSummary(args);
     case "submit_question":
     case "suggest_account":
     case "my_submissions":

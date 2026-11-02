@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "SurviAGI agent API",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "description": "Read-only access to published SurviAGI records and key-gated submissions. Every record is machine-proposed unless its review state says otherwise; cite the source URLs, not our summaries. Entity field names, types and grades are in the JSON Schemas listed under `x-entities`.",
     "x-ontology-version": "2.5.0"
   },
@@ -285,6 +285,320 @@
           }
         }
       }
+    },
+    "/api/agent/observations": {
+      "get": {
+        "operationId": "queryObservations",
+        "summary": "List observations, filtered, with counts over everything that matches.",
+        "description": "Occupation and market select exactly the observations their pages list, so the counts equal the page's. Pages through the rows with `cursor`; a cursor of an earlier data release is refused.",
+        "parameters": [
+          {
+            "name": "occupation",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "description": "Occupation id, O*NET code or name (English or Chinese)."
+          },
+          {
+            "name": "market",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "description": "Market id, slug or name."
+          },
+          {
+            "name": "task",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "description": "Task id, e.g. oaw:task:21593."
+          },
+          {
+            "name": "organization",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "description": "Organization id, actor key or exact actor name."
+          },
+          {
+            "name": "subject",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "description": "Product or model key or id."
+          },
+          {
+            "name": "evidence_types",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "vendor_claim",
+                  "demonstration",
+                  "own_use",
+                  "measurement",
+                  "production_use",
+                  "statistic"
+                ]
+              }
+            },
+            "style": "form",
+            "explode": false,
+            "description": "Comma-separated; any of them."
+          },
+          {
+            "name": "directions",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "ai_takes_on",
+                  "human_still_needed",
+                  "neutral"
+                ]
+              }
+            },
+            "style": "form",
+            "explode": false,
+            "description": "Comma-separated; any of them."
+          },
+          {
+            "name": "outcomes",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "succeeded",
+                  "partly",
+                  "failed",
+                  "not_stated"
+                ]
+              }
+            },
+            "style": "form",
+            "explode": false,
+            "description": "Comma-separated; any of them."
+          },
+          {
+            "name": "review_states",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "machine_proposed",
+                  "human_confirmed",
+                  "human_rejected"
+                ]
+              }
+            },
+            "style": "form",
+            "explode": false,
+            "description": "Comma-separated; any of them."
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "strength",
+                "newest"
+              ],
+              "default": "strength"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "`next_cursor` of the previous page."
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "en",
+                "zh-CN"
+              ],
+              "default": "en"
+            },
+            "description": "Language of page links and labels."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of matching observations.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservationsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A parameter is missing or malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No occupation or market matches; `candidates` lists near matches.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "At most 60 reads a minute from one address.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/summary": {
+      "get": {
+        "operationId": "occupationSummary",
+        "summary": "Evidence statistics of one occupation or market, as its page states them.",
+        "parameters": [
+          {
+            "name": "occupation",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "description": "Occupation id, O*NET code or name. Give this or market."
+          },
+          {
+            "name": "market",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "description": "Market id, slug or name."
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "en",
+                "zh-CN"
+              ],
+              "default": "en"
+            },
+            "description": "Language of page links and labels."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The statistics.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SummaryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A parameter is missing or malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No occupation or market matches; `candidates` lists near matches.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "At most 60 reads a minute from one address.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -505,6 +819,351 @@
           "versions",
           "content_kinds",
           "editorial_articles",
+          "note"
+        ]
+      },
+      "ObservationCounts": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "description": "Counts as of the data release's date; null when the release carries no observations (unknown, not zero).",
+        "properties": {
+          "as_of": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The release date the 30/90-day windows end on."
+          },
+          "total": {
+            "type": "integer"
+          },
+          "by_evidence_type": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "by_direction": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "by_outcome": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "against": {
+            "type": "integer",
+            "description": "Saying a person is still needed, or that the AI fell short."
+          },
+          "last_30_days": {
+            "type": "integer"
+          },
+          "last_90_days": {
+            "type": "integer"
+          },
+          "undated": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "as_of",
+          "total",
+          "by_evidence_type",
+          "by_direction",
+          "by_outcome",
+          "against",
+          "last_30_days",
+          "last_90_days",
+          "undated"
+        ]
+      },
+      "ObservationSummary": {
+        "type": "object",
+        "description": "One observation as a list shows it. Read it in full with /api/agent/record.",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "observation"
+            ]
+          },
+          "date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "When it was said in public."
+          },
+          "evidence_type": {
+            "type": "string",
+            "enum": [
+              "vendor_claim",
+              "demonstration",
+              "own_use",
+              "measurement",
+              "production_use",
+              "statistic"
+            ]
+          },
+          "evidence_type_label": {
+            "type": "string"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "ai_takes_on",
+              "human_still_needed",
+              "neutral"
+            ]
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "succeeded",
+              "partly",
+              "failed",
+              "not_stated"
+            ]
+          },
+          "task": {
+            "type": "string",
+            "description": "Machine-written: what was done."
+          },
+          "actor": {
+            "type": "object"
+          },
+          "subject": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "facts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string"
+                },
+                "unit": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "what": {
+                  "type": "string"
+                },
+                "quote": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "value",
+                "unit",
+                "what",
+                "quote"
+              ]
+            }
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "quote": {
+                  "type": "string"
+                },
+                "published_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "url",
+                "quote",
+                "published_at"
+              ]
+            }
+          },
+          "review_state": {
+            "type": "string",
+            "enum": [
+              "machine_proposed",
+              "human_confirmed",
+              "human_rejected"
+            ]
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri"
+          },
+          "markdown_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "date",
+          "evidence_type",
+          "direction",
+          "outcome",
+          "task",
+          "actor",
+          "subject",
+          "facts",
+          "sources",
+          "review_state",
+          "url",
+          "markdown_url"
+        ]
+      },
+      "ObservationsResponse": {
+        "type": "object",
+        "properties": {
+          "published": {
+            "type": "boolean",
+            "description": "Whether the loaded release carries observations at all."
+          },
+          "filters": {
+            "type": "object"
+          },
+          "total": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "counts": {
+            "$ref": "#/components/schemas/ObservationCounts"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ObservationSummary"
+            }
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "release": {
+            "type": "object"
+          },
+          "versions": {
+            "$ref": "#/components/schemas/Versions"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "published",
+          "filters",
+          "total",
+          "counts",
+          "results",
+          "next_cursor",
+          "release",
+          "versions",
+          "note"
+        ]
+      },
+      "SummaryResponse": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "occupation",
+              "market"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "label_zh_cn": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "markdown_url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "unpublished",
+              "none",
+              "some"
+            ]
+          },
+          "counts": {
+            "$ref": "#/components/schemas/ObservationCounts"
+          },
+          "strongest": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ObservationSummary"
+            }
+          },
+          "other_way": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ObservationSummary"
+            }
+          },
+          "versions": {
+            "$ref": "#/components/schemas/Versions"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "label",
+          "url",
+          "markdown_url",
+          "state",
+          "counts",
+          "versions",
           "note"
         ]
       },
