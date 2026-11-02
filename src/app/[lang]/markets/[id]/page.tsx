@@ -7,11 +7,12 @@ import { termNameOrRaw } from "@/components/ontology-labels";
 import { getLocale } from "@/lib/locale";
 import { breadcrumbLd, pageMetadata } from "@/lib/seo";
 import { JsonLd } from "@/components/json-ld";
-import { ObservationLedger } from "@/components/observation-ledger";
+import { ObservationLedger, RelatedTopics } from "@/components/observation-ledger";
 import { evidenceLd, ledger, pageQuestion } from "@/lib/observation-view";
 import { siteNavCopy } from "@/lib/site-nav";
 import { href } from "@/lib/routes";
 import { indexable } from "@/lib/site-pages";
+import { topicsAbout } from "@/lib/topic-evidence";
 import {
   activitiesOfMarket,
   activityAnchor,
@@ -179,6 +180,7 @@ export default async function MarketPage({ params }: Props) {
       </Screen>
 
       <ObservationLedger rows={observationsOfMarket(market.id)} name={name} language={language} />
+      <RelatedTopics list={topicsAbout("market", market.id)} language={language} />
 
       <Block title={c.activitiesTitle} lead={c.activitiesLead}>
         {activities.length === 0 ? (

@@ -6,12 +6,14 @@ import { topicEditorial } from "@/content/topic-editorials";
 import d from "@/components/detail.module.css";
 import { appEnabled } from "@/lib/app-config";
 import { getLocale } from "@/lib/locale";
-import { href, marketHref, updateHref } from "@/lib/routes";
+import { href, updateHref } from "@/lib/routes";
 import { breadcrumbLd, pageMetadata } from "@/lib/seo";
 import { siteNavCopy } from "@/lib/site-nav";
 import { indexable } from "@/lib/site-pages";
-import { linkedEvents, manifest, markets, occupationSlug, occupations, topicBySlug, type Topic } from "@/lib/snapshot";
+import { linkedEvents, manifest, topicBySlug } from "@/lib/snapshot";
 import { localizedPath } from "@/lib/i18n";
+import { topicSubject } from "@/lib/topic-evidence";
+import { TopicObservations } from "@/components/observation-ledger";
 import type { Route } from "next";
 import s from "../topics.module.css";
 import { TopicVote } from "./vote";
@@ -41,20 +43,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
 }
 
-/** A link to the page of what the topic is about, when that page exists in this release. */
-function aboutHref(topic: Topic, language: "en" | "zh-CN"): Route | null {
-  const about = topic.about;
-  if (!about) return null;
-  if (about.kind === "occupation" && occupations().some((o) => o.occupation_id === about.id)) {
-    return localizedPath(language, `/occupations/${occupationSlug(about.id)}`) as Route;
-  }
-  if (about.kind === "market" && markets().some((m) => m.id === about.id)) return marketHref(language, about.id);
-  return null;
-}
-
 /**
- * One topic: the question, and under each answer who argued it and which
- * updates weigh for or against it. The page declares no answer.
+ * One topic: the question, the observations about its occupation or market
+ * pointing each way, and under each answer who argued it and which updates
+ * weigh for or against it. The page declares no answer.
  */
 export default async function TopicPage({ params }: Props) {
   const { language } = await getLocale();
@@ -65,7 +57,8 @@ export default async function TopicPage({ params }: Props) {
 
   const withPage = new Set(linkedEvents().map((e) => e.event_id));
   const about = topic.about;
-  const aboutLink = aboutHref(topic, language);
+  const subject = topicSubject(topic, language);
+  const aboutLink = subject ? (localizedPath(language, subject.path) as Route) : null;
   const aboutName = about ? about[language] ?? about.en : null;
   const quarters = Object.keys(topic.by_quarter).sort();
   const path = `/topics/${topic.slug}`;
@@ -112,6 +105,8 @@ export default async function TopicPage({ params }: Props) {
           <Link className={s.editorialLink} href={href(language, editorial.articlePath)}>{editorial.article}</Link>
         </section>
       ) : null}
+
+      <TopicObservations topic={topic} language={language} />
 
       <TopicVote language={language} enabled={appEnabled()} topicId={topic.topic_id}
         options={topic.options.map((option) => ({ option_id: option.option_id, text: option.text[language] }))} />

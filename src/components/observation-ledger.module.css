@@ -50,6 +50,12 @@
 .actors span{overflow-wrap:anywhere}
 .actors small{font-family:var(--ah-font-mono);font-size:11px;color:var(--ah-color-subtle)}
 .actors b{font-family:var(--ah-font-mono);font-size:12.5px;font-weight:500}
+.onward{display:inline-block;margin:0 0 8px;font-family:var(--ah-font-mono);font-size:12.5px;letter-spacing:.04em;color:var(--ah-color-signal)}
+.onward:hover{text-decoration:underline;text-underline-offset:3px}
+.topics{list-style:none;margin:0;padding:0;border-top:1px solid var(--ah-color-line)}
+.topics li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:baseline;padding:14px 4px;border-bottom:1px solid var(--ah-color-line);font-size:16px;line-height:1.45}
+.topics a:hover{color:var(--ah-color-signal)}
+.topics small{font-family:var(--ah-font-mono);font-size:11.5px;color:var(--ah-color-subtle);white-space:nowrap}
 @media(max-width:1100px){
   .types{grid-template-columns:repeat(3,minmax(0,1fr))}
   .type:nth-child(4){border-left:0}
@@ -65,4 +71,6 @@
   .how{flex-direction:row;align-items:center;text-align:left}
   .months li{grid-template-columns:72px minmax(0,1fr) 36px;row-gap:4px}
   .months small{grid-column:1 / -1}
+  .topics li{grid-template-columns:1fr;gap:4px}
+  .topics small{white-space:normal}
 }
