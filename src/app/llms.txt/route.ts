@@ -108,8 +108,8 @@ function standing(home: NonNullable<ReturnType<typeof buildHomeData>>): string[]
   return [
     "## Where things stand",
     "",
-    `As of ${home.generatedAt}, ${home.updates.length} updates from ${home.orgsTracked} AI companies bear on the ${home.catalogueWorks} kinds of work ` +
-      `in the catalogue, collected since ${home.start}. An update is a record of what a company or person said it did; it is not a measure of what AI can do.`,
+    `As of ${home.generatedAt}, ${home.updatesTotal} updates from ${home.orgsTracked} AI companies have been collected since ${home.start}, ` +
+      `and ${home.topicsTotal} open questions about jobs and businesses are tracked. An update is a record of what a company or person said it did; it is not a measure of what AI can do.`,
     "",
   ];
 }

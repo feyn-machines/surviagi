@@ -46,7 +46,11 @@ export async function generateMetadata(): Promise<Metadata> {
   return pageMetadata({ language, path: "/markets", title: c.title, description: c.lead });
 }
 
-export default async function MarketsPage() {
+type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
+
+export default async function MarketsPage({ searchParams }: Props) {
+  const { q } = await searchParams;
+  const initialQuery = typeof q === "string" ? q.slice(0, 100) : "";
   const { language } = await getLocale();
   const c = indexCopy[language];
   if (!snapshotExists()) {
@@ -130,7 +134,7 @@ export default async function MarketsPage() {
       {rows.length === 0 ? (
         <p>{c.empty}</p>
       ) : (
-        <MarketsExplorer rows={rows} rungs={rungs} levels={levels} language={language} />
+        <MarketsExplorer rows={rows} rungs={rungs} levels={levels} language={language} initialQuery={initialQuery} />
       )}
 
       <Provenance language={language} />
