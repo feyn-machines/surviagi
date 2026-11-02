@@ -275,7 +275,7 @@ class PostOutcomeTests(unittest.TestCase):
         self.assertIn("Relays:", other)
         seen = []
         original = deepseek.chat
-        deepseek.chat = lambda messages, cfg, timeout=120: seen.append(messages[0]["content"]) or {"events": []}
+        deepseek.chat = lambda messages, cfg, timeout=120, usage=None: seen.append(messages[0]["content"]) or {"events": []}
         try:
             deepseek.extract_events([person_cand("1", "a"), cand("2")], cfg={"model": "m"}, batch_size=20)
         finally:
@@ -613,7 +613,7 @@ class DeepSeekResilienceTests(unittest.TestCase):
 
     def test_batch_retried_then_succeeds(self):
         calls = {"n": 0}
-        def flaky(messages, cfg, timeout=120):
+        def flaky(messages, cfg, timeout=120, usage=None):
             calls["n"] += 1
             if calls["n"] < 3:
                 raise deepseek.DeepSeekError("transient")
@@ -625,7 +625,7 @@ class DeepSeekResilienceTests(unittest.TestCase):
         self.assertEqual(calls["n"], 3)
 
     def test_persistent_failure_skips_batch_not_run(self):
-        def always_fail(messages, cfg, timeout=120):
+        def always_fail(messages, cfg, timeout=120, usage=None):
             raise deepseek.DeepSeekError("down")
         deepseek.chat = always_fail
         batches, failures = deepseek.extract_events([cand("1"), cand("2")], cfg={"model": "m"}, batch_size=1)

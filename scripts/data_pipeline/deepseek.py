@@ -32,7 +32,7 @@ DEFAULT_BASE_URL = "https://api.deepseek.com"
 EXTRACTION_VERSION_TAG = "deepseek-events-5"
 
 
-def system_prompt(official=False):
+def system_prompt(official=False, observations=False):
     """The extraction prompt, built from the schema instead of hand-typed.
 
     There are two: one for posts by companies' official accounts and one for
@@ -45,6 +45,10 @@ def system_prompt(official=False):
     datasets/ontology/schema/schema.json. A boundary changes in one place, and
     `prompt_sha256` moves when it does. The list of known updates a run attaches
     posts to is data, not part of the prompt: `known_events_message` renders it.
+
+    With `observations` the same call also returns what the posts show about AI
+    doing real work (Issue #25): the observation section is appended and the
+    output object gains an `observations` list. Off, the prompt is unchanged.
     """
     schema = ontology_schema.load_schema()
     use_kinds = ", ".join(schema["properties"]["Event.task"]["applies_to_kinds"])
@@ -96,7 +100,7 @@ def system_prompt(official=False):
             "model have made two events, one each, with their own numbers. Merge only several posts by "
             "the SAME author about the same thing.",
         ]
-    return "\n".join([
+    lines = [
         who,
         "",
         "Every post you are given ends in exactly one of three places:",
@@ -176,7 +180,11 @@ def system_prompt(official=False):
         "",
         "Rules: use only the given posts as evidence; never invent a number, a name or a result. "
         "Every given post id appears exactly once across the three lists. Output ONLY the JSON object.",
-    ])
+    ]
+    if observations:
+        from .observation_extraction import prompt_section
+        lines += ["", *prompt_section(schema)]
+    return "\n".join(lines)
 
 
 def known_events_message(known):
@@ -201,6 +209,16 @@ def prompt_sha256():
                    "schema": EXTRACTION_VERSION_TAG,
                    "rubric_sha256": ontology_schema.rubric_sha256(),
                    "semantic_version": ontology_schema.EVENT_KIND_VERSION})
+
+
+def observation_prompt_sha256():
+    """Version anchor of the prompt that also asks for observations."""
+    from .observation_extraction import EXTRACTOR
+    return digest({"system": system_prompt(observations=True),
+                   "system_official": system_prompt(official=True, observations=True),
+                   "schema": EXTRACTION_VERSION_TAG, "observations": EXTRACTOR,
+                   "rubric_sha256": ontology_schema.rubric_sha256(),
+                   "schema_version": ontology_schema.SCHEMA_VERSION})
 
 
 def load_env(root):
@@ -243,11 +261,13 @@ def _post_message(candidates):
     return "\n".join(lines)
 
 
-def chat(messages, cfg, timeout=120):
+def chat(messages, cfg, timeout=120, usage=None):
     """One OpenAI-compatible chat/completions call in JSON mode; returns parsed content.
 
     Raises DeepSeekError on any transport, HTTP, empty-response or malformed-JSON
     problem so the caller can retry that one batch and, failing that, skip it.
+    When `usage` is a list, the token counts the API reports for an answered call
+    are appended to it, with the model that served it and the time it ended.
     """
     payload = json.dumps({
         "model": cfg["model"], "messages": messages,
@@ -265,6 +285,8 @@ def chat(messages, cfg, timeout=120):
         raise DeepSeekError(f"request failed: {error}") from None
     if isinstance(body, dict) and body.get("error"):
         raise DeepSeekError(f"api error: {str(body['error'])[:200]}")
+    if usage is not None and isinstance(body, dict) and isinstance(body.get("usage"), dict):
+        usage.append({"model": body.get("model"), "at": time.time(), **body["usage"]})
     choices = (body or {}).get("choices") or []
     if not choices:
         raise DeepSeekError(f"no choices: {json.dumps(body)[:200]}")
@@ -278,7 +300,7 @@ def chat(messages, cfg, timeout=120):
 
 
 def extract_events(candidates, cfg=None, batch_size=25, progress=None, max_attempts=3,
-                   known=None, workers=1):
+                   known=None, workers=1, observations=False, usage=None):
     """Extract events from candidates in batches. Returns (batches, failures).
 
     Each batch is retried up to `max_attempts` on a DeepSeekError with backoff; a batch
@@ -288,9 +310,13 @@ def extract_events(candidates, cfg=None, batch_size=25, progress=None, max_attem
 
     `known` is the list of stored updates a post may attach to. `workers` runs
     that many batches at once; the result keeps batch order either way.
+    `observations` asks the same calls for observations too; `usage` collects
+    the token counts of every call, retries included.
     """
     cfg = cfg or config_from_env()
-    prompts = {True: system_prompt(official=True), False: system_prompt()}
+    prompts = {official: system_prompt(official=official, observations=observations)
+               for official in (True, False)}
+    names = ("events", "attachments", "dropped") + (("observations",) if observations else ())
     known_message = known_events_message(known)
     # Official accounts and everyone else are read in separate batches, each
     # under its own prompt; the order of posts inside a group is kept.
@@ -307,7 +333,7 @@ def extract_events(candidates, cfg=None, batch_size=25, progress=None, max_attem
         result, error = None, None
         for attempt in range(max_attempts):
             try:
-                result = chat(messages, cfg)
+                result = chat(messages, cfg, usage=usage)
                 break
             except DeepSeekError as exc:
                 error = exc
@@ -318,7 +344,7 @@ def extract_events(candidates, cfg=None, batch_size=25, progress=None, max_attem
             return {"events": []}, {"batch": number, "error": str(error)}
         result = result if isinstance(result, dict) else {}
         batch = {name: result.get(name) if isinstance(result.get(name), list) else []
-                 for name in ("events", "attachments", "dropped")}
+                 for name in names}
         if progress:
             progress(number, total, len(batch["events"]))
         return batch, None
@@ -333,3 +359,37 @@ def extract_events(candidates, cfg=None, batch_size=25, progress=None, max_attem
     batches = [batch for batch, _ in done]
     failures = [failure for _, failure in done if failure]
     return batches, failures
+
+
+# USD per million tokens, from https://api-docs.deepseek.com/quick_start/pricing
+# as read on 2026-11-03. Off-peak is half of peak. Peak is 01:00-04:00 and
+# 06:00-10:00 UTC, Monday to Friday; Chinese public holidays are off-peak too,
+# which this table does not know, so a holiday call is counted at peak.
+PRICES_READ_ON = "2026-11-03"
+PRICES = {
+    "deepseek-flash": {"cache_hit": 0.006, "cache_miss": 0.30, "output": 1.20},
+    "deepseek-v4-pro": {"cache_hit": 0.044, "cache_miss": 1.32, "output": 3.96},
+}
+PEAK_HOURS_UTC = ((1, 4), (6, 10))
+
+
+def is_peak(timestamp):
+    """Whether a call that ended at this Unix time was billed at the peak rate."""
+    from datetime import datetime, timezone
+    moment = datetime.fromtimestamp(timestamp, timezone.utc)
+    return moment.weekday() < 5 and any(start <= moment.hour < end for start, end in PEAK_HOURS_UTC)
+
+
+def call_cost(usage, prices, peak):
+    """USD for one call's reported usage at the given peak rates (halved off-peak).
+
+    The API splits the prompt into cache hits and misses; an answer without the
+    split is counted as all misses, which can only overstate the cost.
+    """
+    hit = usage.get("prompt_cache_hit_tokens") or 0
+    miss = usage.get("prompt_cache_miss_tokens")
+    if miss is None:
+        miss = (usage.get("prompt_tokens") or 0) - hit
+    factor = 1 if peak else 0.5
+    return factor * (hit * prices["cache_hit"] + miss * prices["cache_miss"]
+                     + (usage.get("completion_tokens") or 0) * prices["output"]) / 1_000_000
