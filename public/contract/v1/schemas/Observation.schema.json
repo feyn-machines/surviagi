@@ -326,8 +326,8 @@
       "items": {
         "type": "object"
       },
-      "description": "Catalog entries the work was put on: concept_id, kind (`work` market work item, `occupation`, `task` O*NET task), English and Chinese labels, method and status. Machine-proposed candidates unless status says `reviewed`. Empty when nothing fit (`work_key` is then `unmapped`).",
-      "x-description-zh-CN": "这项工作被归到的目录条目：concept_id、类别（`work` 赛道工作项、`occupation` 职业、`task` O*NET 任务）、中英名称、方法与状态。除非状态为 `reviewed`，均为机器提出的候选。都对不上时为空（此时 `work_key` 为 `unmapped`）。",
+      "description": "Catalog entries the work was put on: concept_id, kind (`work` market work item, `occupation`, `task` O*NET task), English and Chinese labels, `occupation_id` (1.7.0: the occupation a task belongs to; null for other kinds, absent in older releases), method and status. Machine-proposed candidates unless status says `reviewed`. Empty when nothing fit (`work_key` is then `unmapped`).",
+      "x-description-zh-CN": "这项工作被归到的目录条目：concept_id、类别（`work` 赛道工作项、`occupation` 职业、`task` O*NET 任务）、中英名称、`occupation_id`（1.7.0：任务所属的职业；其他类别为 null，旧版本没有此字段）、方法与状态。除非状态为 `reviewed`，均为机器提出的候选。都对不上时为空（此时 `work_key` 为 `unmapped`）。",
       "x-grade": "machine",
       "x-shape": "view"
     },

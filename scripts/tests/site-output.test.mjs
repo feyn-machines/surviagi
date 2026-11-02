@@ -1429,7 +1429,14 @@ test("market and occupation pages count their observations by evidence type and 
   writeFileSync(join(dir, "observations.json"), JSON.stringify([
     row("obs-a", {
       evidence_type: "production_use", announced_at: day(5),
-      concerns: [concern(first.id, "work"), concern(second.id, "work"), { ...concern(occupation.id, "occupation"), label_en: occupation.label_en, label_zh_cn: occupation.label_zh_cn }],
+      concerns: [
+        concern(first.id, "work"), concern(second.id, "work"), { ...concern(occupation.id, "occupation"), label_en: occupation.label_en, label_zh_cn: occupation.label_zh_cn },
+        // Issue #32: a task of this occupation (contract 1.7.0), one of another occupation, and one written
+        // before tasks named their occupation, placed here because the observation names this one alone.
+        { ...concern("oaw:task:900001", "task"), label_en: "TASK ONE of the job", occupation_id: occupation.id },
+        { ...concern("oaw:task:900002", "task"), label_en: "TASK OF ANOTHER job", occupation_id: "oaw:occupation:99-9999.00" },
+        { ...concern("oaw:task:900003", "task"), label_en: "TASK THREE of the job" },
+      ],
       facts: [{ fact_id: "fact-a", value: "48", unit: "%", what: "share of tickets closed", baseline: null, method_note: null, quote: "FIGURE obs-a" }],
     }),
     row("obs-b", {
@@ -1476,6 +1483,14 @@ test("market and occupation pages count their observations by evidence type and 
     assert.match(occ, /1 observation bears on .*: 1 production use\./);
     assert.ok(occ.includes("None of them says a person is still needed.") && !occ.includes("obs-b"));
     assert.ok((await (await fetch(`${base}${occupationPath}`)).text()).includes('id="obs-a"'));
+    // Issue #32: the occupation's own tasks the observations were mapped to, each with them linked; no other occupation's.
+    assert.ok(occ.includes("## Which of its tasks the evidence is about") && occ.includes(`2 of its ${occupation.tasks} tasks have at least one observation.`));
+    assert.ok(occ.includes("- **TASK ONE of the job** — 1 observation: 1 production use") && occ.includes("**TASK THREE of the job**"));
+    assert.ok(!occ.includes("TASK OF ANOTHER"), "a task of another occupation is listed");
+    const occPage = await (await fetch(`${base}${occupationPath}`)).text();
+    assert.ok(occPage.includes('id="tasks"') && occPage.includes('href="#obs-a"') && !occPage.includes("TASK OF ANOTHER"));
+    const occZh = await (await fetch(`${base}/zh-CN${occupationPath}/raw.md`)).text();
+    assert.ok(occZh.includes(`它的 ${occupation.tasks} 项任务中，有 2 项至少有一条观察。`) && occZh.includes("1 条：生产使用 1 条"), "Chinese task copy");
     const pageCounts = (copy) => Object.fromEntries([...copy.matchAll(/^- (Production use|Measurement|Statistic|Own use|Demonstration|Vendor claim): (\d+)$/gm)]
       .map(([, label, n]) => [label.toLowerCase().replace(" ", "_"), Number(n)]));
 
@@ -1555,6 +1570,7 @@ test("market and occupation pages count their observations by evidence type and 
     assert.equal(job.id, occupation.id);
     assert.deepEqual(job.counts.by_evidence_type, pageCounts(occ));
     assert.equal(job.counts.total, 1);
+    assert.deepEqual(job.tasks.map((t) => [t.id, t.observations]), [["oaw:task:900001", 1], ["oaw:task:900003", 1]], "the interface lists the tasks the page lists");
     assert.equal((await api("/api/agent/summary")).status, 400);
     assert.equal((await api(`/api/agent/summary?market=${marketId}&occupation=${occupation.id}`)).status, 400);
     const unknown = await api("/api/agent/summary?occupation=zzzz-no-such-job");
