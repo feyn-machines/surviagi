@@ -3,12 +3,14 @@ import type { Language } from "./i18n";
 import { absoluteUrl } from "./seo";
 import { workSlug } from "./routes";
 import {
+  activityAnchor,
   activityById,
   chainEvents,
   dataRelease,
   events,
   evidence,
   manifest,
+  marketSlug,
   topics,
   type ChainEvent,
   type EventRow,
@@ -101,10 +103,10 @@ const clip = (text: string, max = SNIPPET) => {
 export const evidenceId = (row: Pick<EvidenceRow, "event_id" | "activity_id">) =>
   `evidence:${row.event_id}:${workSlug(row.activity_id)}`;
 
-/** Only work an update has given a level has a page of its own; the same rule as the work page and the sitemap. */
-function workHasPage(activityId: string) {
+/** A kind of work is a row on its market's page; the old /work/ address redirects there. */
+function workPath(activityId: string): string | null {
   const work = activityById(activityId);
-  return Boolean(work?.evidence_rows && work.level);
+  return work ? `/markets/${marketSlug(work.market_id)}#${activityAnchor(work.activity_id, work.market_id)}` : null;
 }
 
 function buildDocs(): Doc[] {
@@ -162,7 +164,7 @@ function buildDocs(): Doc[] {
       date: update.occurred_at,
       organization: update.org_name,
       sources: update.source_urls ?? [],
-      path: workHasPage(r.activity_id) ? `/work/${workSlug(r.activity_id)}` : `/updates/${r.event_id}`,
+      path: workPath(r.activity_id) ?? `/updates/${r.event_id}`,
       fields: [
         { text: lower(`${work.label_en} ${work.label_zh_cn ?? ""}`), weight: 3 },
         { text: lower(`${work.market_en} ${work.market_zh_cn ?? ""} ${update.title}`), weight: 2 },
@@ -328,7 +330,7 @@ function readingSummary(r: EvidenceRow, language: Language) {
   return {
     id: evidenceId(r),
     work: work ? { label: work.label_en, label_zh_cn: work.label_zh_cn, market: work.market_en } : null,
-    work_url: workHasPage(r.activity_id) ? absoluteUrl(language, `/work/${workSlug(r.activity_id)}`) : null,
+    work_url: workPath(r.activity_id) ? absoluteUrl(language, workPath(r.activity_id)!) : null,
     level: r.level,
     claimed_level: r.observed_level,
     evidence_tier: r.evidence_tier,
@@ -379,11 +381,11 @@ function questionRecord(t: Topic, language: Language) {
 
 function evidenceRecord(r: EvidenceRow, e: ChainEvent, language: Language) {
   const work = activityById(r.activity_id);
-  const workUrl = workHasPage(r.activity_id) ? absoluteUrl(language, `/work/${workSlug(r.activity_id)}`) : null;
+  const workUrl = workPath(r.activity_id) ? absoluteUrl(language, workPath(r.activity_id)!) : null;
   return {
     id: evidenceId(r),
     type: "evidence" as const,
-    /** The page that shows this reading: its work's page, or the update's when the work has none. */
+    /** The page that shows this reading: its work's row on the market page, or the update's when the work is unknown. */
     url: workUrl ?? absoluteUrl(language, `/updates/${e.event_id}`),
     content: "machine_reading" as const,
     review: REVIEW,

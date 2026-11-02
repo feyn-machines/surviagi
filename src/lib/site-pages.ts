@@ -12,7 +12,6 @@ import {
   progress,
   topics,
 } from "./snapshot";
-import { workSlug } from "./routes";
 
 /** Pages that exist whatever the snapshot holds. */
 export const FIXED_PATHS = ["/", "/markets", "/occupations", "/topics", "/updates", "/voices", "/articles", "/whitepaper", "/agents", "/privacy", "/terms"] as const;
@@ -29,8 +28,6 @@ export const detailPages = {
   /** Occupations an update has reached: the ones a search engine is told about. */
   reachedOccupations: () => occupations().filter((row) => row.assessed > 0).map((row) => occupationSlug(row.occupation_id)),
   occupationGroups: () => Object.keys(progress()?.groups ?? {}).map(groupSlug),
-  /** Only work an update has reached has a page of its own. */
-  work: () => activities().filter((a) => a.evidence_rows && a.level).map((a) => workSlug(a.activity_id)),
   topics: () => topics().map((topic) => ({ slug: topic.slug, latest: topic.latest_claim_at })),
   updates: () => chainEvents().map((e) => ({ id: e.event_id, occurredAt: updateTimestamp(e) })),
 };

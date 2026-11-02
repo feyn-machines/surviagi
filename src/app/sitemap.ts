@@ -16,8 +16,8 @@ type Page = { path: string; lastModified?: string; languages?: readonly Language
  * be a 404.
  *
  * `lastModified` is when a page last had something new: for an update the
- * time it happened, for a topic its latest claim, for market, occupation and
- * work pages the newest dated update among their readings (`evidenceDates`),
+ * time it happened, for a topic its latest claim, for market and occupation
+ * pages the newest dated update among their readings (`evidenceDates`),
  * and for the fixed pages, which summarise the whole release, the snapshot's
  * generation time. It is left out rather than invented when there is no such
  * time: a detail page with no date of its own would otherwise claim a change
@@ -80,7 +80,6 @@ function entries(built: string | undefined, approvedSlugs: Set<string>): Metadat
       path: `/occupations/${code}`,
       lastModified: dated.occupation(`oaw:occupation:${code}`),
     })),
-    ...detailPages.work().map((id) => ({ path: `/work/${id}`, lastModified: dated.work(`oaw:market:${id}`) })),
     ...detailPages.topics().map(({ slug, latest }) => ({ path: `/topics/${slug}`, lastModified: latest ?? undefined })),
     ...detailPages.updates().map(({ id, occurredAt }) => ({ path: `/updates/${id}`, lastModified: occurredAt ?? undefined, languages: UPDATE_LANGUAGES })),
     // The article pages are built ahead from documents the server does not carry,

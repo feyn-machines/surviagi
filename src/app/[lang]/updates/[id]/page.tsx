@@ -11,7 +11,7 @@ import { JsonLd } from "@/components/json-ld";
 import { siteNavCopy } from "@/lib/site-nav";
 import { UPDATE_LANGUAGES } from "@/lib/site-pages";
 import { copy, updateDate } from "./copy";
-import { href, marketHref, workHref } from "@/lib/routes";
+import { activityHref, href, marketHref } from "@/lib/routes";
 import { activityById, chainEvents, events as allEvents, evidenceForEvent } from "@/lib/snapshot";
 
 /** Rendered per request from the loaded data release, never at build time. */
@@ -90,13 +90,12 @@ export default async function UpdatePage({ params }: Props) {
         {rows.map((r) => {
           const work = activityById(r.activity_id);
           const market = work ? (zh ? work.market_zh_cn : work.market_en) ?? work.market_en : "";
-          const linked = Boolean(work?.evidence_rows && work.level);
-          const name = (zh ? r.activity_zh_cn : r.activity_en) ?? r.activity_en;
+                    const name = (zh ? r.activity_zh_cn : r.activity_en) ?? r.activity_en;
           return (
             <li key={r.activity_id} className={s.row}>
               <div className={s.when}><b>L{r.level}</b>{LEVEL_NAMES[language][r.level ?? 0]}</div>
               <div className={s.what}>
-                {linked ? <Link className={s.name} href={workHref(language, r.activity_id)}>{name}</Link> : <span className={s.name}>{name}</span>}
+                {work ? <Link className={s.name} href={activityHref(language, work)}>{name}</Link> : <span className={s.name}>{name}</span>}
                 {work && <small><Link href={marketHref(language, work.market_id)}>{market}</Link></small>}
               </div>
               <div className={s.how}>
