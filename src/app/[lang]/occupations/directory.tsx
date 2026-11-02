@@ -154,18 +154,21 @@ export function OccupationDirectory({
   groups,
   language,
   l2Word,
+  initialQuery = "",
 }: {
   rows: DirectoryRow[];
   groups: DirectoryGroup[];
   language: Language;
   /** The L2 rung's own word, read from the snapshot. Never written here. */
   l2Word: string;
+  /** The search the reader arrived with, e.g. from the home page. */
+  initialQuery?: string;
 }) {
   const c = copy[language];
   const searchId = useId();
   const { ref, seen } = useSeen<HTMLDivElement>();
 
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   // One group at a time: the page opens on the group furthest along, and a search looks through all of them.
   const first = useMemo(() => [...groups].sort((a, b) => b.share - a.share)[0]?.id ?? "", [groups]);
   const [group, setGroup] = useState(first);

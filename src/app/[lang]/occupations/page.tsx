@@ -67,7 +67,11 @@ export async function generateMetadata(): Promise<Metadata> {
   return pageMetadata({ language, path: "/occupations", title: copy[language].metaTitle, description: copy[language].metaDescription });
 }
 
-export default async function Occupations() {
+type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
+
+export default async function Occupations({ searchParams }: Props) {
+  const { q } = await searchParams;
+  const initialQuery = typeof q === "string" ? q.slice(0, 100) : "";
   const { language } = await getLocale();
   const c = copy[language];
   const data = progress();
@@ -139,6 +143,7 @@ export default async function Occupations() {
         groups={groups}
         language={language}
         l2Word={data.levels?.["2"]?.[language] ?? "L2"}
+        initialQuery={initialQuery}
       />
     </div>
   );

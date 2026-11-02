@@ -536,13 +536,13 @@ test("document-backed pages stay static while live editorial pages render per re
   }
 });
 
-test("every market in the loaded data belongs to a market group the home page can draw", { skip: !HAS_SNAPSHOT }, () => {
+test("every market in the loaded data belongs to a market group the market list can draw", { skip: !HAS_SNAPSHOT }, () => {
   const chain = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "chain.json"), "utf8"));
   const stored = JSON.parse(readFileSync(join(ROOT, "src", "content", "market-groups.json"), "utf8"));
   const markets = new Set(chain.activities.map((a) => a.market_id));
   assert.ok(markets.size > 0);
   const ungrouped = [...markets].filter((id) => !stored.groups[stored.group_of_market[id]]);
-  assert.deepEqual(ungrouped, [], "markets with no group are left off the home page");
+  assert.deepEqual(ungrouped, [], "markets with no group cannot be listed under a domain");
 });
 
 test("the standalone output carries the database client and the data loader", () => {
@@ -813,11 +813,11 @@ test("llms.txt is generated from the site, names real pages, and overstates noth
   if (HAS_SNAPSHOT) {
     // One dated sentence an engine can quote, with the numbers the home page shows. The level scale is retired (#35).
     const manifest = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "manifest.json"), "utf8"));
-    const said = text.match(/^As of (\d{4}-\d{2}-\d{2}), (\d+) updates from (\d+) AI companies bear on the (\d+) kinds of work /m);
+    const said = text.match(/^As of (\d{4}-\d{2}-\d{2}), (\d+) updates from (\d+) AI companies have been collected since /m);
     assert.ok(said, "llms.txt has no dated answer sentence");
     assert.equal(said[1], manifest.generated_at.slice(0, 10));
     const home = html("en", "").replace(/<script[\s\S]*?<\/script>/g, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
-    assert.ok(home.includes(`${said[3]} AI companies tracked`), `llms.txt says ${said[3]} where the home page does not say "${said[3]} AI companies tracked"`);
+    assert.ok(home.includes(`${said[2]} updates from ${said[3]} AI companies`), `llms.txt says ${said[2]} updates from ${said[3]} companies where the home page does not`);
     assert.doesNotMatch(text, /^## Levels/m, "llms.txt still defines the retired levels");
     assert.doesNotMatch(text, /^- L[0-5] /m);
     assert.doesNotMatch(text, /\bL[0-5]\b(?!–L5)/, "llms.txt presents a level as a conclusion");
@@ -829,25 +829,36 @@ test("llms.txt is generated from the site, names real pages, and overstates noth
   }
 });
 
-test("the home page's count of recent updates covers only the last 30 days of the window", { skip: !HAS_SNAPSHOT }, () => {
-  const chain = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "chain.json"), "utf8"));
+test("the home page's counts cover the updates published, and its recent count only the last 30 days of the window", { skip: !HAS_SNAPSHOT }, () => {
+  const events = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "events.json"), "utf8"));
   const coverage = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "coverage.json"), "utf8"));
-  const levelled = new Set(chain.activities.filter((a) => a.evidence_rows && a.level).map((a) => a.activity_id));
-  const used = new Set(chain.evidence.filter((r) => r.level != null && r.observed_level != null && levelled.has(r.activity_id)).map((r) => r.event_id));
-  const last = Math.max(Date.parse(coverage.collection_window.last.slice(0, 10)), ...chain.events.map((e) => Date.parse((e.occurred_at ?? e.announced_at ?? "").slice(0, 10))).filter(Number.isFinite));
+  const stamp = (e) => (e.occurred_at ?? e.announced_at ?? "").slice(0, 10);
+  const last = Math.max(Date.parse(coverage.collection_window.last.slice(0, 10)), ...events.map((e) => Date.parse(stamp(e))).filter(Number.isFinite));
   const day = 24 * 60 * 60 * 1000;
-  const recent = chain.events.filter((e) => used.has(e.event_id) && (e.occurred_at ?? e.announced_at) && last - Date.parse((e.occurred_at ?? e.announced_at).slice(0, 10)) < 30 * day).length;
-  for (const [language, label] of [["en", "AI updates in 30 days"], ["zh-CN", "30 天内的 AI 更新"]]) {
+  const recent = events.filter((e) => stamp(e) && last - Date.parse(stamp(e)) < 30 * day).length;
+  for (const [language, pattern] of [
+    ["en", /(\d+) updates from \d+ AI companies collected since [\d-]+; (\d+) in the last 30 days/],
+    ["zh-CN", /收集了 \d+ 家 AI 公司的 (\d+) 条更新，近 30 天有 (\d+) 条/],
+  ]) {
     const text = html(language, "").replace(/<script[\s\S]*?<\/script>/g, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
-    const shown = text.match(new RegExp(`(\\d+) ${label}`))?.[1];
-    assert.equal(Number(shown), recent, `${language}: the home page says ${shown} ${label}`);
+    const shown = text.match(pattern);
+    assert.ok(shown, `${language}: the home page has no standing sentence`);
+    assert.equal(Number(shown[1]), events.length, `${language}: the home page counts ${shown[1]} updates`);
+    assert.equal(Number(shown[2]), recent, `${language}: the home page counts ${shown[2]} recent updates`);
   }
 });
 
-test("the figures on the home page are in its HTML, not only drawn by script", { skip: !HAS_SNAPSHOT }, () => {
-  for (const language of ["en", "zh-CN"]) {
-    const text = html(language, "").replace(/<script[\s\S]*?<\/script>/g, "").replace(/<[^>]+>/g, " ");
-    assert.match(text, /\bL[0-5]\b/, `${language}: no level appears as text`);
+test("the home page is the question entry: both search forms, the four sections, and no level", { skip: !HAS_SNAPSHOT }, () => {
+  for (const [language, prefix] of [["en", ""], ["zh-CN", "/zh-CN"]]) {
+    const page = html(language, "");
+    for (const target of ["/occupations", "/markets"]) {
+      assert.match(page, new RegExp(`<form[^>]*action="${prefix}${target}"`), `${language}: no search form to ${target}`);
+    }
+    for (const target of ["/markets", "/occupations", "/topics", "/articles", "/updates"]) {
+      assert.ok(page.includes(`href="${prefix}${target}"`), `${language}: no link to ${target}`);
+    }
+    const text = page.replace(/<script[\s\S]*?<\/script>/g, "").replace(/<[^>]+>/g, " ");
+    assert.doesNotMatch(text, /\bL[0-5]\b/, `${language}: a level appears on the home page`);
     assert.ok((text.match(/\d{2,}/g) ?? []).length >= 5, `${language}: fewer than five numbers appear as text`);
   }
 });

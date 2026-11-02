@@ -47,6 +47,7 @@ export function MarketsExplorer({
   rungs,
   levels,
   language,
+  initialQuery = "",
 }: {
   rows: MarketRow[];
   /** The published ladder, empty rungs included: an absent L5 is the finding. */
@@ -54,9 +55,11 @@ export function MarketsExplorer({
   /** Rung words, already in the reader's language, straight from the snapshot. */
   levels: Record<string, string>;
   language: Language;
+  /** The search the reader arrived with, e.g. from the home page. */
+  initialQuery?: string;
 }) {
   const c = indexCopy[language];
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [coverage, setCoverage] = useState<Coverage>("all");
   const [rung, setRung] = useState<number | null | "any">("any");
   const [sort, setSort] = useState<Sort>("top");
