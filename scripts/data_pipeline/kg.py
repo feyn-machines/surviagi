@@ -16,6 +16,7 @@ unpack, release_id, diff_rows) are unit-tested with the system python.
 from __future__ import annotations
 
 import json
+import subprocess
 from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -105,6 +106,21 @@ def read_snapshot(directory: Path = SNAPSHOT_DIR) -> tuple[dict, dict]:
             raise KgError(f"{name}.json is not valid JSON: {error}") from error
     verify_payload(payload, manifest)
     return payload, manifest
+
+
+def check_contract(directory: Path = SNAPSHOT_DIR) -> None:
+    """Refuse a snapshot whose rows do not fit the public data contract (Issue #27).
+
+    The checker is the one in `scripts/check-public-contract.mjs`; the schemas it reads are
+    generated from the ontology (`pnpm ontology:projections`), so Python restates nothing.
+    """
+    checker = ROOT / "scripts/check-public-contract.mjs"
+    try:
+        result = subprocess.run(["node", str(checker), str(directory)], capture_output=True, text=True, cwd=ROOT)
+    except FileNotFoundError as error:
+        raise KgError("node is needed to check the public data contract") from error
+    if result.returncode != 0:
+        raise KgError((result.stderr or result.stdout).strip() or "snapshot does not satisfy the public data contract")
 
 
 def check_shape(payload: Any) -> None:

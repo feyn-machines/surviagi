@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://surviagi.com/contract/v1/schemas/ObservationFact.schema.json",
+  "title": "Observation fact",
+  "x-title-zh-CN": "观察事实",
+  "description": "A number, price, limit, score or date an observation rests on, with what it measures, what it is compared with, how it was counted and the words it came from.",
+  "x-description-zh-CN": "观察所依据的一个数字、价格、限制、成绩或日期，连同它指什么、与什么比较、怎么算的以及它出自的原文。",
+  "type": "object",
+  "properties": {
+    "fact_id": {
+      "type": "string",
+      "description": "Identifier of the fact.",
+      "x-description-zh-CN": "事实的标识。",
+      "x-grade": "record",
+      "x-ontology-property": "ObservationFact.fact_id",
+      "x-since": "2.5.0"
+    },
+    "observation_id": {
+      "type": "string",
+      "description": "The observation the fact belongs to.",
+      "x-description-zh-CN": "事实所属的观察。",
+      "x-grade": "record",
+      "x-ontology-property": "ObservationFact.observation_id",
+      "x-since": "2.5.0"
+    },
+    "value": {
+      "type": "string",
+      "description": "The value as the source gives it.",
+      "x-description-zh-CN": "来源给出的值。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "ObservationFact.value",
+      "x-since": "2.5.0"
+    },
+    "unit": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The unit of the value, when it has one.",
+      "x-description-zh-CN": "值的单位，没有则为空。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "ObservationFact.unit",
+      "x-since": "2.5.0"
+    },
+    "what": {
+      "type": "string",
+      "description": "What the value measures.",
+      "x-description-zh-CN": "这个值指的是什么。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "ObservationFact.what",
+      "x-since": "2.5.0"
+    },
+    "baseline": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "What the value is compared with, when the source compares.",
+      "x-description-zh-CN": "来源有比较时，拿什么作比较。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "ObservationFact.baseline",
+      "x-since": "2.5.0"
+    },
+    "method_note": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "How it was counted: sample, scope, period. Empty means the source does not say.",
+      "x-description-zh-CN": "怎么算的：样本、范围、时间段。为空表示来源没写。",
+      "x-grade": "machine",
+      "x-ontology-property": "ObservationFact.method_note",
+      "x-since": "2.5.0"
+    },
+    "quote": {
+      "type": "string",
+      "description": "The exact words the value comes from; checked against the source before it is stored.",
+      "x-description-zh-CN": "值所出自的原文；入库前与来源核对。",
+      "x-grade": "quote",
+      "x-ontology-property": "ObservationFact.quote",
+      "x-since": "2.5.0"
+    }
+  },
+  "required": [
+    "fact_id",
+    "observation_id",
+    "value",
+    "unit",
+    "what",
+    "baseline",
+    "method_note",
+    "quote"
+  ],
+  "additionalProperties": false,
+  "x-identifier": "fact_id",
+  "x-since": "2.5.0"
+}

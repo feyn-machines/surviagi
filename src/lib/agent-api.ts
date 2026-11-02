@@ -26,6 +26,7 @@ import {
   record,
   RECORD_TYPES,
   type RecordType,
+  versionsInfo,
 } from "./agent-search";
 import { sources } from "./snapshot";
 import { EDITORIAL_STATUSES, getEditorialArticleRecord, parseEditorialRevisionId, searchEditorialArticles } from "./editorial-agent";
@@ -178,6 +179,7 @@ export async function runSearch(args: Args): Promise<Outcome> {
     total,
     results,
     release: found.release,
+    versions: versionsInfo(),
     content_kinds: found.content_kinds,
     editorial_articles: includeArticles ? { available, count: articles?.total ?? 0 } : null,
     note: results.length === 0
@@ -195,7 +197,7 @@ export async function runRecord(args: Args): Promise<Outcome> {
   if (editorialRevision) {
     try {
       const found = await getEditorialArticleRecord(editorialRevision.articleId, editorialRevision.version, language ?? "en");
-      return found ? ok(found, false) : fail(404, "not_found", "No public article revision with this id is available. It may have been withdrawn; search again.");
+      return found ? ok({ ...found, versions: versionsInfo() }, false) : fail(404, "not_found", "No public article revision with this id is available. It may have been withdrawn; search again.");
     } catch (error) {
       console.error(`[agent] editorial record read failed: ${error instanceof Error ? error.message : "unknown error"}`);
       return fail(503, "unavailable", "Public article reading is unavailable right now. Try again later.");

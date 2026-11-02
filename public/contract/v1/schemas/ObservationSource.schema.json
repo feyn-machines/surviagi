@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://surviagi.com/contract/v1/schemas/ObservationSource.schema.json",
+  "title": "Observation source",
+  "x-title-zh-CN": "观察出处",
+  "description": "A place an observation is written, with the exact words it was read from. Not only X: a blog, a customer case page, a report or a paper.",
+  "x-description-zh-CN": "观察被写下的一个地方，连同读出它的原文。不限于 X：博客、客户案例页、报告或论文都可以。",
+  "type": "object",
+  "properties": {
+    "source_ref": {
+      "type": "string",
+      "description": "Identifier of the row.",
+      "x-description-zh-CN": "这一行的标识。",
+      "x-grade": "record",
+      "x-ontology-property": "ObservationSource.source_ref",
+      "x-since": "2.5.0"
+    },
+    "observation_id": {
+      "type": "string",
+      "description": "The observation the source supports.",
+      "x-description-zh-CN": "这条来源支持的观察。",
+      "x-grade": "record",
+      "x-ontology-property": "ObservationSource.observation_id",
+      "x-since": "2.5.0"
+    },
+    "source_type": {
+      "type": "string",
+      "enum": [
+        "x_post",
+        "official_blog",
+        "case_page",
+        "report",
+        "paper"
+      ],
+      "description": "What kind of place it is.",
+      "x-description-zh-CN": "是哪种来源。",
+      "x-grade": "record",
+      "x-ontology-property": "ObservationSource.source_type",
+      "x-since": "2.5.0"
+    },
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Where it can be read.",
+      "x-description-zh-CN": "在哪里可以读到。",
+      "x-grade": "record",
+      "x-ontology-property": "ObservationSource.url",
+      "x-since": "2.5.0"
+    },
+    "source_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The collected post, for an X source.",
+      "x-description-zh-CN": "X 来源对应的已采集帖子。",
+      "x-grade": "record",
+      "x-ontology-property": "ObservationSource.source_id",
+      "x-since": "2.5.0"
+    },
+    "quote": {
+      "type": "string",
+      "description": "The exact words the observation was read from; checked against the source before it is stored.",
+      "x-description-zh-CN": "读出观察的原文；入库前与来源核对。",
+      "x-grade": "quote",
+      "x-ontology-property": "ObservationSource.quote",
+      "x-since": "2.5.0"
+    },
+    "published_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time",
+      "description": "When the source was published; null when unknown.",
+      "x-description-zh-CN": "来源发布的时间；未知则为空。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "ObservationSource.published_at",
+      "x-since": "2.5.0"
+    }
+  },
+  "required": [
+    "source_ref",
+    "observation_id",
+    "source_type",
+    "url",
+    "source_id",
+    "quote",
+    "published_at"
+  ],
+  "additionalProperties": false,
+  "x-identifier": "source_ref",
+  "x-since": "2.5.0"
+}

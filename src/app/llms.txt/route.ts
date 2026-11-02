@@ -81,6 +81,8 @@ export async function GET() {
       `Submitting research questions or accounts to monitor needs a reader's API key and ${SITE_URL}/api/mcp/submit. ` +
       `Details: [For AI agents](${absoluteUrl("en", "/agents")}).`,
     "",
+    `Data contract: a JSON Schema per record type and an OpenAPI description, with every field graded (quote, excerpt, machine, human, record) and four separate versions on every response (contract, ontology, method, data). Index: ${SITE_URL}/contract/v1/index.json; OpenAPI: ${SITE_URL}/contract/v1/openapi.json.`,
+    "",
     "## Levels",
     "",
     "Each kind of work carries the highest level its evidence supports. " +

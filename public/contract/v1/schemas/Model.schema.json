@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://surviagi.com/contract/v1/schemas/Model.schema.json",
+  "title": "Model",
+  "x-title-zh-CN": "模型",
+  "description": "A trained model, or a family of them, that its maker releases under a name: GPT-6 Astra, Claude Fable 5.1, Qwen3.8, Wan 2.7. A product, app, agent, feature, platform or service is not a model, even when it runs on one or shares its brand.",
+  "x-description-zh-CN": "厂商以某个名字发布的一个训练好的模型，或一个模型系列：GPT-6 Astra、Claude Fable 5.1、Qwen3.8、Wan 2.7。产品、应用、智能体、功能、平台、服务都不是模型，即使它跑在模型上、或与模型同名。",
+  "type": "object",
+  "properties": {
+    "model_id": {
+      "type": "string",
+      "description": "model:<owner>:<slug of the name>. Stable; never reused.",
+      "x-description-zh-CN": "model:<归属方>:<名字的规范写法>。稳定，不复用。",
+      "x-grade": "record",
+      "x-ontology-property": "Model.model_id"
+    },
+    "org_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The company that makes the model, when it is one we follow.",
+      "x-description-zh-CN": "出品公司，限我们跟踪的公司。",
+      "x-grade": "record",
+      "x-ontology-property": "Model.org_id"
+    },
+    "level": {
+      "type": "string",
+      "enum": [
+        "family",
+        "release"
+      ],
+      "description": "Family or release.",
+      "x-description-zh-CN": "系列还是具体版本。",
+      "x-grade": "machine",
+      "x-ontology-property": "Model.level"
+    },
+    "parent_model_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The family a release belongs to. A family has none.",
+      "x-description-zh-CN": "具体版本所属的系列。系列自身没有。",
+      "x-grade": "record",
+      "x-ontology-property": "Model.parent_model_id"
+    },
+    "name": {
+      "type": "string",
+      "description": "The release name as its maker writes it, without a date or build suffix.",
+      "x-description-zh-CN": "厂商的写法，不带日期或构建号后缀。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "Model.name"
+    },
+    "version": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The version as written. Never inferred; a family has none.",
+      "x-description-zh-CN": "文本里写出的版本号。不推断；系列没有。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "Model.version"
+    },
+    "variant": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The variant (Flash, Pro, mini). A family has none.",
+      "x-description-zh-CN": "变体（Flash、Pro、mini）。系列没有。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "Model.variant"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "candidate",
+        "confirmed"
+      ],
+      "description": "How far the model's existence is established.",
+      "x-description-zh-CN": "模型的存在被确认到什么程度。",
+      "x-grade": "machine",
+      "x-ontology-property": "Model.status"
+    },
+    "released_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time",
+      "description": "When the maker's own release update happened. Set only by confirmation.",
+      "x-description-zh-CN": "厂商自己的发布帖的时间。只在确认时写入。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "Model.released_at"
+    },
+    "owner": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Name of the owning organization.",
+      "x-description-zh-CN": "所属组织的名称。",
+      "x-grade": "excerpt",
+      "x-shape": "view"
+    },
+    "owner_zh_cn": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Chinese name of the owning organization.",
+      "x-description-zh-CN": "所属组织的中文名。",
+      "x-grade": "machine",
+      "x-shape": "view"
+    },
+    "events": {
+      "type": "integer",
+      "description": "Events that name the model.",
+      "x-description-zh-CN": "提到该模型的事件数。",
+      "x-grade": "record",
+      "x-shape": "view"
+    }
+  },
+  "required": [
+    "model_id",
+    "org_id",
+    "level",
+    "parent_model_id",
+    "name",
+    "version",
+    "variant",
+    "status",
+    "released_at",
+    "owner",
+    "owner_zh_cn",
+    "events"
+  ],
+  "additionalProperties": false,
+  "x-identifier": "model_id",
+  "x-snapshot-file": "models.json"
+}

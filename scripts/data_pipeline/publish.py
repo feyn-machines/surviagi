@@ -25,6 +25,11 @@ ROOT = Path(__file__).resolve().parents[2]
 PUBLISHED = ROOT / "datasets/published"
 SNAPSHOT_VERSION = "snapshot-1"
 
+
+def contract_version() -> str:
+    """The public data contract version this snapshot is checked against (public/contract/v1/index.json)."""
+    return json.loads((ROOT / "public/contract/v1/index.json").read_text())["contract_version"]
+
 # What produced the numbers: the four mapping passes, then the fold in
 # activity_state. It used to be read from datasets/scoring/method.v1.json, a
 # prior-only calibration config for the retired capability scorer - it named a
@@ -920,6 +925,7 @@ def build(conn, ontology_version: str | None = None) -> dict:
         "generated_at": generated_at.isoformat(),
         "ontology_version": ontology_version,
         "schema_version": ontology_schema.SCHEMA_VERSION,
+        "contract_version": contract_version(),
         "method_version": METHOD_VERSION,
         # chain is four lists in one file, so counting it as "1" would publish a
         # manifest that cannot be checked against the file it describes.

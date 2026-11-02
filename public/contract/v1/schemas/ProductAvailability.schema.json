@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://surviagi.com/contract/v1/schemas/ProductAvailability.schema.json",
+  "title": "Product availability",
+  "x-title-zh-CN": "产品可用性",
+  "description": "What a product was, on one day: its stage, where it is offered, to whom, and at what price. A later day gets a new row; the earlier row is not overwritten.",
+  "x-description-zh-CN": "产品在某一天的状态：阶段、在哪里提供、给谁用、什么价格。之后的日子另写一行，不覆盖之前的行。",
+  "type": "object",
+  "properties": {
+    "availability_id": {
+      "type": "string",
+      "description": "Identifier of the row.",
+      "x-description-zh-CN": "这一行的标识。",
+      "x-grade": "record",
+      "x-ontology-property": "ProductAvailability.availability_id",
+      "x-since": "2.5.0"
+    },
+    "product_id": {
+      "type": "string",
+      "description": "The product the row is about.",
+      "x-description-zh-CN": "这一行说的产品。",
+      "x-grade": "record",
+      "x-ontology-property": "ProductAvailability.product_id",
+      "x-since": "2.5.0"
+    },
+    "as_of": {
+      "type": "string",
+      "format": "date",
+      "description": "The day the row describes.",
+      "x-description-zh-CN": "这一行描述的日期。",
+      "x-grade": "record",
+      "x-ontology-property": "ProductAvailability.as_of",
+      "x-since": "2.5.0"
+    },
+    "stage": {
+      "type": "string",
+      "enum": [
+        "announced",
+        "preview",
+        "available",
+        "retired"
+      ],
+      "description": "How far the product is open.",
+      "x-description-zh-CN": "产品开放到什么程度。",
+      "x-grade": "machine",
+      "x-ontology-property": "ProductAvailability.stage",
+      "x-since": "2.5.0"
+    },
+    "channel": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Where it is offered: an app, an API, a store, a plan.",
+      "x-description-zh-CN": "在哪里提供：应用、API、商店、套餐。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "ProductAvailability.channel",
+      "x-since": "2.5.0"
+    },
+    "region": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Where in the world; empty means the source does not say.",
+      "x-description-zh-CN": "在哪些地区；为空表示来源没写。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "ProductAvailability.region",
+      "x-since": "2.5.0"
+    },
+    "audience": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Who may use it; empty means the source does not say.",
+      "x-description-zh-CN": "谁能用；为空表示来源没写。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "ProductAvailability.audience",
+      "x-since": "2.5.0"
+    },
+    "price": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The price as the source writes it, with its unit; empty means the source gives none.",
+      "x-description-zh-CN": "来源里写的价格及单位；为空表示来源没给。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "ProductAvailability.price",
+      "x-since": "2.5.0"
+    },
+    "source_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Where the row was read.",
+      "x-description-zh-CN": "这一行读自哪里。",
+      "x-grade": "record",
+      "x-ontology-property": "ProductAvailability.source_url",
+      "x-since": "2.5.0"
+    }
+  },
+  "required": [
+    "availability_id",
+    "product_id",
+    "as_of",
+    "stage",
+    "channel",
+    "region",
+    "audience",
+    "price",
+    "source_url"
+  ],
+  "additionalProperties": false,
+  "x-identifier": "availability_id",
+  "x-since": "2.5.0"
+}

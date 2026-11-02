@@ -1,0 +1,525 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SurviAGI agent API",
+    "version": "1.0.0",
+    "description": "Read-only access to published SurviAGI records and key-gated submissions. Every record is machine-proposed unless its review state says otherwise; cite the source URLs, not our summaries. Entity field names, types and grades are in the JSON Schemas listed under `x-entities`.",
+    "x-ontology-version": "2.5.0"
+  },
+  "servers": [
+    {
+      "url": "https://surviagi.com"
+    }
+  ],
+  "x-entities": [
+    {
+      "name": "Concept",
+      "schema": "/contract/v1/schemas/Concept.schema.json"
+    },
+    {
+      "name": "Organization",
+      "schema": "/contract/v1/schemas/Organization.schema.json"
+    },
+    {
+      "name": "Person",
+      "schema": "/contract/v1/schemas/Person.schema.json"
+    },
+    {
+      "name": "SourceAccount",
+      "schema": "/contract/v1/schemas/SourceAccount.schema.json"
+    },
+    {
+      "name": "Event",
+      "schema": "/contract/v1/schemas/Event.schema.json"
+    },
+    {
+      "name": "Model",
+      "schema": "/contract/v1/schemas/Model.schema.json"
+    },
+    {
+      "name": "Provider",
+      "schema": "/contract/v1/schemas/Provider.schema.json"
+    },
+    {
+      "name": "Product",
+      "schema": "/contract/v1/schemas/Product.schema.json"
+    },
+    {
+      "name": "ProductAvailability",
+      "schema": "/contract/v1/schemas/ProductAvailability.schema.json"
+    },
+    {
+      "name": "Observation",
+      "schema": "/contract/v1/schemas/Observation.schema.json"
+    },
+    {
+      "name": "ObservationSource",
+      "schema": "/contract/v1/schemas/ObservationSource.schema.json"
+    },
+    {
+      "name": "ObservationFact",
+      "schema": "/contract/v1/schemas/ObservationFact.schema.json"
+    },
+    {
+      "name": "Topic",
+      "schema": "/contract/v1/schemas/Topic.schema.json"
+    },
+    {
+      "name": "TopicOption",
+      "schema": "/contract/v1/schemas/TopicOption.schema.json"
+    }
+  ],
+  "paths": {
+    "/api/agent/search": {
+      "get": {
+        "operationId": "search",
+        "summary": "Search published records.",
+        "description": "Ranks updates, topics, evidence readings and public articles against the query. A search that finds nothing starts no research.",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "description": "What to look for, in English or Chinese. `q` is accepted as an alias."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20,
+              "default": 8
+            }
+          },
+          {
+            "name": "types",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "update",
+                  "question",
+                  "evidence",
+                  "article"
+                ]
+              }
+            },
+            "style": "form",
+            "explode": false,
+            "description": "Comma-separated record types. Default all."
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "approved",
+                "preview"
+              ]
+            },
+            "description": "For articles only."
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "en",
+                "zh-CN"
+              ],
+              "default": "en"
+            },
+            "description": "Language of page links and labels."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Matching records.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A parameter is missing or malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "At most 60 reads a minute from one address.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Article search is unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/record": {
+      "get": {
+        "operationId": "getRecord",
+        "summary": "Read one record in full.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 260
+            },
+            "description": "An id returned by search."
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "en",
+                "zh-CN"
+              ],
+              "default": "en"
+            },
+            "description": "Language of page links and labels."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A parameter is missing or malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No record with this id in the loaded release.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "At most 60 reads a minute from one address.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Versions": {
+        "type": "object",
+        "description": "The four versions kept apart. A client that pins one of them can detect a change in any of them.",
+        "properties": {
+          "contract": {
+            "type": "string",
+            "description": "This contract: field names, types and grades."
+          },
+          "ontology": {
+            "type": "string",
+            "description": "The ontology schema the records conform to."
+          },
+          "method": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "How progress and readings were computed."
+          },
+          "data": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The published data release the answer was read from."
+          }
+        },
+        "required": [
+          "contract",
+          "ontology",
+          "method",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "enum": [
+              "invalid",
+              "rate",
+              "not_found",
+              "unavailable",
+              "unauthorized",
+              "forbidden",
+              "quota"
+            ]
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error",
+          "message"
+        ]
+      },
+      "SearchResult": {
+        "type": "object",
+        "description": "One hit. Article hits carry extra revision fields (status, version, evidence cutoff).",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "update",
+              "question",
+              "evidence",
+              "article"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "snippet": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string",
+            "description": "What kind of text the snippet is; see `content_kinds`.",
+            "enum": [
+              "machine_summary",
+              "post_quote",
+              "machine_reading",
+              "editorial_article"
+            ]
+          },
+          "review": {
+            "type": "string",
+            "description": "Review state of the record. `machine_proposed_unreviewed` until a person confirms."
+          },
+          "date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The record's own date."
+          },
+          "organization": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The organization the record is about."
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "markdown_url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            },
+            "description": "Addresses of the original sources."
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "title",
+          "snippet",
+          "content",
+          "date",
+          "organization",
+          "url",
+          "markdown_url",
+          "sources"
+        ]
+      },
+      "SearchResponse": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchResult"
+            }
+          },
+          "release": {
+            "type": "object",
+            "description": "The loaded data release.",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "generated_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "When the snapshot was built."
+              },
+              "method": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Method version."
+              }
+            }
+          },
+          "versions": {
+            "$ref": "#/components/schemas/Versions"
+          },
+          "content_kinds": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "editorial_articles": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Article store availability and hit count; null when articles were not requested.",
+            "properties": {
+              "available": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "count": {
+                "type": "integer"
+              }
+            }
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "query",
+          "total",
+          "results",
+          "release",
+          "versions",
+          "content_kinds",
+          "editorial_articles",
+          "note"
+        ]
+      },
+      "RecordResponse": {
+        "type": "object",
+        "description": "A full record: its text, sources and the release it came from. Shape depends on the record type.",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "versions": {
+            "$ref": "#/components/schemas/Versions"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "versions"
+        ]
+      }
+    }
+  }
+}

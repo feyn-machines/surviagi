@@ -255,8 +255,9 @@ class ActivationTest(KgBase):
 
 class CliTest(KgBase):
     def run_cli(self, *argv):
+        """The synthetic payloads here are not contract rows, so the contract gate is stubbed."""
         out, err = io.StringIO(), io.StringIO()
-        with mock.patch.object(cli, "connect", lambda: connect(self.database)), \
+        with mock.patch.object(cli, "connect", lambda: connect(self.database)), mock.patch.object(kg, "check_contract"), \
                 redirect_stdout(out), redirect_stderr(err):
             code = cli.main(list(argv))
         return code, out.getvalue(), err.getvalue()
@@ -284,6 +285,16 @@ class CliTest(KgBase):
         code, out, _ = self.run_cli("status")
         self.assertEqual(code, 0)
         self.assertIn("* 2026", out)
+
+    def test_release_refuses_a_snapshot_that_breaks_the_public_contract(self):
+        refused = kg.KgError("snapshot does not satisfy the public data contract")
+        with mock.patch.object(kg, "check_contract", side_effect=refused), mock.patch.object(kg, "import_release") as imported:
+            out, err = io.StringIO(), io.StringIO()
+            with mock.patch.object(cli, "connect", lambda: connect(self.database)), redirect_stdout(out), redirect_stderr(err):
+                code = cli.main(["release", "--snapshot", str(self.snapshot_dir())])
+        self.assertEqual(code, 1)
+        self.assertIn("public data contract", err.getvalue())
+        imported.assert_not_called()
 
     def test_kg_error_is_one_line_exit_1(self):
         code, out, err = self.run_cli("release", "--snapshot", "/nonexistent")

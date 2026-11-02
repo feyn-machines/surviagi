@@ -1,3 +1,4 @@
+import contract from "../../public/contract/v1/index.json";
 import type { Language } from "./i18n";
 import { absoluteUrl } from "./seo";
 import { workSlug } from "./routes";
@@ -44,6 +45,20 @@ const REVIEW = "machine_proposed_unreviewed";
 /** The original text of X posts is not in the published data: only their addresses are, and short quotes on topics. */
 const ORIGINAL_GAP =
   "The full text of the source posts is not published here. Open the source URLs for the original; X Articles, linked pages and PDFs are not collected.";
+
+/**
+ * The four versions every response carries, kept apart (Issue #27): this contract, the ontology schema the
+ * records conform to, the method that computed the readings, and the data release the answer came from.
+ */
+export function versionsInfo() {
+  const m = manifest();
+  return {
+    contract: contract.contract_version,
+    ontology: m?.schema_version ?? contract.ontology_version,
+    method: m?.method_version ?? null,
+    data: dataRelease().releaseId,
+  };
+}
 
 export function releaseInfo() {
   const m = manifest();
@@ -379,19 +394,20 @@ function evidenceRecord(r: EvidenceRow, e: ChainEvent, language: Language) {
 /** One record of the loaded release by the id `search` gave, or null when the release does not hold it. */
 export function record(id: string, language: Language = "en") {
   const release = releaseInfo();
+  const versions = versionsInfo();
   if (ID_UPDATE.test(id)) {
     const e = chainEvents().find((row) => row.event_id === id);
-    return e ? { ...updateRecord(e, language), release } : null;
+    return e ? { ...updateRecord(e, language), release, versions } : null;
   }
   if (ID_QUESTION.test(id)) {
     const t = topics().find((row) => row.topic_id === id);
-    return t ? { ...questionRecord(t, language), release } : null;
+    return t ? { ...questionRecord(t, language), release, versions } : null;
   }
   const parts = ID_EVIDENCE.exec(id);
   if (parts) {
     const e = chainEvents().find((row) => row.event_id === parts[1]);
     const r = evidence().find((row) => row.event_id === parts[1] && workSlug(row.activity_id) === parts[2]);
-    return e && r ? { ...evidenceRecord(r, e, language), release } : null;
+    return e && r ? { ...evidenceRecord(r, e, language), release, versions } : null;
   }
   return null;
 }

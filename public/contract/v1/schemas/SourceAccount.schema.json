@@ -1,0 +1,250 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://surviagi.com/contract/v1/schemas/SourceAccount.schema.json",
+  "title": "Source account",
+  "x-title-zh-CN": "来源账号",
+  "description": "A social account we collect from. It belongs to one person or one organization; a verified badge proves nothing about what it claims.",
+  "x-description-zh-CN": "一个被采集的社交账号，属于一个人或一个机构。认证标记不证明它说的内容。",
+  "type": "object",
+  "properties": {
+    "account_key": {
+      "type": "string",
+      "description": "<platform>:<handle in lower case>.",
+      "x-description-zh-CN": "<平台>:<小写账号名>。",
+      "x-grade": "record",
+      "x-ontology-property": "SourceAccount.account_key"
+    },
+    "platform": {
+      "type": "string",
+      "description": "The platform the account is on.",
+      "x-description-zh-CN": "账号所在平台。",
+      "x-grade": "record",
+      "x-ontology-property": "SourceAccount.platform"
+    },
+    "handle": {
+      "type": "string",
+      "description": "The handle as written.",
+      "x-description-zh-CN": "账号名原样。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "SourceAccount.handle"
+    },
+    "owner_kind": {
+      "type": "string",
+      "enum": [
+        "person",
+        "organization",
+        "unknown"
+      ],
+      "description": "Whether a person or an organization owns it.",
+      "x-description-zh-CN": "归属于个人还是机构。",
+      "x-grade": "machine",
+      "x-ontology-property": "SourceAccount.owner_kind"
+    },
+    "panel_role": {
+      "type": "string",
+      "enum": [
+        "evaluator",
+        "practitioner",
+        "adopter",
+        "researcher",
+        "commentator",
+        "executive",
+        "lab_insider",
+        "relay",
+        "official",
+        "market_researcher",
+        "unclassified"
+      ],
+      "description": "The role the account plays as a source.",
+      "x-description-zh-CN": "账号作为来源的角色。",
+      "x-grade": "machine",
+      "x-ontology-property": "SourceAccount.panel_role"
+    },
+    "identity_grade": {
+      "type": "string",
+      "enum": [
+        "first_party_link",
+        "official_bio",
+        "third_party_list",
+        "found_by_search"
+      ],
+      "description": "How strongly the identity is established.",
+      "x-description-zh-CN": "身份证据的强度。",
+      "x-grade": "machine",
+      "x-ontology-property": "SourceAccount.identity_grade"
+    },
+    "identity_url": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The identity evidence.",
+      "x-description-zh-CN": "身份证据的出处。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "SourceAccount.identity_url",
+      "x-wire-range": "text",
+      "x-ontology-range": "uri"
+    },
+    "avatar_url": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uri",
+      "description": "The profile image the platform returned for the account; null until a lookup has seen one. It shows who is speaking and proves nothing about identity.",
+      "x-description-zh-CN": "平台返回的账号头像地址；账号查询见到之前为空。只用于显示是谁在说话，不证明身份。",
+      "x-grade": "excerpt",
+      "x-ontology-property": "SourceAccount.avatar_url"
+    },
+    "language": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "en",
+        "zh",
+        "both",
+        null
+      ],
+      "description": "Posting language.",
+      "x-description-zh-CN": "发帖语言。",
+      "x-grade": "machine",
+      "x-ontology-property": "SourceAccount.language"
+    },
+    "focus": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "What the account mostly writes about.",
+      "x-description-zh-CN": "账号主要写什么。",
+      "x-grade": "machine",
+      "x-ontology-property": "SourceAccount.focus"
+    },
+    "person_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The person behind the account, when it is a person on record.",
+      "x-description-zh-CN": "账号背后的人物（在名单里时）。",
+      "x-grade": "record",
+      "x-shape": "view"
+    },
+    "org_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The organization behind the account, when it is one on record.",
+      "x-description-zh-CN": "账号背后的组织（在名单里时）。",
+      "x-grade": "record",
+      "x-shape": "view"
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name.",
+      "x-description-zh-CN": "显示名称。",
+      "x-grade": "excerpt",
+      "x-shape": "view"
+    },
+    "name_zh_cn": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Chinese display name.",
+      "x-description-zh-CN": "中文显示名称。",
+      "x-grade": "machine",
+      "x-shape": "view"
+    },
+    "followers": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "description": "Follower count at `followers_at`.",
+      "x-description-zh-CN": "`followers_at` 时的关注者数。",
+      "x-grade": "excerpt",
+      "x-shape": "view"
+    },
+    "followers_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time",
+      "description": "When the follower count was read.",
+      "x-description-zh-CN": "读取关注者数的时间。",
+      "x-grade": "record",
+      "x-shape": "view"
+    },
+    "affiliations": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Affiliations with organizations: relation, role title, start and end when known.",
+      "x-description-zh-CN": "与组织的任职或隶属关系。",
+      "x-grade": "excerpt",
+      "x-shape": "view"
+    },
+    "posts": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "description": "Posts collected from the account.",
+      "x-description-zh-CN": "已收集的帖子数。",
+      "x-grade": "record",
+      "x-shape": "view"
+    },
+    "latest_post_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time",
+      "description": "Publication time of the newest collected post.",
+      "x-description-zh-CN": "最新一条已收集帖子的发布时间。",
+      "x-grade": "record",
+      "x-shape": "view"
+    },
+    "latest": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Recent posts: id, url, publication time, an excerpt of the text and engagement counts.",
+      "x-description-zh-CN": "最近的帖子：编号、地址、发布时间、正文摘录和互动数。",
+      "x-grade": "excerpt",
+      "x-shape": "view"
+    }
+  },
+  "required": [
+    "account_key",
+    "platform",
+    "handle",
+    "owner_kind",
+    "panel_role",
+    "identity_grade",
+    "identity_url",
+    "avatar_url",
+    "language",
+    "focus",
+    "person_id",
+    "org_id",
+    "name",
+    "name_zh_cn",
+    "followers",
+    "followers_at",
+    "affiliations",
+    "posts",
+    "latest_post_at",
+    "latest"
+  ],
+  "additionalProperties": false,
+  "x-identifier": "account_key",
+  "x-snapshot-file": "sources.json"
+}
