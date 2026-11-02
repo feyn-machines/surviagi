@@ -54,6 +54,12 @@ class Prompt(unittest.TestCase):
             self.assertIn(f"- {term}:", extended)
         self.assertNotEqual(deepseek.prompt_sha256(), deepseek.observation_prompt_sha256())
 
+    def test_the_prompt_asks_for_every_basis_and_for_failures(self):
+        extended = deepseek.system_prompt(observations=True)
+        for basis in ("vendor_claim", "production_use", "own_use", "measurement", "statistic"):
+            self.assertIn(f"({basis}", extended)
+        self.assertIn("acting without being asked", extended)
+
 
 class Assembly(unittest.TestCase):
     def test_a_checked_observation_keeps_its_quote_facts_and_conditions(self):

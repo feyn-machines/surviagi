@@ -12,6 +12,10 @@ Nothing is written to the database. Output goes to an ignored directory under
 data/observations/: it quotes third-party posts and stays local.
 
   pnpm data:observations:sample -- --size 500 --baseline
+  pnpm data:observations:sample -- --sample-from data/observations/sample-20261103
+
+--sample-from reads the very posts of an earlier sample again, so a prompt
+change is compared on the same posts.
 """
 from __future__ import annotations
 
@@ -86,6 +90,7 @@ def main():
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--baseline", action="store_true", help="also read the sample with today's prompt")
     parser.add_argument("--plan-only", action="store_true", help="count the population and stop")
+    parser.add_argument("--sample-from", type=Path, help="an earlier sample directory whose posts to read again")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
 
@@ -116,8 +121,14 @@ def main():
         print(json.dumps(counts, ensure_ascii=False, indent=2, default=json_default))
         if args.plan_only:
             return
-        sample = sorted(random.Random(args.seed).sample(population, min(args.size, len(population))),
-                        key=lambda c: (c["published_at"], c["source_id"]))
+        if args.sample_from:
+            wanted = {item["source_id"] for item in json.loads((args.sample_from / "sample.json").read_text())}
+            sample = [c for c in candidates if c["source_id"] in wanted]
+            if len(sample) != len(wanted):
+                raise SystemExit(f"{len(wanted) - len(sample)} posts of {args.sample_from} are no longer candidates")
+        else:
+            sample = random.Random(args.seed).sample(population, min(args.size, len(population)))
+        sample.sort(key=lambda c: (c["published_at"], c["source_id"]))
         known = load_known_events(conn, sample)
 
     out.mkdir(parents=True)
@@ -131,7 +142,9 @@ def main():
         "prompt_sha256": deepseek.observation_prompt_sha256(),
         "prices": {"read_on": deepseek.PRICES_READ_ON, "usd_per_million_at_peak": deepseek.PRICES,
                    "off_peak": "half of peak", "peak_hours_utc": deepseek.PEAK_HOURS_UTC},
-        "seed": args.seed, "started_at": started, "population": counts,
+        "seed": None if args.sample_from else args.seed,
+        "sample_from": str(args.sample_from) if args.sample_from else None,
+        "started_at": started, "population": counts,
         "sample": {"posts": len(sample), "by_group": dict(Counter(group(c) for c in sample)),
                    "known_updates_in_prompt": len(known), "batch_size": args.batch_size},
         "with_observations": {**priced(usage), "failed_batches": failures},
