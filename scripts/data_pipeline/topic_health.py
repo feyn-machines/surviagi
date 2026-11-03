@@ -14,7 +14,9 @@ and says, in four kinds, what needs a look:
 - `evidence`: topics that searching does not move - one-sided after three searches
   and two weeks, or with no new claim for 45 days.
 - `review`: topics only a person can settle - one that fails its own standard, or two
-  whose objects look like one question ("manager" / "middle manager").
+  whose objects look like one question (the same object written two ways, or one with
+  only a seniority qualifier added: "software engineer" / "senior software engineer").
+  A narrower kind of job ("middle manager" among "manager") is its own question.
 
 Each kind is one GitHub Issue at most, labelled `topic-health`, found again by a
 marker in its body: opened when the kind is found, its body rewritten while it lasts
@@ -60,17 +62,32 @@ def _hours(now, then):
     return None if then is None else round((now - then).total_seconds() / 3600, 1)
 
 
-def _words(text):
-    return " " + re.sub(r"[^a-z0-9]+", " ", str(text).lower()).strip() + " "
+# Words that qualify the same job rather than name another one: the mining prompt itself says
+# "junior accountant" answers a question about accountants. A kind of job ("graphic designer" among
+# designers, "wealth manager" among managers) is a different job and a different question.
+QUALIFIERS = frozenset({"junior", "senior", "entry", "level", "lead", "principal", "staff", "freelance",
+                        "freelancer", "part", "full", "time", "remote", "professional"})
+
+
+def _tokens(text):
+    """Lower-case words with a plural s and hyphens removed: "UX designers" == "ux-designer"."""
+    return [w[:-1] if len(w) > 3 and w.endswith("s") and not w.endswith("ss") else w
+            for w in re.sub(r"[^a-z0-9]+", " ", str(text).lower()).split()]
 
 
 def duplicate_pairs(topics):
-    """Topics of one kind whose object holds the other's as whole words: one question asked twice, perhaps."""
+    """Topics of one kind that ask one question twice: the same object in other words ("software
+    engineers" / "software-engineer"), or the same object with only a qualifier added ("senior software
+    engineer"). A narrower job ("middle manager" among "manager") is a question of its own, not a repeat."""
     pairs = []
     for a in topics:
+        ta = _tokens(a["object"])
         for b in topics:
-            if a is not b and a["question_type"] == b["question_type"] and _words(a["object"]).strip() \
-                    and _words(a["object"]) in _words(b["object"]):
+            if a is b or a["question_type"] != b["question_type"] or not ta:
+                continue
+            tb = _tokens(b["object"])
+            extra = set(tb) - set(ta)
+            if set(ta) <= set(tb) and (extra <= QUALIFIERS and (extra or a["id"] < b["id"])):
                 pairs.append((a, b))
     return pairs
 
@@ -194,7 +211,7 @@ def findings(r, now, reviewed=None):
     items = [{**_row(t, "未通过话题标准（" + "、".join(k for k in topic_mining.CHECKS if not t["checks"].get(k)) + "）"),
               "key": f"fails:{t['id']}"} for t in r["_topics"] if t["status"] == "fails"]
     for a, b in duplicate_pairs(r["_topics"]):
-        items.append({**_row(b, f"对象「{b['object']}」包含「{a['object']}」（{a['id']}），可能是同一问题"),
+        items.append({**_row(b, f"对象「{b['object']}」与「{a['object']}」（{a['id']}）只差写法或资历等限定词，可能是同一问题"),
                       "key": f"duplicate:{a['id']},{b['id']}"})
     items = [i for i in items if i["key"] not in reviewed]
     if items:
