@@ -30,6 +30,9 @@ a.question:hover{color:var(--ah-color-signal)}
 .rows small{display:block;margin-top:3px;font-size:12px;color:var(--ah-color-subtle)}
 .rows a:hover{color:var(--ah-color-signal)}
 .outside{margin-left:6px;padding:1px 5px;border:1px solid var(--ah-color-line);font-family:var(--ah-font-mono);font-size:10.5px;color:var(--ah-color-subtle)}
+.single{margin:0 0 24px;padding:12px 16px;border-left:3px solid var(--ah-color-line);font-size:15px;line-height:1.5;color:var(--ah-color-subtle)}
+.single a{color:inherit;text-decoration:underline}
+.observed{color:var(--ah-color-signal)}
 .none{margin:10px 0 4px;font-size:13.5px;color:var(--ah-color-subtle)}
 .quarters{width:100%;border-collapse:collapse;margin:0 0 56px;font-size:14px}
 .quarters th,.quarters td{padding:9px 10px;border-bottom:1px solid var(--ah-color-line);text-align:left}

@@ -1,3 +1,4 @@
+import { topicStands } from "./topic-standing";
 import { updateTimestamp } from "./update-date";
 import {
   activities,
@@ -33,8 +34,8 @@ export const indexable = {
   /** It states a figure, says what was done and how it came out, or more than one source carries it. */
   update: (e: Pick<EventRow, "facts" | "task" | "result" | "source_count">) =>
     (e.facts?.length ?? 0) > 0 || Boolean(e.task && e.result && e.result !== "not_stated") || e.source_count >= 2,
-  /** At least two accounts argue it, so it is a question people disagree on rather than one post. */
-  topic: (t: Pick<Topic, "accounts">) => t.accounts >= 2,
+  /** At least two accounts argue it, or the occupation or market it asks about has an observation: not one post alone. */
+  topic: (t: Pick<Topic, "accounts" | "about">) => topicStands(t),
   market: (marketId: string) => (updateCountByMarket().get(marketId) ?? 0) > 0,
   occupation: (touchedTasks: number) => touchedTasks > 0,
   group: (g: Pick<OccupationGroup, "touched_tasks">) => g.touched_tasks > 0,

@@ -12,7 +12,9 @@ import { siteNavCopy } from "@/lib/site-nav";
 import { indexable } from "@/lib/site-pages";
 import { linkedEvents, manifest, topicBySlug } from "@/lib/snapshot";
 import { localizedPath } from "@/lib/i18n";
-import { topicSubject } from "@/lib/topic-evidence";
+import { fill } from "@/lib/observation-view";
+import { topicEvidenceCopy, topicSubject } from "@/lib/topic-evidence";
+import { topicStands } from "@/lib/topic-standing";
 import { TopicObservations } from "@/components/observation-ledger";
 import type { Route } from "next";
 import s from "../topics.module.css";
@@ -83,6 +85,13 @@ export default async function TopicPage({ params }: Props) {
         <div className={d.fact}><dt>{c.posts}</dt><dd>{topic.posts}</dd></div>
         <div className={d.fact}><dt>{c.evidence}</dt><dd className={topic.evidence.length ? d.sig : ""}>{topic.evidence.length}</dd></div>
       </dl>
+
+      {topicStands(topic) ? null : (
+        <p className={s.single}>
+          {subject ? fill(topicEvidenceCopy[language].singleNote, { name: subject.name }) : topicEvidenceCopy[language].singleNoteLoose}
+          {subject ? <> <Link href={`${localizedPath(language, subject.path)}#discussion` as Route}>{subject.name} →</Link></> : null}
+        </p>
+      )}
 
       {editorial ? (
         <section className={s.editorial} aria-labelledby="topic-analysis-heading">

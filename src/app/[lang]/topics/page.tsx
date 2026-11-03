@@ -7,8 +7,10 @@ import f from "@/components/detail.module.css";
 import { bilingual, localizedPath, type Language } from "@/lib/i18n";
 import { getLocale } from "@/lib/locale";
 import { topicHref } from "@/lib/routes";
+import { fill } from "@/lib/observation-view";
 import { pageMetadata } from "@/lib/seo";
 import { topics, type Topic } from "@/lib/snapshot";
+import { topicObservationCount, topicStands } from "@/lib/topic-standing";
 import s from "./topics.module.css";
 
 /** Rendered per request from the loaded data release, never at build time. */
@@ -56,6 +58,10 @@ const copy = bilingual({
     outside: "Not in the catalog",
     nAccounts: "accounts",
     nEvidence: "evidence",
+    nObservations: "{n} {n|observation|observations} about it",
+    onlyOne: "{n} more {n|question has|questions have} one account and no observation yet.",
+    showThem: "Show them",
+    hideThem: "Hide them",
     bothTag: "both ways",
     shown: "{n} questions",
     clear: "Clear",
@@ -93,6 +99,10 @@ const copy = bilingual({
     outside: "目录外",
     nAccounts: "个账号",
     nEvidence: "条证据",
+    nObservations: "{n} 条相关观察",
+    onlyOne: "另有 {n} 个问题目前只有一个账号提过、还没有观察。",
+    showThem: "显示",
+    hideThem: "收起",
     bothTag: "两边都有人说",
     shown: "{n} 个问题",
     clear: "清除",
@@ -104,7 +114,7 @@ const copy = bilingual({
   },
 });
 
-type Query = { type?: string; field?: string; sides?: string; sort?: string; page?: string };
+type Query = { type?: string; field?: string; sides?: string; sort?: string; page?: string; single?: string };
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -124,7 +134,7 @@ const ORDER: Record<(typeof SORTS)[number], (a: Topic, b: Topic) => number> = {
 /** The address of the list with these filters; a default is left out so each view has one address. */
 function listHref(language: Language, query: Query): Route {
   const params = new URLSearchParams();
-  for (const key of ["type", "field", "sides", "sort", "page"] as const) {
+  for (const key of ["type", "field", "sides", "sort", "page", "single"] as const) {
     const value = query[key];
     if (value && !(key === "sort" && value === "argued") && !(key === "page" && value === "1")) params.set(key, value);
   }
@@ -160,7 +170,12 @@ export default async function Topics({ searchParams }: Props) {
   const c = copy[language];
   const raw = await searchParams;
   const one = (key: string) => (typeof raw[key] === "string" ? (raw[key] as string) : undefined);
-  const all = topics();
+  // A question one account raised, with nothing observed about its subject, is a mention and not a page of its own
+  // (design 2026-11-02 §8.3); it is listed only on request, and the subject's page carries it as under discussion.
+  const everything = topics();
+  const showSingle = one("single") === "1";
+  const all = showSingle ? everything : everything.filter(topicStands);
+  const mentions = everything.length - everything.filter(topicStands).length;
 
   const type = TYPES.find((t) => t === one("type"));
   const sort = SORTS.find((t) => t === one("sort")) ?? "argued";
@@ -168,7 +183,7 @@ export default async function Topics({ searchParams }: Props) {
   const fieldNames = new Map<string, string>();
   for (const topic of all) fieldNames.set(fieldKey(topic), topic.group ? topic.group[language] ?? topic.group.en : c.outside);
   const field = one("field") && fieldNames.has(one("field") as string) ? one("field") : undefined;
-  const query: Query = { type, field, sides: bothOnly ? "both" : undefined, sort };
+  const query: Query = { type, field, sides: bothOnly ? "both" : undefined, sort, single: showSingle ? "1" : undefined };
 
   const ofType = all.filter((t) => !type || t.question_type === type);
   const fields = [...fieldNames].map(([key, name]) => ({ key, name, count: ofType.filter((t) => fieldKey(t) === key).length }))
@@ -187,7 +202,7 @@ export default async function Topics({ searchParams }: Props) {
     evidence: new Set(all.flatMap((t) => t.evidence.map((row) => row.event_id))).size,
   };
 
-  if (all.length === 0) {
+  if (everything.length === 0) {
     return (
       <div className={d.page}>
         <PageHeader eyebrow={c.eyebrow} title={c.title} />
@@ -268,6 +283,12 @@ export default async function Topics({ searchParams }: Props) {
             ))}
           </nav>
         </div>
+        {mentions > 0 ? (
+          <p className={s.shown}>
+            {fill(c.onlyOne, { n: mentions })}{" "}
+            <Link href={listHref(language, { ...query, single: showSingle ? undefined : "1" })}>{showSingle ? c.hideThem : c.showThem}</Link>
+          </p>
+        ) : null}
         <p className={s.shown}>
           {c.shown.replace("{n}", String(matched.length))}
           {field ? ` · ${fieldNames.get(field)}` : ""}
@@ -285,6 +306,7 @@ export default async function Topics({ searchParams }: Props) {
                     {topic.about ? <span>{topic.about[language] ?? topic.about.en}</span> : <span>{c.outside}</span>}
                     <span><b>{topic.accounts}</b> {c.nAccounts}</span>
                     {topic.evidence.length > 0 ? <span><b>{topic.evidence.length}</b> {c.nEvidence}</span> : null}
+                    {topicObservationCount(topic) > 0 ? <span className={s.observed}>{fill(c.nObservations, { n: topicObservationCount(topic) })}</span> : null}
                     {topic.sides === "open" ? <span className={s.both}>{c.bothTag}</span> : null}
                     {topic.latest_claim_at ? <span>{topic.latest_claim_at.slice(0, 10)}</span> : null}
                   </div>

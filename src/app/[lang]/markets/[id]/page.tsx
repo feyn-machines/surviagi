@@ -180,7 +180,7 @@ export default async function MarketPage({ params }: Props) {
       </Screen>
 
       <ObservationLedger rows={observationsOfMarket(market.id)} name={name} language={language} />
-      <RelatedTopics list={topicsAbout("market", market.id)} language={language} />
+      <RelatedTopics list={topicsAbout("market", market.id)} language={language} subjectName={name} />
 
       <Block title={c.activitiesTitle} lead={c.activitiesLead}>
         {activities.length === 0 ? (

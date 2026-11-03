@@ -81,7 +81,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
     ...ledgerMarkdown(ledger(observationsOfOccupation(id), name, language), language),
     // Grouped by its tasks only when there is something to group; the ledger already says when there is not.
     ...(observationsOfOccupation(id).length > 0 ? taskLedgerMarkdown(taskLedger(observationsOfOccupation(id), id, total), language) : []),
-    ...topicsMarkdown(topicsAbout("occupation", id), language),
+    ...topicsMarkdown(topicsAbout("occupation", id), language, name),
     `## ${c.activitiesTitle}`,
     "",
   ];
