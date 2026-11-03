@@ -5,6 +5,9 @@ import { appEnabled } from "@/lib/app-config";
 import { LANGUAGES, bilingual } from "@/lib/i18n";
 import { getLocale } from "@/lib/locale";
 import { SITE_NAV, siteNavCopy } from "@/lib/site-nav";
+
+/** Pages that stay online and in the sitemap but are not main destinations (evidence-ledger redesign, 2026-11-02). */
+const HIDDEN_FROM_HEADER = new Set<string>(["updates", "voices"]);
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { lang } from "next/root-params";
@@ -97,7 +100,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <header className="header wrap">
           <Link href={href(language, "/")} className="brand" aria-label={c.brandLabel}>Survi<span className="brand-will">AGI</span></Link>
           <div className="header-end">
-            <nav aria-label={nav.navLabel}>{SITE_NAV.map((item) => <Link key={item.href} href={href(language, item.href)}>{nav[item.key]}</Link>)}</nav>
+            <nav aria-label={nav.navLabel}>{SITE_NAV.filter((item) => !HIDDEN_FROM_HEADER.has(item.key)).map((item) => <Link key={item.href} href={href(language, item.href)}>{nav[item.key]}</Link>)}</nav>
             <nav className="header-social" aria-label={c.socialLinks}>
               {SOCIAL_LINKS.map((link) => (
                 <a key={link.href} href={link.href} rel="noopener">{link.label}</a>
