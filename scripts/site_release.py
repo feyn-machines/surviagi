@@ -157,7 +157,6 @@ DETAIL_PAGES = {
     "dotted occupation": r"/occupations/\d[^<]*\.[^<]+",
     "occupation group": r"/occupations/g/[^<]+",
     "update": r"/updates/[^<]+",
-    "work": r"/work/[^<]+",
     "Chinese dotted occupation": r"/zh-CN/occupations/\d[^<]*\.[^<]+",
 }
 
