@@ -114,6 +114,14 @@ class Assembly(unittest.TestCase):
         [obs], _ = assemble_observations(posts, batches)
         self.assertEqual([s["source_id"] for s in obs["sources"]], ["1", "2"])
 
+    def test_a_subject_written_only_in_chinese_does_not_stop_the_run(self):
+        [obs], refused = assemble_observations([post()], [{"observations": [item(subject="通义千问")]}])
+        self.assertEqual(obs["subject"], "通义千问")
+        self.assertTrue(obs["subject_key"].startswith("subject-"))
+        self.assertEqual(refused, {})
+        [other], _ = assemble_observations([post()], [{"observations": [item(subject="文心一言")]}])
+        self.assertNotEqual(obs["subject_key"], other["subject_key"])
+
     def test_one_number_told_twice_in_two_forms_is_one_fact(self):
         quote = "Reconciliation now takes 2 days instead of 6"
         plain = {"value": "2", "unit": None, "what": "days to reconcile", "baseline": None, "quote": quote}

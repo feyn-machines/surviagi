@@ -160,6 +160,13 @@ def actor_key(name, posts):
     return "unresolved:" + (wanted or "unknown")
 
 
+def _subject_key(subject):
+    """A slug of the subject; one written without Latin letters (Chinese) keys by its text."""
+    if not subject:
+        return "unspecified"
+    return _slug(subject) or "subject-" + hashlib.sha256(subject.encode()).hexdigest()[:8]
+
+
 def _facts(raw, texts):
     kept, refused = [], 0
     for item in raw if isinstance(raw, list) else []:
@@ -256,7 +263,7 @@ def check_observation(raw, by_id):
     subject = _text_or_none(raw.get("subject"))
     observation = {
         "actor": actor, "actor_key": actor_key(actor, posts), "actor_role": raw["actor_role"],
-        "subject": subject, "subject_key": _slug(subject) if subject else "unspecified",
+        "subject": subject, "subject_key": _subject_key(subject),
         "work": work, "work_key": "unmapped", "task": task,
         "evidence_type": raw["evidence_type"], "outcome": raw["outcome"], "direction": raw["direction"],
         "facts": facts, "refused_facts": refused_facts,
