@@ -422,11 +422,14 @@ test("announcement chronology reaches lists, timelines, market pages and sitemap
       const first = list.match(/<tbody[^>]*>\s*(<tr[\s\S]*?<\/tr>)/)?.[1];
       assert.ok(first?.includes(event.event_id), `${prefix}: the latest announcement is absent from the first row`);
       assert.ok(first.includes(line));
-      const home = await (await fetch(`${base}${prefix || "/"}`)).text();
-      const timeline = home.match(/<section id="updates"[\s\S]*?<\/section>/)?.[0];
-      assert.ok(timeline?.includes(event.event_id), `${prefix}: announcement is absent from the latest timeline day`);
-      assert.ok(timeline.includes(line));
-      assert.ok(home.includes(day));
+      // A release that carries observations shows them on the home page instead of the updates (Issue #32).
+      if (!existsSync(join(dir, "observations.json"))) {
+        const home = await (await fetch(`${base}${prefix || "/"}`)).text();
+        const timeline = home.match(/<section id="updates"[\s\S]*?<\/section>/)?.[0];
+        assert.ok(timeline?.includes(event.event_id), `${prefix}: announcement is absent from the latest timeline day`);
+        assert.ok(timeline.includes(line));
+        assert.ok(home.includes(day));
+      }
       const marketPath = `/markets/${activity.market_id.replace(/^oaw:market:/, "")}`;
       for (const suffix of ["", "/raw.md"]) {
         const market = await (await fetch(`${base}${prefix}${marketPath}${suffix}`)).text();
@@ -1546,6 +1549,18 @@ test("market and occupation pages count their observations by evidence type and 
     const page = await (await fetch(`${base}${marketPath}`)).text();
     for (const id of ["obs-a", "obs-b", "obs-c"]) assert.ok(page.includes(`id="${id}"`), `market page lacks ${id}`);
     assert.ok(page.includes("QUOTE obs-a") && !page.includes("obs-d"));
+    // Issue #32: the home page's new evidence is the newest dated observations, each linked to the page that lists it.
+    for (const [prefix, count] of [["", /5 observations of AI at work/], ["/zh-CN", /5 条 AI 实际做工作的观察/]]) {
+      const home = await (await fetch(`${base}${prefix || "/"}`)).text();
+      const evidence = home.match(/<section id="updates"[\s\S]*?<\/section>/)?.[0] ?? "";
+      assert.match(home.replace(/<[^>]+>/g, " ").replace(/\s+/g, " "), count, `${prefix}: the standing line lacks the observation count`);
+      const order = ["obs-d", "obs-a", "obs-b"].map((id) => evidence.indexOf(`#${id}"`));
+      assert.ok(order.every((at) => at > 0) && order[0] < order[1] && order[1] < order[2], `${prefix}: observations are absent or not newest first (${order})`);
+      assert.ok(!evidence.includes("obs-c") && !evidence.includes("obs-1111"), `${prefix}: an undated observation is listed`);
+      assert.ok(evidence.includes("48 % — share of tickets closed"), `${prefix}: the figure is absent`);
+      assert.ok(evidence.includes(`href="${prefix}/occupations/${occupation.id.replace(/^oaw:occupation:/, "")}#obs-a"`), `${prefix}: obs-a is not linked to the occupation page that lists it`);
+      assert.ok(!evidence.includes("QUOTE"), `${prefix}: a source quote is on the home page`);
+    }
     const zh = await (await fetch(`${base}/zh-CN${marketPath}/raw.md`)).text();
     assert.ok(zh.includes("有 3 条观察涉及") && zh.includes("生产使用 1 条") && zh.includes("- 测量：1"), "Chinese copy");
 
