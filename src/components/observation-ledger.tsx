@@ -21,7 +21,7 @@ import {
 } from "@/lib/observation-view";
 import { EVIDENCE_ORDER, observationDate, type ObservationRow, type ObservationStats, type Topic } from "@/lib/snapshot";
 import { plural } from "@/lib/plural";
-import { directionName, subjectHref, topicEvidence, topicEvidenceCopy, topicLine } from "@/lib/topic-evidence";
+import { directionName, splitTopics, subjectHref, topicEvidence, topicEvidenceCopy, topicLine } from "@/lib/topic-evidence";
 import { topicHref } from "@/lib/routes";
 import l from "./observation-ledger.module.css";
 
@@ -236,20 +236,44 @@ export function TopicObservations({ topic, language }: { topic: Topic; language:
 }
 
 /** The topics asked about an occupation or a market, on its page; nothing when there are none. */
-export function RelatedTopics({ list, language }: { list: Topic[]; language: Language }) {
-  if (list.length === 0) return null;
+export function RelatedTopics({ list, language, subjectName }: { list: Topic[]; language: Language; subjectName: string }) {
+  const { pages, mentions } = splitTopics(list, language);
+  if (pages.length === 0 && mentions.length === 0) return null;
   const c = topicEvidenceCopy[language];
   return (
-    <Block id="topics" title={c.topicsTitle} lead={c.topicsLead}>
-      <ul className={l.topics}>
-        {list.map((t) => (
-          <li key={t.topic_id}>
-            <Link href={topicHref(language, t.slug)}>{t.question[language]}</Link>
-            <small>{topicLine(t, language)}</small>
-          </li>
-        ))}
-      </ul>
-    </Block>
+    <>
+      {pages.length > 0 ? (
+        <Block id="topics" title={c.topicsTitle} lead={c.topicsLead}>
+          <ul className={l.topics}>
+            {pages.map((t) => (
+              <li key={t.topic_id}>
+                <Link href={topicHref(language, t.slug)}>{t.question[language]}</Link>
+                <small>{topicLine(t, language)}</small>
+              </li>
+            ))}
+          </ul>
+        </Block>
+      ) : null}
+      {mentions.length > 0 ? (
+        <Block id="discussion" title={c.talkTitle} lead={fill(c.talkLead, { name: subjectName })}>
+          <ul className={l.topics}>
+            {mentions.map((m) => (
+              <li key={m.topic.topic_id}>
+                <span>
+                  {m.topic.question[language]}
+                  <br />
+                  <span className={l.mention}>{fill(c.talkLine, { handle: m.handle, answer: m.answer })}</span>
+                </span>
+                <small>
+                  {m.date}
+                  {m.url ? <> · <a href={m.url} rel="noopener noreferrer" target="_blank">{c.sourceWord} ↗</a></> : null}
+                </small>
+              </li>
+            ))}
+          </ul>
+        </Block>
+      ) : null}
+    </>
   );
 }
 

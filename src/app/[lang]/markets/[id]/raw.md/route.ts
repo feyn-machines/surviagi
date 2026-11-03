@@ -54,7 +54,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
     c.lead,
     "",
     ...ledgerMarkdown(ledger(observationsOfMarket(market.id), name, language), language),
-    ...topicsMarkdown(topicsAbout("market", market.id), language),
+    ...topicsMarkdown(topicsAbout("market", market.id), language, name),
     `## ${c.activitiesTitle}`,
     "",
   ];

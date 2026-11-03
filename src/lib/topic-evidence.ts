@@ -2,6 +2,7 @@ import { termNameOrRaw } from "@/components/ontology-labels";
 import { bilingual, localizedPath, type Language } from "@/lib/i18n";
 import { colon, link } from "@/lib/markdown-copy";
 import { fill, ledger, ledgerCopy, observationMarkdown } from "@/lib/observation-view";
+import { topicStands } from "@/lib/topic-standing";
 import {
   marketSlug,
   markets,
@@ -35,6 +36,12 @@ export const topicEvidenceCopy = bilingual({
     topicsLead: "Closed questions argued in the posts collected. A topic page lists who argues each answer and declares none.",
     topicLine: "{a} {a|account|accounts} · {n} answers",
     latest: "latest claim {date}",
+    talkTitle: "Under discussion",
+    talkLead: "Questions about {name} that one account has raised so far, with no observation about it yet. Each gets a page of its own once a second account or an observation arrives.",
+    talkLine: "@{handle} says: {answer}",
+    sourceWord: "source",
+    singleNote: "Only one account has raised this so far and no observation covers {name}, so it is listed under discussion on that page and does not ask to be indexed.",
+    singleNoteLoose: "Only one account has raised this so far and it is not mapped to an occupation or market, so this page does not ask to be indexed.",
   },
   "zh-CN": {
     title: "关于{name}的观察怎么说",
@@ -45,6 +52,12 @@ export const topicEvidenceCopy = bilingual({
     topicsLead: "采集到的帖子里争论的封闭问题。话题页列出谁主张哪个选项，不给出答案。",
     topicLine: "{a} 个账号 · {n} 个选项",
     latest: "最近主张于 {date}",
+    talkTitle: "讨论中",
+    talkLead: "关于{name}、目前只有一个账号提过且还没有观察的问题。出现第二个账号或第一条观察后，各自单独成页。",
+    talkLine: "@{handle} 的答案：{answer}",
+    sourceWord: "出处",
+    singleNote: "目前只有一个账号提过这个问题，{name}也没有观察，所以它在{name}页的“讨论中”列出，本页不要求被收录。",
+    singleNoteLoose: "目前只有一个账号提过这个问题，也没有映射到职业或赛道，所以本页不要求被收录。",
   },
 });
 
@@ -113,6 +126,23 @@ export function topicsAbout(kind: "occupation" | "market", id: string): Topic[] 
     .sort((a, b) => b.accounts - a.accounts || (b.latest_claim_at ?? "").localeCompare(a.latest_claim_at ?? "") || a.slug.localeCompare(b.slug));
 }
 
+/** A question only one account has raised: its text and what that account answered, for the subject page's list. */
+export type Mention = { topic: Topic; answer: string; handle: string; date: string; url: string | null };
+
+/** The topics about one subject split into those with a page of their own and the mentions folded into its page. */
+export function splitTopics(list: Topic[], language: Language): { pages: Topic[]; mentions: Mention[] } {
+  const pages = list.filter(topicStands);
+  const mentions: Mention[] = [];
+  for (const topic of list) {
+    if (topicStands(topic)) continue;
+    const claim = [...topic.claims].sort((a, b) => b.published_at.localeCompare(a.published_at))[0];
+    const option = claim ? topic.options.find((o) => o.key === claim.option) : undefined;
+    if (!claim || !option) continue;
+    mentions.push({ topic, answer: option.text[language], handle: claim.handle, date: claim.published_at.slice(0, 10), url: claim.url });
+  }
+  return { pages, mentions };
+}
+
 export function topicLine(topic: Topic, language: Language): string {
   const c = topicEvidenceCopy[language];
   const line = fill(c.topicLine, { a: topic.accounts, n: topic.options.length });
@@ -141,15 +171,26 @@ export function topicEvidenceMarkdown(view: TopicEvidence, language: Language): 
 }
 
 /** The topics of an occupation or market page as Markdown lines; nothing when none is asked about it. */
-export function topicsMarkdown(list: Topic[], language: Language): string[] {
-  if (list.length === 0) return [];
+export function topicsMarkdown(list: Topic[], language: Language, subjectName: string): string[] {
+  const { pages, mentions } = splitTopics(list, language);
   const c = topicEvidenceCopy[language];
   const sep = colon(language);
-  return [
-    `## ${c.topicsTitle}`, "", c.topicsLead, "",
-    ...list.map((t) => `- ${link(language, t.question[language], `/topics/${t.slug}`)}${sep}${topicLine(t, language)}`),
-    "",
-  ];
+  const out: string[] = [];
+  if (pages.length > 0) {
+    out.push(
+      `## ${c.topicsTitle}`, "", c.topicsLead, "",
+      ...pages.map((t) => `- ${link(language, t.question[language], `/topics/${t.slug}`)}${sep}${topicLine(t, language)}`),
+      "",
+    );
+  }
+  if (mentions.length > 0) {
+    out.push(
+      `## ${c.talkTitle}`, "", fill(c.talkLead, { name: subjectName }), "",
+      ...mentions.map((m) => `- ${m.topic.question[language]}${sep}${fill(c.talkLine, { handle: m.handle, answer: m.answer })} · ${m.date}${m.url ? ` · [${c.sourceWord}](${m.url})` : ""}`),
+      "",
+    );
+  }
+  return out;
 }
 
 /** The evidence page's address for a topic's subject, in the reader's language. */

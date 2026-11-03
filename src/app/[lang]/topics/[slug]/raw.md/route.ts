@@ -2,7 +2,9 @@ import { DEFAULT_LANGUAGE, normalizeLanguage } from "@/lib/i18n";
 import { colon, link, markdownResponse } from "@/lib/markdown-copy";
 import { indexable } from "@/lib/site-pages";
 import { linkedEvents, manifest, topicBySlug } from "@/lib/snapshot";
-import { topicEvidence, topicEvidenceMarkdown } from "@/lib/topic-evidence";
+import { fill } from "@/lib/observation-view";
+import { topicEvidence, topicEvidenceCopy, topicEvidenceMarkdown, topicSubject } from "@/lib/topic-evidence";
+import { topicStands } from "@/lib/topic-standing";
 import { answerSentence, copy } from "../copy";
 
 /** Rendered per request from the loaded data release, like the page. */
@@ -26,6 +28,11 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
     "",
     [c[topic.question_type], about, `${c.since} ${topic.opened_at.slice(0, 10)}`].filter(Boolean).join(" · "),
   ];
+  if (!topicStands(topic)) {
+    const subject = topicSubject(topic, language);
+    const note = topicEvidenceCopy[language];
+    body.push("", `> ${subject ? fill(note.singleNote, { name: subject.name }) : note.singleNoteLoose}`);
+  }
   const observed = topicEvidence(topic, language);
   if (observed) body.push("", ...topicEvidenceMarkdown(observed, language).slice(0, -1));
   for (const option of topic.options) {

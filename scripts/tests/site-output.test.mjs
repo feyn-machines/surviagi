@@ -466,8 +466,14 @@ test("the sitemap offers only pages with something of their own; the others answ
   assert.deepEqual(listed("/updates/"), wantUpdates);
   assert.ok(!listed("/zh-CN/updates/").length, "a Chinese update address is in the sitemap");
 
-  // Topics argued by at least two accounts, in both languages.
-  const wantTopics = topics.filter((t) => t.accounts >= 2).map((t) => t.slug).sort();
+  // Topics argued by at least two accounts, or about an occupation or market that has an observation, in both languages.
+  const observations = existsSync(join(SNAPSHOT_DIR, "observations.json")) ? read("observations") : [];
+  const marketOfWork = new Map((existsSync(join(SNAPSHOT_DIR, "work.json")) ? read("work") : []).map((w) => [w.id, w.market_id]));
+  const concerned = (kind) => observations.flatMap((o) => (o.concerns ?? []).filter((c) => c.kind === kind));
+  const observed = new Set(concerned("occupation").map((c) => c.concept_id));
+  const observedMarkets = new Set(concerned("work").map((c) => marketOfWork.get(c.concept_id)).filter(Boolean));
+  const stands = (t) => t.accounts >= 2 || (t.about?.kind === "occupation" && observed.has(t.about.id)) || (t.about?.kind === "market" && observedMarkets.has(t.about.id));
+  const wantTopics = topics.filter(stands).map((t) => t.slug).sort();
   assert.ok(wantTopics.length > 0 && wantTopics.length < topics.length, "the topic threshold separates nothing in this release");
   assert.deepEqual(listed("/topics/"), wantTopics);
   assert.deepEqual(listed("/zh-CN/topics/"), wantTopics);
@@ -485,7 +491,7 @@ test("the sitemap offers only pages with something of their own; the others answ
   const noindex = (page) => /<meta name="robots" content="noindex, follow"\/>/.test(page);
   const below = {
     update: events.find((e) => withPage.has(e.event_id) && !substantial(e)).event_id,
-    topic: topics.find((t) => t.accounts < 2).slug,
+    topic: topics.find((t) => !stands(t)).slug,
   };
   for (const [path, offeredPage] of [
     [`/updates/${wantUpdates[0]}`, true], [`/updates/${below.update}`, false],
@@ -1532,6 +1538,10 @@ test("market and occupation pages count their observations by evidence type and 
   const [jobTopic, marketTopic] = topicRows;
   jobTopic.about = { id: occupation.id, kind: "occupation", en: occupation.label_en, "zh-CN": occupation.label_zh_cn };
   marketTopic.about = { id: marketId, kind: "market", en: "The market", "zh-CN": "这个赛道" };
+  // A question one account raised about an occupation nothing has been observed about: a mention, not a page of its own.
+  const quiet = read("occupations").find((o) => o.id !== occupation.id && (o.tasks ?? 0) > 0);
+  const mention = topicRows.slice(2).find((t) => t.accounts < 2 && t.claims.length > 0);
+  mention.about = { id: quiet.id, kind: "occupation", en: quiet.label_en, "zh-CN": quiet.label_zh_cn };
   writeFileSync(join(dir, "topics.json"), JSON.stringify(topicRows));
   const { base, proc } = await startServer({ SNAPSHOT_DIR: dir });
   try {
@@ -1770,6 +1780,19 @@ test("market and occupation pages count their observations by evidence type and 
       const copy = await (await fetch(`${base}${path}/raw.md`)).text();
       assert.ok(copy.includes("## Questions argued about it") && copy.includes(`(https://surviagi.com/topics/${topic.slug})`), `${path} copy lists its topic`);
     }
+    // A single account's question with nothing observed about its subject is folded into that page as under
+    // discussion; the subject page does not list it among topics and the topic page says why it is not indexed.
+    const quietPath = `/occupations/${quiet.id.replace(/^oaw:occupation:/, "")}`;
+    const quietHtml = await (await fetch(`${base}${quietPath}`)).text();
+    assert.ok(quietHtml.includes('id="discussion"') && !quietHtml.includes('id="topics"'), "the quiet occupation shows the mention, not a topic list");
+    assert.ok(visible(quietHtml).includes(mention.question.en), "the mention names the question");
+    assert.ok(!quietHtml.includes(`href="/topics/${mention.slug}"`), "the mention has no page of its own to link");
+    const quietCopy = await (await fetch(`${base}${quietPath}/raw.md`)).text();
+    assert.ok(quietCopy.includes("## Under discussion") && !quietCopy.includes("## Questions argued about it"), "the copy folds the mention in");
+    const mentionMd = await (await fetch(`${base}/topics/${mention.slug}/raw.md`)).text();
+    assert.ok(mentionMd.includes("Only one account has raised this so far"), "the mention page says why it is not indexed");
+    assert.ok(!(await (await fetch(`${base}/topics/${jobTopic.slug}/raw.md`)).text()).includes("Only one account has raised this so far"), "a topic with observations about its subject stands");
+    assert.ok(visible(await (await fetch(`${base}/topics`)).text()).includes("one account and no observation yet"), "the list counts the mentions it leaves out");
     const unrelated = topicRows.find((t) => !t.about);
     if (unrelated) assert.ok(!(await (await fetch(`${base}/topics/${unrelated.slug}`)).text()).includes('id="observations"'), "a topic about nothing on a page shows none");
   } finally {

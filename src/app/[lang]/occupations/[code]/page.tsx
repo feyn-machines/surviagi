@@ -239,7 +239,7 @@ export default async function OccupationPage({ params }: Props) {
 
       <ObservationLedger rows={observationsOfOccupation(id)} name={name} language={language} />
       <TaskObservations rows={observationsOfOccupation(id)} occupationId={id} total={totalTasks} language={language} />
-      <RelatedTopics list={topicsAbout("occupation", id)} language={language} />
+      <RelatedTopics list={topicsAbout("occupation", id)} language={language} subjectName={name} />
 
       <Block title={c.gridTitle} lead={c.gridLead}>
         {assessed === 0 ? (
