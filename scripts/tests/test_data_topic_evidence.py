@@ -1,4 +1,4 @@
-"""Updates under a topic's answers: the parts that need neither the judge nor the database."""
+"""Observations under a topic's answers: the parts that need neither the judge nor the database."""
 
 import sys
 import unittest
@@ -20,7 +20,7 @@ class Shortlisting(unittest.TestCase):
 
     def test_no_more_topics_than_the_rule_allows(self):
         many = {f"t{n}": [1.0, 0.0] for n in range(10)}
-        self.assertEqual(len(topic_evidence.shortlist([1.0, 0.0], many, set())), topic_evidence.TOPICS_PER_UPDATE)
+        self.assertEqual(len(topic_evidence.shortlist([1.0, 0.0], many, set())), topic_evidence.TOPICS_PER_OBSERVATION)
 
 
 class Asking(unittest.TestCase):
@@ -32,14 +32,25 @@ class Asking(unittest.TestCase):
         self.assertEqual(asked[1].label, "Question: Will AI replace most accountants? Answer: No.")
 
     def test_the_judge_and_the_threshold_come_from_the_rule(self):
-        rule = ontology_schema.rule("rule:updates-weigh-on-answers-by-judgment")["expression"]
+        rule = ontology_schema.rule("rule:observations-weigh-on-answers-by-judgment")["expression"]
         self.assertEqual((topic_evidence.JUDGE, topic_evidence.WEIGHS_ABOVE), (rule["judge"], rule["weighs_above"]))
         self.assertEqual(topic_evidence.JUDGE, "typesafe")
+
+    def test_the_judge_reads_what_was_done_and_how_it_came_out_not_a_headline(self):
+        state = topic_evidence._state({"task": "draft support replies", "actor": "Acme", "actor_role": "adopter",
+                                       "subject": "Agent", "evidence_type": "production_use", "outcome": "succeeded",
+                                       "scale": None, "conditions": "", "facts": "40 replies per day",
+                                       "quote": "We let it draft 40 replies a day."})
+        self.assertEqual(state["work_done"], "draft support replies")
+        self.assertEqual(state["figures"], "40 replies per day")
+        self.assertEqual(state["source_words"], "We let it draft 40 replies a day.")
+        self.assertNotIn("scale", state)
+        self.assertNotIn("conditions", state)
 
     def test_both_ways_are_asked_and_being_in_the_same_field_is_not_enough(self):
         self.assertEqual(set(topic_evidence.QUESTIONS), set(ontology_schema.term_ids("answer_evidence_sign")))
         for question, _ in topic_evidence.QUESTIONS.values():
-            self.assertIn("same field", question)
+            self.assertIn("Being about the same", question)
 
 
 class Weighing(unittest.TestCase):

@@ -2,15 +2,15 @@ import { DEFAULT_LANGUAGE, normalizeLanguage } from "@/lib/i18n";
 import { colon, link, markdownResponse } from "@/lib/markdown-copy";
 import { indexable } from "@/lib/site-pages";
 import { linkedEvents, manifest, topicBySlug } from "@/lib/snapshot";
-import { fill } from "@/lib/observation-view";
-import { topicEvidence, topicEvidenceCopy, topicEvidenceMarkdown, topicSubject } from "@/lib/topic-evidence";
+import { fill, observationMarkdown } from "@/lib/observation-view";
+import { answerEvidence, topicEvidence, topicEvidenceCopy, topicEvidenceMarkdown, topicSubject } from "@/lib/topic-evidence";
 import { topicStands } from "@/lib/topic-standing";
 import { answerSentence, copy } from "../copy";
 
 /** Rendered per request from the loaded data release, like the page. */
 export const dynamic = "force-dynamic";
 
-/** The topic page as Markdown: its sentence, the observations about its subject, then under each answer the updates that weigh on it and who argues it. */
+/** The topic page as Markdown: its sentence, the observations about its subject, then under each answer the observations that weigh on it and who argues it. */
 export async function GET(_: Request, { params }: { params: Promise<{ lang: string; slug: string }> }) {
   const { lang, slug } = await params;
   const language = normalizeLanguage(lang) ?? DEFAULT_LANGUAGE;
@@ -38,10 +38,17 @@ export async function GET(_: Request, { params }: { params: Promise<{ lang: stri
   for (const option of topic.options) {
     body.push("", `## ${option.text[language]}`, "",
       `${c.argued} ${option.accounts} · ${c.for} ${option.supports} · ${c.against} ${option.contradicts}`);
-    const evidence = topic.evidence.filter((row) => row.option === option.key);
-    if (evidence.length > 0) {
+    const evidence = answerEvidence(topic, option.key);
+    if (evidence.observations.length + evidence.updates.length > 0) {
       body.push("", `### ${c.evidenceLabel}`, "");
-      for (const row of evidence) {
+      for (const sign of ["supports", "contradicts"] as const) {
+        const rows = evidence.observations.filter((e) => e.sign === sign);
+        if (rows.length === 0) continue;
+        body.push(`**${c[sign]}**`, "");
+        for (const e of rows) body.push(...observationMarkdown(e.row, language));
+        body.push("");
+      }
+      for (const row of evidence.updates) {
         const title = withPage.has(row.event_id) ? link(language, row.title, `/updates/${row.event_id}`) : row.title;
         const when = [row.by, row.occurred_at?.slice(0, 10)].filter(Boolean).join(" · ");
         body.push(`- ${c[row.sign]}${sep}${title}${when ? ` · ${when}` : ""}${row.source_url ? ` · [${source}](${row.source_url})` : ""}`);

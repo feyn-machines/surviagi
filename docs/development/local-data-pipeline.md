@@ -177,9 +177,10 @@ pnpm data:measure:markets                                                       
 第一版只按目录推导（视图 `topic_events`）：同一市场组里的更新全部列到话题下，17 个话题共 2,547 条，同组话题列出的更新完全相同，替代类话题一条都没有。用户 2026-10-09 的决定：这样不行，必须收窄；向量只做初筛，由 Jev 判断，并且要判断到选项，否则没有意义。该视图已由迁移 043 删除，规则 `rule:updates-reach-topics-by-the-catalog` 标了 `until`。
 
 ```sh
-pnpm data:topics:evidence -- --since 2026-09-25     # 向量挑话题，Jev 逐个选项判断
+pnpm data:topics:evidence                           # 向量挑话题，Jev 逐个选项判断（对象是观察；--since 只读该时间之后记入的观察）
 ```
 
+- **2026-11-03 起（本体 2.7.0，迁移 049，Issue #32）对象是观察，不再是更新**（`rule:observations-weigh-on-answers-by-judgment`，关系 `bears_on`，表 `topic_option_observations` / `topic_observation_checked`，方法版本 `topic-evidence-3`）。只读不是已并入别的观察、也没被人否决的观察；判官看到的是做了什么、谁、用什么、结果、规模、数字和原文。旧的 `topic_option_evidence` 行保留不动，不再写入、不再发布（契约 1.8.0 起 `evidence` 为空，观察在 `observation_evidence`）。每日运行不再带 `--since`：新开的话题要能遇到旧观察，已判过的配对由检查表挡住。首次全量试跑（49 条观察、79 对、484 次问答）产出 9 条证据（7 支持、2 反驳）。下面的说明是更新版的原始设计，判断方式相同。
 - 每条更新：本机向量挑出最相近的最多 3 个话题（相似度低于 0.80 的不要；相似度不做决定），再问 Jev，对这些话题的每个选项分别问两次——“这条更新是否支持这个答案”“是否反驳这个答案”——高于 0.6 的写入 `topic_option_evidence`（关系 `weighs_on`，方向 `supports` / `contradicts`），标为机器提出的候选。问题里写明“处于同一领域、同一产品或同一家公司不算证据”。问反驳是因为实测往往只否定一个答案而不证明另一个：“模型胜过 12 位持证会计”反驳“AI 做不了会计工作”，本身不等于“需要的会计变少”。
 - 判断过的（更新，话题）记在 `topic_evidence_checked`，不重复问；新开的话题会被之前的更新补问。方法版本变了（现在是 `topic-evidence-2`）就全部重问。
 - **只认 Jev**：分类器在 Jev 失败时会退到对照模型，这一步不接受那样的结果——该更新留作未判断，下一轮再问；开头连续 3 条都失败就整轮停止。试跑时对照模型把“Claude Haiku 5.5 在 GitHub Copilot 可用”判成了某个答案的证据。2026-10-09 有一段时间 Jev 从本机返回 HTTP 451（所在地区不可用），之后恢复。

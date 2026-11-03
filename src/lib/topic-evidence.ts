@@ -8,12 +8,17 @@ import {
   markets,
   observationsOfMarket,
   observationsOfOccupation,
+  isObservationEvidence,
+  observationById,
   occupationSlug,
   occupations,
   topics,
   type ObservationRow,
   type ObservationStats,
   type Topic,
+  type TopicEvidence as TopicEvidenceRow,
+  type TopicObservationEvidence,
+  type TopicUpdateEvidence,
 } from "@/lib/snapshot";
 
 /**
@@ -195,3 +200,24 @@ export function topicsMarkdown(list: Topic[], language: Language, subjectName: s
 
 /** The evidence page's address for a topic's subject, in the reader's language. */
 export const subjectHref = (subject: TopicSubject, language: Language) => `${localizedPath(language, subject.path)}#evidence`;
+
+/**
+ * What weighs on one answer of a topic: observations pointing each way, each
+ * with its sign (contract 1.8.0), or the updates an older release judged.
+ * An observation the release no longer carries is left out; the counts on the
+ * answer still include it, as the data release made them.
+ */
+export type AnswerEvidence = {
+  observations: { sign: "supports" | "contradicts"; confidence: number; row: ObservationRow }[];
+  updates: TopicUpdateEvidence[];
+};
+
+export function answerEvidence(topic: Topic, option: string): AnswerEvidence {
+  const mine = topic.evidence.filter((row: TopicEvidenceRow) => row.option === option);
+  const observations: AnswerEvidence["observations"] = [];
+  for (const row of mine.filter(isObservationEvidence) as TopicObservationEvidence[]) {
+    const found = observationById(row.observation_id);
+    if (found) observations.push({ sign: row.sign, confidence: row.confidence, row: found });
+  }
+  return { observations, updates: mine.filter((row): row is TopicUpdateEvidence => !isObservationEvidence(row)) };
+}

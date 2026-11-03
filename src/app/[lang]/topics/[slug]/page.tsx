@@ -13,9 +13,9 @@ import { indexable } from "@/lib/site-pages";
 import { linkedEvents, manifest, topicBySlug } from "@/lib/snapshot";
 import { localizedPath } from "@/lib/i18n";
 import { fill } from "@/lib/observation-view";
-import { topicEvidenceCopy, topicSubject } from "@/lib/topic-evidence";
+import { answerEvidence, topicEvidenceCopy, topicSubject } from "@/lib/topic-evidence";
 import { topicStands } from "@/lib/topic-standing";
-import { TopicObservations } from "@/components/observation-ledger";
+import { Observations, TopicObservations } from "@/components/observation-ledger";
 import type { Route } from "next";
 import s from "../topics.module.css";
 import { TopicVote } from "./vote";
@@ -47,7 +47,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 /**
  * One topic: the question, the observations about its occupation or market
- * pointing each way, and under each answer who argued it and which updates
+ * pointing each way, and under each answer who argued it and which observations
  * weigh for or against it. The page declares no answer.
  */
 export default async function TopicPage({ params }: Props) {
@@ -122,7 +122,7 @@ export default async function TopicPage({ params }: Props) {
 
       {topic.options.map((option) => {
         const claims = topic.claims.filter((claim) => claim.option === option.key);
-        const evidence = topic.evidence.filter((row) => row.option === option.key);
+        const evidence = answerEvidence(topic, option.key);
         return (
           <section key={option.key} className={s.option}>
             <div className={s.optionHead}>
@@ -132,25 +132,36 @@ export default async function TopicPage({ params }: Props) {
               </div>
             </div>
             <div className={s.optionBody}>
-              {evidence.length > 0 ? (
+              {evidence.observations.length + evidence.updates.length > 0 ? (
                 <>
                   <div className={s.label}>{c.evidenceLabel}</div>
-                  <ul className={s.rows}>
-                    {evidence.map((row) => (
-                      <li key={`${row.event_id}-${row.sign}`}>
-                        <span className={`${s.sign} ${s[row.sign]}`}>{c[row.sign]}</span>
-                        <div>
-                          {withPage.has(row.event_id)
-                            ? <Link href={updateHref(language, row.event_id)}>{row.title}</Link>
-                            : row.title}
-                          <small>
-                            {[row.by, row.occurred_at?.slice(0, 10)].filter(Boolean).join(" · ")}
-                            {row.source_url ? <> · <a href={row.source_url} rel="noopener noreferrer" target="_blank">{c.source}</a></> : null}
-                          </small>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                  {(["supports", "contradicts"] as const).map((sign) => {
+                    const rows = evidence.observations.filter((e) => e.sign === sign).map((e) => e.row);
+                    return rows.length === 0 ? null : (
+                      <div key={sign}>
+                        <span className={`${s.sign} ${s[sign]}`}>{c[sign]}</span>
+                        <Observations rows={rows} language={language} anchors={false} />
+                      </div>
+                    );
+                  })}
+                  {evidence.updates.length > 0 ? (
+                    <ul className={s.rows}>
+                      {evidence.updates.map((row) => (
+                        <li key={`${row.event_id}-${row.sign}`}>
+                          <span className={`${s.sign} ${s[row.sign]}`}>{c[row.sign]}</span>
+                          <div>
+                            {withPage.has(row.event_id)
+                              ? <Link href={updateHref(language, row.event_id)}>{row.title}</Link>
+                              : row.title}
+                            <small>
+                              {[row.by, row.occurred_at?.slice(0, 10)].filter(Boolean).join(" · ")}
+                              {row.source_url ? <> · <a href={row.source_url} rel="noopener noreferrer" target="_blank">{c.source}</a></> : null}
+                            </small>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
                 </>
               ) : null}
               <div className={s.label}>{c.claimsLabel}</div>

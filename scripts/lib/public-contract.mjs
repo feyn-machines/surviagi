@@ -13,7 +13,7 @@
 import { schema, termIds, validateSchema } from "./ontology-schema.mjs";
 
 /** The contract's own version. Moves independently of the ontology, the method and the data. */
-export const CONTRACT_VERSION = "1.7.0";
+export const CONTRACT_VERSION = "1.8.0";
 export const CONTRACT_PATH = "contract/v1";
 
 /**
@@ -202,6 +202,8 @@ export const ENTITIES = [
     name: "Topic", class: "Topic", id: "topic_id", collection: "topics", title: { en: "Topic", "zh-CN": "话题" },
     fields: { topic_id: "record", question_type: "machine", state: "record", origin: "record", opened_at: "record" },
     omit: ["object_key", "question_en", "question_zh_cn", "state_changed_at", "schema_version"],
+    // Releases made before 1.8.0 have no observation_evidence.
+    optionalKeys: ["observation_evidence"],
     view: {
       slug: view("string", "record", "URL-safe form of the id.", "编号的网址形式。"),
       object: view("string", "machine", "What the question is about, in words.", "问题所涉对象的文字。"),
@@ -214,7 +216,8 @@ export const ENTITIES = [
       posts: view("integer", "record", "Posts that made claims.", "发表主张的帖子数。"),
       options: view("array", "machine", "Answers: option id, key, position, text in both languages and tallies.", "各答案：编号、键、顺序、双语文本和计数。"),
       claims: view("array", "quote", "Posts arguing for an answer, each with the original quote.", "支持某个答案的帖子，各带原文引用。"),
-      evidence: view("array", "machine", "Updates weighing on an answer, with the judged sign.", "对某个答案有分量的更新及判定的方向。"),
+      evidence: view("array", "machine", "Deprecated since 1.8.0, empty in releases made from then on: updates a judge weighed against an answer. Observations replace them in `observation_evidence`.", "1.8.0 起弃用，此后发布的版本为空：判官曾拿来对照某个答案的更新。由 `observation_evidence` 里的观察取代。"),
+      observation_evidence: view("array", "machine", "Observations weighing on an answer (1.8.0): `observation_id` (a row of `observations.json`; a merged observation counts as the one it was merged into), `option` (the answer's key), `sign` (`supports` or `contradicts`) and the judge's `confidence`. A model's proposal, not a conclusion; it says which way an observation weighs, never which answer is right. Absent in older releases.", "对某个答案有分量的观察（1.8.0）：`observation_id`（`observations.json` 中的一行；已合并的观察算作并入的那一条）、`option`（答案的键）、`sign`（`supports` 或 `contradicts`）及判官的 `confidence`。是模型的提议，不是结论；它说明观察偏向哪一边，不说明哪个答案是对的。旧版本没有此字段。"),
       by_quarter: view("object", "record", "Claims per answer per calendar quarter.", "按自然季度统计的各答案主张数。"),
     },
   },
