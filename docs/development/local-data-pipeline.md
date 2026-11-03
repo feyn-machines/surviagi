@@ -236,7 +236,7 @@ pnpm data:topics:searched data/collection/search/search-topics-<窗口>.json
 | `pipeline` 链路未运行或失败 | 挖掘超过 36 小时没跑；搜索超过 72 小时没跑；最近一次挖掘有失败批次；最近一次证据判断失败；最近窗口里任一话题步骤未完成 | 以上都不再成立 |
 | `stalled` 断更 | 7 天内没有新话题，或 7 天内归入的主张少于 10 条 | 7 天内至少 1 个新话题且至少 10 条主张 |
 | `evidence` 证据不足 | 只有一边的话题，开了两周以上、搜过 3 次以上仍没有另一边；或 45 天没有新主张 | 列表为空 |
-| `review` 需人工判断 | 话题未通过自己的标准（`checks`）；同类话题里一个的对象按整词包含另一个的（“manager”/“middle manager”），可能是同一问题 | 列表为空 |
+| `review` 需人工判断 | 话题未通过自己的标准（`checks`）；同类话题里两个对象只差写法（复数、连字符）或只差资历/雇佣类限定词（“software engineer”/“senior software engineer”），可能是同一问题；更窄的另一种工作（“designer”/“graphic designer”、“manager”/“middle manager”）是独立问题，不算重复 | 列表为空 |
 
 **GitHub Issue**：每类最多一个打开的 Issue，标签 `topic-health`，正文第一行的标记 `<!-- topic-health:<类> first-seen=<时间> -->` 用来找回它。正文字段固定：类型、状态（首次发现、最近检查）、触发原因、涉及话题（key、问题、状态、账号数、说明）、当前读数、建议处理、自动关闭条件。
 

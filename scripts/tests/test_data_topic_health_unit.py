@@ -73,17 +73,29 @@ class Findings(unittest.TestCase):
         self.assertEqual(found["evidence"]["items"][0]["key"], "quiet:t:q")
         self.assertIn("50 天没有新主张", found["evidence"]["items"][0]["note"])
 
-    def test_a_failed_standard_and_a_contained_object_need_a_person(self):
+    def test_a_failed_standard_and_a_repeated_question_need_a_person(self):
         failing = topic("t:f", "writer", status="fails", checks={**SOUND, "specific": False})
-        found = topic_health.findings(healthy(_topics=[topic("t:m", "manager"), topic("t:mm", "middle manager"),
-                                                       topic("t:v", "manager", qtype="viability"), failing]), NOW)
+        found = topic_health.findings(healthy(_topics=[topic("t:m", "software engineer"),
+                                                       topic("t:mm", "senior software engineer"),
+                                                       topic("t:v", "software engineer", qtype="viability"), failing]), NOW)
         keys = [i["key"] for i in found["review"]["items"]]
         self.assertEqual(keys, ["fails:t:f", "duplicate:t:m,t:mm"])
         self.assertIn("specific", found["review"]["items"][0]["note"])
 
-    def test_an_object_is_matched_by_whole_words_only(self):
-        pairs = topic_health.duplicate_pairs([topic("a", "artist"), topic("b", "martist"), topic("c", "3d artist")])
-        self.assertEqual([(a["id"], b["id"]) for a, b in pairs], [("a", "c")])
+    def pairs(self, *rows):
+        return [(a["id"], b["id"]) for a, b in topic_health.duplicate_pairs([topic(i, o) for i, o in rows])]
+
+    def test_a_narrower_kind_of_job_is_its_own_question(self):
+        self.assertEqual(self.pairs(("a", "designer"), ("b", "graphic designer"), ("c", "manager"),
+                                    ("d", "middle manager"), ("e", "3d artist"), ("f", "artist")), [])
+
+    def test_a_qualifier_or_another_spelling_repeats_the_question(self):
+        self.assertEqual(self.pairs(("a", "accountant"), ("b", "junior accountant")), [("a", "b")])
+        self.assertEqual(self.pairs(("a", "ux designer"), ("b", "UX-designers")), [("a", "b")])
+        self.assertEqual(self.pairs(("a", "software engineer"), ("b", "software engineer")), [("a", "b")])
+
+    def test_objects_are_matched_by_whole_words_only(self):
+        self.assertEqual(self.pairs(("a", "artist"), ("b", "martist"), ("c", "senior artist")), [("a", "c")])
 
     def test_a_resolved_item_is_not_listed_again(self):
         topics = [topic("t:m", "manager"), topic("t:wm", "wealth manager")]
