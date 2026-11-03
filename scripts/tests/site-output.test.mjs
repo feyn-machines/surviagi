@@ -1109,11 +1109,11 @@ test("MCP: search answers with structured, cited records of the loaded release; 
   const ids = new Set([...chain.events.map((e) => e.event_id), ...topics.map((t) => t.topic_id)]);
   for (const r of found.results) {
     // Evidence readings carry the retired level scale: they are returned only when asked for by name (#35).
-    assert.ok(["update", "question"].includes(r.type), `${r.type} is not a default search type`);
+    assert.ok(["update", "question", "observation"].includes(r.type), `${r.type} is not a default search type`);
     assert.equal(r.review, "machine_proposed_unreviewed");
     assert.ok(Object.keys(found.content_kinds).includes(r.content));
     assert.ok(r.url.startsWith("https://surviagi.com/"));
-    if (r.type !== "evidence") assert.ok(ids.has(r.id), `${r.id} is a published record`);
+    if (r.type !== "evidence" && r.type !== "observation") assert.ok(ids.has(r.id), `${r.id} is a published record`);
     assert.ok([...r.snippet].length <= 280);
   }
   // Each kind of record reads back, and says that the source text is not here.

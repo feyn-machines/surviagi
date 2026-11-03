@@ -1,0 +1,29 @@
+/* The plain top of an occupation page: one sentence, then the cases behind it. */
+.verdict{margin:0 0 var(--ah-space-7);padding:var(--ah-space-5) 0;border-top:1px solid var(--ah-color-line);border-bottom:1px solid var(--ah-color-line);max-width:820px}
+.sentence{margin:0 0 10px;font-size:22px;line-height:1.5;font-weight:500;color:var(--ah-color-text)}
+.caveat{margin:0;font-size:13.5px;line-height:1.6;color:var(--ah-color-subtle)}
+.section{margin:0 0 var(--ah-space-7)}
+.h2{margin:0 0 6px;font-size:26px;letter-spacing:-.015em;font-weight:600}
+.sub{margin:0 0 18px;max-width:70ch;font-size:14.5px;line-height:1.6;color:var(--ah-color-muted)}
+.list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.card{padding:20px 22px 22px;border:1px solid var(--ah-color-line);background:var(--ah-color-surface);min-width:0;overflow-wrap:anywhere}
+.against{border-left:3px solid var(--ah-color-warning)}
+.who{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:0 0 8px}
+.who b{font-size:19px;font-weight:600}
+.who span{font-family:var(--ah-font-mono);font-size:12px;color:var(--ah-color-subtle);white-space:nowrap}
+.task{margin:0 0 12px;font-size:15.5px;line-height:1.5;color:var(--ah-color-text)}
+.figures{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:8px}
+.figures li{display:grid;gap:2px;font-size:13.5px;line-height:1.45;color:var(--ah-color-muted)}
+.figures b{font-family:var(--ah-font-heading);font-size:22px;font-weight:700;letter-spacing:-.02em;color:var(--ah-color-signal)}
+.against .figures b{color:var(--ah-color-warning)}
+.source{margin:0;font-size:12.5px;line-height:1.55;color:var(--ah-color-subtle)}
+.source a{display:inline-block;margin-bottom:4px;color:var(--ah-color-signal);font-family:var(--ah-font-mono);letter-spacing:.03em}
+.source a:hover{text-decoration:underline;text-underline-offset:3px}
+.source q{display:block}
+.fold{margin:var(--ah-space-7) 0 0;border-top:1px solid var(--ah-color-line)}
+.fold>summary{cursor:pointer;padding:18px 0;font-size:17px;font-weight:500;color:var(--ah-color-signal)}
+.fold>summary small{display:block;margin-top:4px;font-size:13px;font-weight:400;color:var(--ah-color-subtle)}
+@media(max-width:800px){
+  .list{grid-template-columns:1fr}
+  .sentence{font-size:19px}
+}

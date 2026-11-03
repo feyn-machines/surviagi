@@ -7,7 +7,10 @@ import { getLocale } from "@/lib/locale";
 import { breadcrumbLd, pageMetadata } from "@/lib/seo";
 import { JsonLd } from "@/components/json-ld";
 import { ObservationLedger, RelatedTopics, TaskObservations } from "@/components/observation-ledger";
-import { evidenceLd, ledger, pageQuestion } from "@/lib/observation-view";
+import { Cases, Verdict } from "@/components/case-brief";
+import { briefCopy, caseBrief } from "@/lib/case-brief";
+import s2 from "@/components/case-brief.module.css";
+import { evidenceLd, fill as fillText, ledger, pageQuestion } from "@/lib/observation-view";
 import { siteNavCopy } from "@/lib/site-nav";
 import { indexable } from "@/lib/site-pages";
 import { topicsAbout } from "@/lib/topic-evidence";
@@ -123,6 +126,7 @@ export default async function OccupationPage({ params }: Props) {
   const assessed = entry?.touched_tasks ?? 0;
   const median = occupationMedianShare();
 
+  const brief = caseBrief(observationsOfOccupation(id), name, language);
   const served = marketsOfOccupation(id);
 
   // One row per activity, with the updates that bear on it already joined: the
@@ -194,30 +198,8 @@ export default async function OccupationPage({ params }: Props) {
     { name, path: `/occupations/${code}` },
   ];
 
-  return (
-    <div className={`${s.page} ${bp.canvas}`}>
-      <JsonLd data={breadcrumbLd(language, trail)} />
-      <JsonLd
-        data={evidenceLd(language, {
-          kind: "occupation",
-          name,
-          slug: code,
-          path: `/occupations/${code}`,
-          sentence: sentence(id, name, language),
-          rows: observationsOfOccupation(id),
-        })}
-      />
-      <Link className="oaw-back" href={href(language, "/occupations")}>
-        {c.back}
-      </Link>
-      <h1 className={s.title}>{pageQuestion("occupation", name, language)}</h1>
-      <p className={s.pageLead}>{c.lead}</p>
-      {/* The page's answer in one dated sentence with its numbers, the line an engine can quote. */}
-      <p className={s.answer}>{sentence(id, name, language)}</p>
-      {alsoCalled(entry, language).length > 0 && (
-        <p className={s.alsoCalled}>{fill(c.alsoCalled, { names: alsoCalled(entry, language).join(language === "zh-CN" ? "、" : ", ") })}</p>
-      )}
-
+  const full = (
+    <>
       <div className={s.stats}>
         <Stat
           label={c.statReachLabel}
@@ -239,7 +221,6 @@ export default async function OccupationPage({ params }: Props) {
 
       <ObservationLedger rows={observationsOfOccupation(id)} name={name} language={language} />
       <TaskObservations rows={observationsOfOccupation(id)} occupationId={id} total={totalTasks} language={language} />
-      <RelatedTopics list={topicsAbout("occupation", id)} language={language} subjectName={name} />
 
       <Block title={c.gridTitle} lead={c.gridLead}>
         {assessed === 0 ? (
@@ -281,6 +262,54 @@ export default async function OccupationPage({ params }: Props) {
           </ul>
         )}
       </Block>
+    </>
+  );
+
+  return (
+    <div className={`${s.page} ${bp.canvas}`}>
+      <JsonLd data={breadcrumbLd(language, trail)} />
+      <JsonLd
+        data={evidenceLd(language, {
+          kind: "occupation",
+          name,
+          slug: code,
+          path: `/occupations/${code}`,
+          sentence: sentence(id, name, language),
+          rows: observationsOfOccupation(id),
+        })}
+      />
+      <Link className="oaw-back" href={href(language, "/occupations")}>
+        {c.back}
+      </Link>
+      <h1 className={s.title}>{pageQuestion("occupation", name, language)}</h1>
+      <p className={s.pageLead}>{brief ? briefCopy[language].lead : c.lead}</p>
+      {/* The page's answer in one dated sentence with its numbers, the line an engine can quote. */}
+      {brief ? null : <p className={s.answer}>{sentence(id, name, language)}</p>}
+      {alsoCalled(entry, language).length > 0 && (
+        <p className={s.alsoCalled}>{fill(c.alsoCalled, { names: alsoCalled(entry, language).join(language === "zh-CN" ? "、" : ", ") })}</p>
+      )}
+
+      {brief ? (
+        <>
+          <Verdict brief={brief} language={language} />
+          <Cases brief={brief} language={language} />
+        </>
+      ) : null}
+
+      <RelatedTopics list={topicsAbout("occupation", id)} language={language} subjectName={name} />
+
+      {brief ? (
+        <details className={s2.fold}>
+          <summary>
+            {fillText(briefCopy[language].foldTitle, { n: brief.total })}
+            <small>{briefCopy[language].foldLead}</small>
+          </summary>
+          <p className={s.answer}>{sentence(id, name, language)}</p>
+          {full}
+        </details>
+      ) : (
+        full
+      )}
 
       <Provenance language={language} />
       <DataPageLinks language={language} current="occupations" />
