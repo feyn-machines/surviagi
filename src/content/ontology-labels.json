@@ -1,6 +1,6 @@
 {
   "generated_from": "datasets/ontology/schema/schema.json",
-  "schema_version": "2.6.0",
+  "schema_version": "2.7.0",
   "classes": {
     "Concept": {
       "en": "Concept",
@@ -223,6 +223,10 @@
     "concerns": {
       "en": "concerns",
       "zh-CN": "关系到"
+    },
+    "bears_on": {
+      "en": "bears on",
+      "zh-CN": "对…有分量"
     },
     "adopts": {
       "en": "adopts",

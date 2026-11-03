@@ -1542,6 +1542,16 @@ test("market and occupation pages count their observations by evidence type and 
   const quiet = read("occupations").find((o) => o.id !== occupation.id && (o.tasks ?? 0) > 0);
   const mention = topicRows.slice(2).find((t) => t.accounts < 2 && t.claims.length > 0);
   mention.about = { id: quiet.id, kind: "occupation", en: quiet.label_en, "zh-CN": quiet.label_zh_cn };
+  // Contract 1.8.0: a judge found obs-a to support the first answer and obs-b to contradict the second; the release
+  // carries no judged updates any more. The job topic's other fields are the fixture's own.
+  jobTopic.evidence = [];
+  for (const option of jobTopic.options) Object.assign(option, { supports: 0, contradicts: 0 });
+  jobTopic.options[0].supports = 1;
+  jobTopic.options[1].contradicts = 1;
+  jobTopic.observation_evidence = [
+    { observation_id: "obs-a", option: jobTopic.options[0].key, sign: "supports", confidence: 0.9 },
+    { observation_id: "obs-b", option: jobTopic.options[1].key, sign: "contradicts", confidence: 0.8 },
+  ];
   writeFileSync(join(dir, "topics.json"), JSON.stringify(topicRows));
   const { base, proc } = await startServer({ SNAPSHOT_DIR: dir });
   try {
@@ -1774,6 +1784,15 @@ test("market and occupation pages count their observations by evidence type and 
     const jobPage = await (await fetch(`${base}/zh-CN/topics/${jobTopic.slug}`)).text();
     assert.ok(jobPage.includes('id="observations"') && jobPage.includes('id="obs-a"') && jobPage.includes(`href="/zh-CN${occupationPath}#evidence"`), "Chinese topic page");
     assert.ok(visible(jobPage).includes(quoted(await (await fetch(`${base}/zh-CN${occupationPath}/raw.md`)).text()).slice(2)), "Chinese topic page says the occupation's sentence");
+    // Contract 1.8.0: under each answer, the observations a judge found to weigh on it, with the sign, once per page.
+    const [firstAnswer, secondAnswer] = jobTopic.options;
+    const answerOf = (copy, option, next) => copy.split(`## ${option.text.en}`)[1].split(next ? `## ${next.text.en}` : "\u0000")[0];
+    assert.ok(answerOf(jobMd, firstAnswer, secondAnswer).includes("**SUPPORTS**") && answerOf(jobMd, firstAnswer, secondAnswer).includes("`obs-a`"), "the first answer lists obs-a as supporting");
+    assert.ok(answerOf(jobMd, secondAnswer).includes("**CONTRADICTS**") && answerOf(jobMd, secondAnswer).includes("`obs-b`"), "the second answer lists obs-b as contradicting");
+    assert.match(jobMd.split("\n").find((line) => line.startsWith("> As of")) ?? "", /2 observations weigh for or against/, "the sentence counts observations, not updates");
+    const jobEn = await (await fetch(`${base}/topics/${jobTopic.slug}`)).text();
+    assert.equal(jobEn.split('id="obs-a"').length - 1, 1, "an observation listed under an answer is not given a second anchor");
+    assert.ok(jobEn.includes("QUOTE obs-a") && jobEn.includes("QUOTE obs-b"), "the answers show the observations' words");
     for (const [path, topic] of [[occupationPath, jobTopic], [marketPath, marketTopic]]) {
       const html = await (await fetch(`${base}${path}`)).text();
       assert.ok(html.includes('id="topics"') && html.includes(`href="/topics/${topic.slug}"`), `${path} lists its topic`);

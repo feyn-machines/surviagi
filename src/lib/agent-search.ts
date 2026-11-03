@@ -11,6 +11,7 @@ import {
   linkedEvents,
   dataRelease,
   events,
+  isObservationEvidence,
   legacyEvidence,
   manifest,
   marketSlug,
@@ -634,15 +635,11 @@ function questionRecord(t: Topic, language: Language) {
       quote_content: c.quote ? ("post_quote" as const) : null,
     })),
     evidence_total: t.evidence.length,
-    evidence: t.evidence.slice(0, DETAIL_ROWS).map((v) => ({
-      update_id: v.event_id,
-      option: v.option,
-      sign: v.sign,
-      confidence: v.confidence,
-      title: v.title,
-      occurred_at: v.occurred_at,
-      source_url: v.source_url,
-    })),
+    // Observations since contract 1.8.0 (read one by its id); updates in a release before.
+    evidence: t.evidence.slice(0, DETAIL_ROWS).map((v) =>
+      isObservationEvidence(v)
+        ? { observation_id: v.observation_id, option: v.option, sign: v.sign, confidence: v.confidence }
+        : { update_id: v.event_id, option: v.option, sign: v.sign, confidence: v.confidence, title: v.title, occurred_at: v.occurred_at, source_url: v.source_url }),
     original_text: { available: false, note: ORIGINAL_GAP },
   };
 }

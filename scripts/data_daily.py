@@ -366,7 +366,7 @@ def steps(window: Window, root: Path = ROOT) -> list[Step]:
         Step("topic-searched", pnpm("data:topics:searched", search_run), optional=True),
         Step("mine-topics", pnpm("data:mine:topics", "--window-start", start, "--window-end", end,
                                  "--output", f"data/topics/topics-{tag}.json"), check=batch_problems),
-        Step("topic-evidence", pnpm("data:topics:evidence", "--since", f"{window.start:%Y-%m-%d}T00:00:00+00:00"),
+        Step("topic-evidence", pnpm("data:topics:evidence"),
              check=batch_problems, before=typesafe_preflight),
         Step("post-events", pnpm("data:post-events")),
         Step("activity-state", pnpm("data:activity:state")),

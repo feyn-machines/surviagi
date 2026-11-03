@@ -327,7 +327,8 @@ export type TopicClaim = {
 };
 
 /** An update a judge found to weigh for or against one answer. No answer is declared right. */
-export type TopicEvidence = {
+/** An update a judge found to weigh on an answer: releases before contract 1.8.0 (rule:updates-weigh-on-answers-by-judgment). */
+export type TopicUpdateEvidence = {
   event_id: string;
   option: string;
   sign: "supports" | "contradicts";
@@ -338,6 +339,25 @@ export type TopicEvidence = {
   by: string | null;
   source_url: string | null;
 };
+
+/**
+ * An observation a judge found to weigh on an answer (contract 1.8.0, rule:observations-weigh-on-answers-by-judgment).
+ * Only the id and which way it weighs: the observation itself is in `observations`.
+ */
+export type TopicObservationEvidence = {
+  observation_id: string;
+  option: string;
+  sign: "supports" | "contradicts";
+  confidence: number;
+};
+
+export type TopicEvidence = TopicUpdateEvidence | TopicObservationEvidence;
+
+/** Observations are the evidence from 1.8.0; a row naming an update belongs to an older release. */
+export const isObservationEvidence = (row: TopicEvidence): row is TopicObservationEvidence => "observation_id" in row;
+
+/** One id for a row of either kind, for counting how many different things weigh anywhere. */
+export const topicEvidenceId = (row: TopicEvidence): string => (isObservationEvidence(row) ? row.observation_id : row.event_id);
 
 /** A closed question about one job or one kind of business. It carries no answer of its own. */
 export type Topic = {
@@ -358,9 +378,21 @@ export type Topic = {
   posts: number;
   options: TopicOption[];
   claims: TopicClaim[];
+  /**
+   * What a judge found to weigh on an answer: observations from contract 1.8.0, then the updates an older
+   * release judged. The release file carries the two apart (`observation_evidence`, `evidence`); they are
+   * read together here, observations first.
+   */
   evidence: TopicEvidence[];
   /** Accounts arguing each answer, by calendar quarter (UTC). */
   by_quarter: Record<string, Record<string, number>>;
+};
+
+/** A topic as the release file carries it (contract 1.8.0). */
+type TopicDocument = Omit<Topic, "evidence"> & {
+  /** Deprecated since 1.8.0: updates a judge weighed against answers; empty in releases made from then on. */
+  evidence: TopicUpdateEvidence[];
+  observation_evidence?: TopicObservationEvidence[];
 };
 
 // ------------------------------------------------------- before Issue #35 ----
@@ -413,7 +445,7 @@ export type Payload = {
   coverage: Coverage;
   sources: Source[];
   /** Absent from a release made before topics were published. */
-  topics?: Topic[];
+  topics?: TopicDocument[];
   /** Absent from a release made before Issue #35; then the chain and progress below carry the same. */
   work?: (Omit<Activity, "activity_id"> & { id: string })[];
   occupations?: OccupationRow[];
@@ -514,6 +546,8 @@ type Store = {
   observationsByOccupation: Map<string, ObservationRow[]>;
   /** Every published observation by its id, and by each id merged into it. */
   observationById: Map<string, ObservationRow>;
+  /** Topics with the evidence of both kinds read together. */
+  topics: Topic[];
 };
 
 function buildStore(data: Payload | null, release: DataRelease): Store {
@@ -584,6 +618,10 @@ function buildStore(data: Payload | null, release: DataRelease): Store {
     observationsByMarket,
     observationsByOccupation,
     observationById,
+    topics: (data?.topics ?? []).map(({ observation_evidence, ...topic }) => ({
+      ...topic,
+      evidence: [...(observation_evidence ?? []), ...(topic.evidence ?? [])],
+    })),
   };
 }
 
@@ -624,7 +662,7 @@ export const activities = (): Activity[] => current().work;
 export const events = (): EventRow[] => current().data?.events ?? [];
 export const coverage = (): Coverage | null => current().data?.coverage ?? null;
 export const sources = (): Source[] => current().data?.sources ?? [];
-export const topics = (): Topic[] => current().data?.topics ?? [];
+export const topics = (): Topic[] => current().topics;
 export const topicBySlug = (slug: string): Topic | undefined => topics().find((t) => t.slug === slug);
 
 /** Every update-to-work link, resolved. */

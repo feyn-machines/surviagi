@@ -9,7 +9,7 @@ import { getLocale } from "@/lib/locale";
 import { topicHref } from "@/lib/routes";
 import { fill } from "@/lib/observation-view";
 import { pageMetadata } from "@/lib/seo";
-import { topics, type Topic } from "@/lib/snapshot";
+import { topicEvidenceId, topics, type Topic } from "@/lib/snapshot";
 import { topicObservationCount, topicStands } from "@/lib/topic-standing";
 import s from "./topics.module.css";
 
@@ -199,7 +199,7 @@ export default async function Topics({ searchParams }: Props) {
 
   const totals = {
     accounts: new Set(all.flatMap((t) => t.claims.map((claim) => claim.handle.toLowerCase()))).size,
-    evidence: new Set(all.flatMap((t) => t.evidence.map((row) => row.event_id))).size,
+    evidence: new Set(all.flatMap((t) => t.evidence.map(topicEvidenceId))).size,
   };
 
   if (everything.length === 0) {

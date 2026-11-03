@@ -345,13 +345,13 @@ function EvidenceCounts({ stats, language }: { stats: ObservationStats; language
   );
 }
 
-function Observations({ rows, language }: { rows: ObservationRow[]; language: Language }) {
+export function Observations({ rows, language, anchors = true }: { rows: ObservationRow[]; language: Language; anchors?: boolean }) {
   const c = ledgerCopy[language];
   const zh = language === "zh-CN";
   return (
     <ul className={l.list}>
       {rows.map((row) => (
-        <li key={row.observation_id} id={row.observation_id} className={l.row}>
+        <li key={row.observation_id} id={anchors ? row.observation_id : undefined} className={l.row}>
           <div className={l.when}>
             <b>{observationDate(row) ?? "—"}</b>
             {typeName(row.evidence_type, language)}

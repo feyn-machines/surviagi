@@ -158,7 +158,7 @@ ROUTES = (
     ("topic_panel", "SELECT handle, account_key FROM public.source_accounts"),
     ("topic_kinds", "SELECT id, kind, label_en, label_zh_cn FROM public.ontology_concepts"),
     ("topic_parents", "SELECT child_id, parent_id FROM public.ontology_relations"),
-    ("topic_evidence", "FROM public.topic_option_evidence w"),
+    ("topic_evidence", "FROM public.topic_option_observations w"),
     # The sources export reads the collection tables too, so its queries are
     # matched first, each on a phrase only it contains.
     ("source_accounts", "FROM public.source_accounts a LEFT JOIN public.people"),
@@ -1006,8 +1006,7 @@ class TopicsTests(unittest.TestCase):
                          {"id": "oaw:occupation-group:13", "kind": "occupation_group", "label_en": "Business and Financial Operations", "label_zh_cn": None}],
             topic_parents=[{"child_id": "oaw:occupation:13-2011.00", "parent_id": "oaw:occupation-group:13"}],
             topic_evidence=[{"topic_id": self.TOPIC, "position": 2, "sign": "contradicts", "confidence": 0.91,
-                             "event_id": "e9", "title": "Models beat 12 licensed accountants", "kind": "benchmark_result",
-                             "occurred_at": "2026-10-01T19:26:48+00:00", "by_name": "mercor", "source_url": "https://x.com/m/9"}],
+                             "observation_id": "obs-00000000000000e9"}],
         )
         return publish.build(FakeConn(data), "1.0.0")["topics"]
 

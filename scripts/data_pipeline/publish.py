@@ -169,8 +169,10 @@ def topics(conn) -> list[dict]:
     """The open questions, each with its answers, who argued them and what weighs on them.
 
     A topic carries no answer (rule:topic-carries-no-answer): what is published
-    is who argued each answer in the posts collected, and which updates a judge
-    found to weigh for or against it. The counts say nothing about how many
+    is who argued each answer in the posts collected, and which observations a
+    judge found to weigh for or against it (`observation_evidence`). Before
+    contract 1.8.0 these were updates (`evidence`); those judgments stay in the
+    database and are no longer published. The counts say nothing about how many
     people think so. A topic that failed the standard it was written to, or
     was merged or closed, is not published.
 
@@ -199,25 +201,26 @@ def topics(conn) -> list[dict]:
         found = anchor if kinds.get(anchor) in ("occupation_group", "market_group") else parents.get(anchor)
         row = entries.get(found)
         return row and {"id": found, "en": row["label_en"], "zh-CN": row["label_zh_cn"] or row["label_en"]}
+    # What a judge found to weigh on an answer is an observation (rule:observations-weigh-on-answers-by-judgment).
+    # An observation merged into another counts as the one it was merged into, once; one a person
+    # rejected is not here, as in `observations`. Only an id and which way it weighs are published:
+    # the observation itself is in `observations`.
     weighing: dict[str, list] = {}
     for r in _clean(_rows(conn, """
-            SELECT w.topic_id, o.position, w.sign, w.confidence, e.event_id, e.title, e.kind,
-                   COALESCE(e.occurred_at, e.announced_at) AS occurred_at,
-                   COALESCE(org.canonical_name_en, a.handle) AS by_name,
-                   (SELECT min(cs.canonical_url) FROM public.extracted_event_sources es
-                      JOIN public.collected_sources cs ON cs.source_id = es.source_id
-                     WHERE es.event_id = e.event_id AND cs.canonical_url IS NOT NULL) AS source_url
-              FROM public.topic_option_evidence w
+            SELECT DISTINCT ON (head.id, w.option_id)
+                   w.topic_id, o.position, w.sign, w.confidence, head.id AS observation_id
+              FROM public.topic_option_observations w
               JOIN public.topic_options o ON o.option_id = w.option_id
-              JOIN public.extracted_events e ON e.event_id = w.event_id
-              LEFT JOIN public.org_registry org ON org.org_id = e.primary_org_id
-              LEFT JOIN public.source_accounts a ON a.account_key = e.actor_account_key
-             WHERE w.status <> 'rejected' AND NOT o.retired
-             ORDER BY w.topic_id, o.position, w.confidence DESC, e.event_id""")):
+              LEFT JOIN public.observation_merges m ON m.observation_id = w.observation_id
+              CROSS JOIN LATERAL (SELECT COALESCE(m.merged_into, w.observation_id) AS id) head
+              JOIN public.observations ob ON ob.observation_id = head.id
+             WHERE w.status <> 'rejected' AND NOT o.retired AND ob.review_state <> 'human_rejected'
+             ORDER BY head.id, w.option_id, w.confidence DESC""")):
         weighing.setdefault(r.pop("topic_id"), []).append(
-            {"event_id": r["event_id"], "option": "abcdefgh"[r["position"] - 1], "sign": r["sign"],
-             "confidence": r["confidence"], "title": r["title"], "kind": r["kind"],
-             "occurred_at": r["occurred_at"], "by": r["by_name"], "source_url": r["source_url"]})
+            {"observation_id": r["observation_id"], "option": "abcdefgh"[r["position"] - 1], "sign": r["sign"],
+             "confidence": r["confidence"]})
+    for rows in weighing.values():
+        rows.sort(key=lambda e: (e["option"], -e["confidence"], e["observation_id"]))
     out = []
     for topic in found:
         evidence = weighing.get(topic["id"], [])
@@ -252,7 +255,9 @@ def topics(conn) -> list[dict]:
             "opened_at": topic["opened_at"],
             "latest_claim_at": max((c["published_at"] for c in claims), default=None),
             "accounts": topic["accounts"], "posts": topic["posts"],
-            "options": options, "claims": claims, "evidence": evidence,
+            "options": options, "claims": claims,
+            # Deprecated since contract 1.8.0, kept empty: updates are no longer weighed against answers.
+            "evidence": [], "observation_evidence": evidence,
             "by_quarter": topic["by_quarter"],
         })
     out.sort(key=lambda t: t["topic_id"])

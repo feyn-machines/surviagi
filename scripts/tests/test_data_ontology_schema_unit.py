@@ -28,7 +28,7 @@ class LoaderTests(unittest.TestCase):
     def test_model_path_and_version(self):
         self.assertTrue(ontology_schema.SCHEMA_PATH.exists())
         self.assertEqual(ontology_schema.SCHEMA_PATH.name, "schema.json")
-        self.assertEqual(ontology_schema.SCHEMA_VERSION, "2.6.0")
+        self.assertEqual(ontology_schema.SCHEMA_VERSION, "2.7.0")
         self.assertEqual(ontology_schema.load_schema()["version"], ontology_schema.SCHEMA_VERSION)
 
     def test_load_schema_is_cached(self):
