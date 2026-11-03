@@ -69,13 +69,16 @@ const QUOTE = 220;
 
 const clip = (text: string) => (text.length <= QUOTE ? text : `${text.slice(0, QUOTE).replace(/\s+\S*$/, "")}…`);
 
-/** The strongest cases first, one per actor so a single company is not told twice; named actors before unnamed. */
+/** A proper name starts with a capital or a Chinese character; "internet provider" is a description of someone, not a name. */
+const isName = (row: ObservationRow) => /^[\p{Lu}\p{Lo}]/u.test(row.actor_name ?? "");
+
+/** The strongest cases first, one per actor so a single company is not told twice; proper names before descriptions. */
 function pick(rows: ObservationRow[], limit: number): ObservationRow[] {
   const sorted = [...rows].sort(byStrength);
-  const named = sorted.filter((r) => r.actor_name);
+  const named = sorted.filter(isName);
   const seen = new Set<string>();
   const out: ObservationRow[] = [];
-  for (const row of [...named, ...sorted.filter((r) => !r.actor_name)]) {
+  for (const row of [...named, ...sorted.filter((r) => !isName(r))]) {
     if (seen.has(row.actor_key)) continue;
     seen.add(row.actor_key);
     out.push(row);
