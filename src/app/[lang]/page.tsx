@@ -7,6 +7,9 @@ import { bilingual, localizedPath } from "@/lib/i18n";
 import { getLocale } from "@/lib/locale";
 import { href, topicHref, updateHref } from "@/lib/routes";
 import { pageMetadata, siteLd } from "@/lib/seo";
+import { observationDate } from "@/lib/snapshot";
+import { actorLine, figure, typeName } from "@/lib/observation-view";
+import { termNameOrRaw } from "@/components/ontology-labels";
 import { dateLabel } from "@/lib/update-date";
 import s from "./home.module.css";
 
@@ -43,9 +46,13 @@ const copy = bilingual({
     topicsText: "Open questions, with who argued each answer.",
     articles: "Articles",
     articlesText: "What changed, read from the updates.",
+    standingObservations: "{n} observations of AI at work, each with the words and the source it was read from.",
     recent: "New evidence",
     recentLead: "The latest updates from AI companies.",
+    recentObservations: "The newest observations: what someone reported AI doing, with the figure and where it was said. Each opens on the page that lists it.",
     allUpdates: "All updates",
+    underUpdates: "The updates behind them",
+    on: "On",
     featured: "Questions argued both ways",
     featuredLead: "More than one answer has someone arguing it.",
     allTopics: "All topics",
@@ -80,9 +87,13 @@ const copy = bilingual({
     topicsText: "开放的问题，以及每种答案由谁主张。",
     articles: "文章",
     articlesText: "从更新里读出的变化。",
+    standingObservations: "{n} 条 AI 实际做工作的观察，每条附读出它的原话和出处。",
     recent: "最近的新证据",
     recentLead: "AI 公司最新的更新。",
+    recentObservations: "最新的观察：有人报告 AI 做了什么，附数字和说这话的地方。每条都链到列出它的页面。",
     allUpdates: "全部更新",
+    underUpdates: "它们背后的更新",
+    on: "见",
     featured: "两边都有人说的问题",
     featuredLead: "不止一个答案有人主张。",
     allTopics: "全部话题",
@@ -124,6 +135,7 @@ export default async function Home() {
         {data ? (
           <p className={s.standing}>
             {fill(c.standing, { date: data.generatedAt, updates: data.updatesTotal, orgs: data.orgsTracked, start: data.start, recent: data.recentUpdates, days: RECENT_DAYS })}
+            {data.observationsTotal ? ` ${fill(c.standingObservations, { n: data.observationsTotal })}` : ""}
           </p>
         ) : (
           <p className={s.standing}>{c.noData}</p>
@@ -165,7 +177,44 @@ export default async function Home() {
         </ul>
       </section>
 
-      {data && data.latest.length > 0 ? (
+      {data && data.latestObservations.length > 0 ? (
+        <section id="updates" className={s.block} aria-labelledby="home-recent">
+          <div className={s.blockHead}>
+            <div>
+              <h2 id="home-recent" className={s.blockTitle}>{c.recent}</h2>
+              <p className={s.blockLead}>{c.recentObservations}</p>
+            </div>
+            <Link className={s.more} href={href(language, "/updates")}>{c.underUpdates} →</Link>
+          </div>
+          <ul className={s.rows}>
+            {data.latestObservations.map(({ row, path, where }) => {
+              const date = observationDate(row);
+              const fact = row.facts[0];
+              const [route, anchor] = path.split("#");
+              const target = localizedPath(language, route) + (anchor ? `#${anchor}` : "");
+              return (
+                <li key={row.observation_id} className={s.row}>
+                  <time className={s.rowDate} dateTime={date ?? undefined}>{date}</time>
+                  <div>
+                    {/* Written by a model in English from the post; the figure's own words are on the page it links to. */}
+                    <Link className={s.rowTitle} href={target as never} lang="en">{row.task}</Link>
+                    <p className={s.rowMeta}>
+                      {[
+                        actorLine(row, language),
+                        typeName(row.evidence_type, language),
+                        termNameOrRaw("event_result", row.outcome, language),
+                        termNameOrRaw("observation_direction", row.direction, language),
+                        where ? `${c.on} ${pick(where)}` : null,
+                      ].filter(Boolean).join(" · ")}
+                    </p>
+                    {fact ? <p className={s.rowMeta} lang="en">{figure(fact)}</p> : null}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : data && data.latest.length > 0 ? (
         <section id="updates" className={s.block} aria-labelledby="home-recent">
           <div className={s.blockHead}>
             <div>
