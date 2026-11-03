@@ -387,8 +387,11 @@ class SmokeSelectionTest(unittest.TestCase):
 
     def test_with_data_every_kind_of_detail_page_is_asked_for(self):
         self.assertEqual(set(release.detail_patterns(True)),
-                         {"market", "dotted occupation", "occupation group", "update", "work",
+                         {"market", "dotted occupation", "occupation group", "update",
                           "Chinese dotted occupation"})
+
+    def test_retired_work_addresses_are_not_required_in_the_sitemap(self):
+        self.assertNotIn("work", release.detail_patterns(True))
 
     def test_the_selection_is_a_copy(self):
         release.detail_patterns(True).clear()
