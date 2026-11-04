@@ -65,7 +65,7 @@ test("zero is a value and null is unknown, in the optional fields of a topic vie
   const row = {
     event_id: "ev-1", kind: null, kind_vocabulary: "event_kind-2.2.0", subject_key: null, title: "t", summary: "s", occurred_at: null,
     confidence: 0, identity_confidence: "high", subject: null, basis: null, task: null, result: null, quote: null, schema_version: null,
-    unresolved_reason: "no kind", primary_org_id: "org:x", org_name: "X", org_name_zh_cn: "X", facts: null, source_count: 0, source_urls: [],
+    unresolved_reason: "no kind", unresolved_class: null, primary_org_id: "org:x", org_name: "X", org_name_zh_cn: "X", facts: null, source_count: 0, source_urls: [],
     attention: {}, series_size: null, models: [], work: [],
   };
   assert.ok(events(row), JSON.stringify(events.errors));

@@ -13,7 +13,7 @@
 import { schema, termIds, validateSchema } from "./ontology-schema.mjs";
 
 /** The contract's own version. Moves independently of the ontology, the method and the data. */
-export const CONTRACT_VERSION = "1.8.0";
+export const CONTRACT_VERSION = "1.9.0";
 export const CONTRACT_PATH = "contract/v1";
 
 /**
@@ -127,6 +127,8 @@ export const ENTITIES = [
       event_id: "record", kind: "machine", kind_vocabulary: "record", subject_key: "machine", title: "machine", summary: "machine",
       announced_at: "excerpt", occurred_at: "excerpt", confidence: "machine", identity_confidence: "machine",
       subject: "machine", basis: "machine", task: "machine", result: "machine", quote: "quote", schema_version: "record",
+      // 1.9.0: null when the event has a kind, in releases before it, and until a pass has read the event.
+      unresolved_class: "machine",
     },
     omit: ["actor_account_key", "occurrence_status", "scheduled_for"],
     // Written only for updates with no `occurred_at` (their first source post's time), so dated updates stay byte-identical.

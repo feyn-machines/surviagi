@@ -510,7 +510,10 @@ def build(conn, ontology_version: str | None = None) -> dict:
 
     events = _clean(_rows(conn, """
         SELECT e.event_id, e.title, e.summary, e.kind, e.kind_vocabulary,
-               e.unresolved_reason, e.subject_key, e.identity_confidence,
+               e.unresolved_reason,
+               (SELECT c.unresolved_class FROM public.event_unresolved_classes c
+                 WHERE c.event_id = e.event_id AND e.kind IS NULL) AS unresolved_class,
+               e.subject_key, e.identity_confidence,
                e.occurred_at, e.confidence, e.primary_org_id,
                CASE WHEN e.occurred_at IS NULL THEN coalesce(e.announced_at,
                     (SELECT min(cs.published_at) FROM public.extracted_event_sources s

@@ -101,6 +101,7 @@ export const governedColumns = {
   "topics.origin": "topic_origin",
   "topics.about_method": "relation_method",
   "topics.about_status": "relation_status",
+  "event_unresolved_classes.unresolved_class": "event_unresolved_class",
   "event_measures.method": "relation_method",
   "event_measures.status": "relation_status",
   "topic_option_evidence.method": "relation_method",

@@ -200,6 +200,10 @@ def _subject_key(value):
     return _slug(value) if isinstance(value, str) else None
 
 
+NO_KIND_REASON = "model returned no kind and no unresolved_reason"
+UNKNOWN_KIND_REASON = "model returned unknown kind"
+
+
 def _kind_of(raw):
     """(kind, unresolved_reason) for one model event.
 
@@ -215,8 +219,8 @@ def _kind_of(raw):
     model_reason = raw.get("unresolved_reason")
     model_reason = model_reason.strip() if isinstance(model_reason, str) else ""
     if value is None or kind == "":
-        return None, model_reason or "model returned no kind and no unresolved_reason"
-    return None, f"model returned unknown kind {value!r}"
+        return None, model_reason or NO_KIND_REASON
+    return None, f"{UNKNOWN_KIND_REASON} {value!r}"
 
 
 def event_id_for(key):
