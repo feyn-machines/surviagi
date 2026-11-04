@@ -317,6 +317,17 @@ def mapping_notes(outcome: Outcome) -> list[str]:
     return notes
 
 
+def unresolved_notes(outcome: Outcome) -> list[str]:
+    """How many updates with no kind were classed; one whose call failed is asked again next run."""
+    result = outcome.result
+    if not result.get("run_id"):
+        return []
+    notes = [f"updates with no kind: {result.get('classed', 0)} classed, {result.get('no_term', 0)} no term"]
+    if result.get("failed"):
+        notes.append(f"updates with no kind: {result['failed']} calls failed; asked again next run")
+    return notes
+
+
 def pnpm(*args: str) -> list[str]:
     return ["pnpm", "-s", *args]
 
@@ -349,6 +360,7 @@ def steps(window: Window, root: Path = ROOT) -> list[Step]:
         Step("crawl-panel", pnpm("crawl", "timeline", "--targets", "panel", "--start", start, "--end", end,
                                  "--output", panel_run), **crawl(panel_run)),
         Step("extract-events", extract, check=extraction_problems(root / extraction)),
+        Step("classify-unresolved", pnpm("data:classify:unresolved"), notes=unresolved_notes, optional=True),
         Step("extract-observations", observe, notes=observation_notes, optional=True),
         Step("map-observations", pnpm("data:map:observations"), notes=mapping_notes, optional=True),
         Step("verify", pnpm("data:verify"), check=batch_problems, before=typesafe_preflight),

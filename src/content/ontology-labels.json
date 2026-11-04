@@ -1,6 +1,6 @@
 {
   "generated_from": "datasets/ontology/schema/schema.json",
-  "schema_version": "2.7.0",
+  "schema_version": "2.8.0",
   "classes": {
     "Concept": {
       "en": "Concept",
@@ -2425,6 +2425,54 @@
           "definition": {
             "en": "Running in the organization's real operations.",
             "zh-CN": "在组织的真实业务中运行。"
+          }
+        }
+      }
+    },
+    "event_unresolved_class": {
+      "label": {
+        "en": "Why an update has no kind",
+        "zh-CN": "更新为什么没有类型"
+      },
+      "terms": {
+        "no_readable_content": {
+          "en": "Nothing to read",
+          "zh-CN": "没有可读内容",
+          "definition": {
+            "en": "Only a link, a number or a fragment: the post gives nothing to decide on.",
+            "zh-CN": "只有链接、数字或片段，帖子里没有可供判断的内容。"
+          }
+        },
+        "teaser": {
+          "en": "Teaser",
+          "zh-CN": "预告",
+          "definition": {
+            "en": "It hints that something is coming, or that something exists, without naming the thing or what changes.",
+            "zh-CN": "暗示有东西要来或已经有了，但没有说是什么、变了什么。"
+          }
+        },
+        "not_an_update": {
+          "en": "Not an update",
+          "zh-CN": "不是更新",
+          "definition": {
+            "en": "It says something readable and announces no change: commentary, teaching, a talk or episode, promotion of what already exists, someone's story of using it, or news that has nothing to do with AI products.",
+            "zh-CN": "内容可读，但没有宣布任何变化：评论、教学、讲座或节目、宣传已有的东西、别人的使用故事，或与 AI 产品无关的消息。"
+          }
+        },
+        "kind_undecided": {
+          "en": "Kind undecided",
+          "zh-CN": "类型未定",
+          "definition": {
+            "en": "It announces something real, and the post does not say enough to choose among the kinds, or it sits between two of them.",
+            "zh-CN": "确实宣布了某件事，但帖子说得不够，无法在类型中选定，或它介于两个类型之间。"
+          }
+        },
+        "extractor_fault": {
+          "en": "Extractor fault",
+          "zh-CN": "抽取出错",
+          "definition": {
+            "en": "The extractor's answer could not be used: no kind and no reason, or a kind outside the list. Assigned from the stored reason, without asking a model.",
+            "zh-CN": "抽取器的回答无法使用：既没有类型也没有理由，或给了词表以外的类型。按已存的理由确定，不询问模型。"
           }
         }
       }

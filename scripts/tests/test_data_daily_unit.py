@@ -187,7 +187,7 @@ class RunTest(DailyCase):
         runner = FakeRunner()
         with mock.patch.object(daily, "typesafe_preflight", blocked):
             self.assertEqual(self.make(runner).main(["--promote"]), 1)
-        self.assertEqual(runner.ran, ["crawl-official", "crawl-panel", "extract-events", "extract-observations",
+        self.assertEqual(runner.ran, ["crawl-official", "crawl-panel", "extract-events", "classify-unresolved", "extract-observations",
                                       "map-observations"])
         self.assertIn("pending", self.saved())
 

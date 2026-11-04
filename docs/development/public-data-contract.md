@@ -1,6 +1,6 @@
 # Public data contract / 对外数据契约
 
-Issue #27, part of the evidence-ledger redesign (#34). Contract version **1.8.0**, ontology schema **2.7.0**.
+Issue #27, part of the evidence-ledger redesign (#34). Contract version **1.9.0**, ontology schema **2.8.0**.
 
 The ontology schema is the one type definition. The public contract is generated from it, so an agent can learn from one place which entities exist, what each field means, how far it can be trusted, and how the format evolves.
 
@@ -61,6 +61,7 @@ A field added in a minor version is optional for readers to use. A field is depr
 
 ## Changes / 变更
 
+- 1.9.0 — `events.json` rows carry `unresolved_class` (Event.unresolved_class, ontology 2.8.0, #28): why an update with no `kind` has none, as a controlled class over its free-text `unresolved_reason`. `null` when it has a kind, until a pass has read it, or when the model named no term.
 - 1.8.0 — `topics.json` rows carry `observation_evidence` (Observation `bears_on` TopicOption, ontology 2.7.0, #32): the observations a judge found to weigh for or against each answer, with `sign` and `confidence`. They replace the updates of `evidence`, which is deprecated and empty in releases made from this version; a reader that still reads `evidence` sees no rows, not a different shape. The Agent `question` record lists them under `evidence` with `observation_id` instead of `update_id`.
 - 1.7.0 — each `concerns` entry of an observation carries `occupation_id`: the occupation a `task` belongs to, `null` for other kinds (#32). Occupation pages and `occupation_summary.tasks` count a task only under its own occupation; with an older release, a task counts under an occupation only when it is the observation's one occupation.
 - 1.6.0 — `occupations.json` rows carry `alt_labels_en` and `alt_labels_zh_cn` (Occupation.alt_label, ontology 2.6.0, #30): O*NET reported job titles as written, and their AI translations and model-proposed common Chinese names. They find an occupation and do not define it; one name can belong to several occupations. `null` when the release carries none. The snapshot manifest records which sealed release they came from (`alt_labels_from`). Search responses list the other names a query used under `aliases`, and the `occupation` argument accepts them.

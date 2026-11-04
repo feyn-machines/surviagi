@@ -178,6 +178,8 @@ export type EventRow = {
   kind: string | null;
   kind_vocabulary: string;
   unresolved_reason: string | null;
+  /** Why it has no kind, as a controlled class (contract 1.9.0). Older releases lack it. */
+  unresolved_class?: string | null;
   subject_key: string | null;
   identity_confidence: string | null;
   occurred_at: string | null;

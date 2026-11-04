@@ -207,6 +207,25 @@
       "x-ontology-property": "Event.schema_version",
       "x-since": "2.2.0"
     },
+    "unresolved_class": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "no_readable_content",
+        "teaser",
+        "not_an_update",
+        "kind_undecided",
+        "extractor_fault",
+        null
+      ],
+      "description": "Why an update has no kind, as a class over its free-text reason. A model's proposal, for counting; it does not change the row. Empty when the update has a kind, when no pass has read it yet, or when the model named no term.",
+      "x-description-zh-CN": "更新为什么没有类型：对其自由文本理由的分类。是模型提出的，用于统计，不改动更新本身。更新有类型、尚未分类或模型未给出词表内的类别时为空。",
+      "x-grade": "machine",
+      "x-ontology-property": "Event.unresolved_class",
+      "x-since": "2.8.0"
+    },
     "unresolved_reason": {
       "type": [
         "string",
@@ -322,6 +341,7 @@
     "result",
     "quote",
     "schema_version",
+    "unresolved_class",
     "unresolved_reason",
     "primary_org_id",
     "org_name",

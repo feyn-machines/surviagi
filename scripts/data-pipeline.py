@@ -224,6 +224,7 @@ def main():
     evidence.add_argument('--since', help='Only observations recorded on or after this time (default: every one not yet judged against a topic)')
     evidence.add_argument('--limit', type=int)
     evidence.add_argument('--note', default='')
+    sub.add_parser('classify-unresolved', help='Say why each update with no kind has none, as a controlled class')
     sub.add_parser('measure-markets', help='Say which market or occupation each market measurement is about')
     index = sub.add_parser('search-index', help='Fill the search indexes from the database and the topics document')
     index.add_argument('--only', action='append', choices=['topics', 'updates', 'catalog'])
@@ -470,6 +471,12 @@ def main():
                 conn, limit=args.limit, workers=args.workers, plan_only=args.plan_only,
                 progress=lambda done, total: print(f'  observation {done}/{total}', file=sys.stderr, flush=True)),
                 ensure_ascii=False))
+        elif args.command == 'classify-unresolved':
+            from data_pipeline import deepseek, event_unresolved
+            deepseek.load_env(ROOT)
+            migrate(conn)
+            print(json.dumps(event_unresolved.classify(
+                conn, progress=lambda done, total: print(f'  update {done}/{total}', flush=True)), ensure_ascii=False))
         elif args.command == 'measure-markets':
             from data_pipeline import deepseek, market_measures
             deepseek.load_env(ROOT)
