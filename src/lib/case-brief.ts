@@ -1,6 +1,6 @@
 import { bilingual, type Language } from "@/lib/i18n";
 import { fill } from "@/lib/observation-view";
-import { byStrength, observationDate, observationStats, type ObservationRow } from "@/lib/snapshot";
+import { byStrength, factWords, observationDate, observationStats, observationTask, type ObservationRow, type Worded } from "@/lib/snapshot";
 
 /**
  * What a first-time reader of an occupation page sees before any count: one
@@ -26,6 +26,8 @@ export const briefCopy = bilingual({
     foldTitle: "All {n} records, counts and method",
     foldLead: "For readers who want to check the numbers.",
     english: "Quotes and task wording are in English, as the posts were written.",
+    translated: "",
+    partly: "",
   },
   "zh-CN": {
     lead: "这份工作里，AI 现在做到哪一步了？下面是公开帖子里有出处的真实案例。",
@@ -42,6 +44,8 @@ export const briefCopy = bilingual({
     foldTitle: "查看全部 {n} 条记录、统计与方法",
     foldLead: "给想自己核对数字的读者。",
     english: "案例描述和引文是帖子的英文原文，暂未翻译。",
+    translated: "案例描述是机器翻译，引文保留帖子原话。",
+    partly: "案例描述是机器翻译，没译好的仍是英文；引文保留帖子原话。",
   },
 });
 
@@ -49,8 +53,8 @@ export type BriefCase = {
   id: string;
   actor: string;
   date: string | null;
-  task: string;
-  figures: { value: string; what: string }[];
+  task: Worded;
+  figures: { value: string; what: Worded }[];
   url: string | null;
   quote: string | null;
 };
@@ -91,13 +95,21 @@ export function caseOf(row: ObservationRow, language: Language): BriefCase {
   const source = row.sources[0];
   return {
     id: row.observation_id,
-    actor: row.actor_name ?? (language === "zh-CN" ? "未具名" : "unnamed"),
+    actor: (language === "zh-CN" ? row.actor_name_zh_cn : null) ?? row.actor_name ?? (language === "zh-CN" ? "未具名" : "unnamed"),
     date: observationDate(row),
-    task: row.task,
-    figures: row.facts.slice(0, FIGURES).map((f) => ({ value: `${f.value}${f.unit ? ` ${f.unit}` : ""}`, what: f.what })),
+    task: observationTask(row, language),
+    figures: row.facts.slice(0, FIGURES).map((f) => factWords(f, language)),
     url: source?.url ?? null,
     quote: source ? clip(source.quote) : null,
   };
+}
+
+/** What the cards' wording is, in one sentence for the Chinese page: only what the cards shown make true. */
+export function wordingNote(cases: BriefCase[], language: Language): string {
+  const c = briefCopy[language];
+  const parts = cases.flatMap((row) => [row.task, ...row.figures.map((f) => f.what)]);
+  const done = parts.filter((part) => part.translated).length;
+  return done === 0 ? c.english : done === parts.length ? c.translated : c.partly;
 }
 
 /** Null when nothing is mapped to the page, so the page keeps its plain layout. */

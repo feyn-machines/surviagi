@@ -19,7 +19,7 @@ import {
   typeName,
   type Overview,
 } from "@/lib/observation-view";
-import { EVIDENCE_ORDER, observationDate, type ObservationRow, type ObservationStats, type Topic } from "@/lib/snapshot";
+import { EVIDENCE_ORDER, observationDate, observationTask, worded, type ObservationRow, type ObservationStats, type Topic, type Worded } from "@/lib/snapshot";
 import { plural } from "@/lib/plural";
 import { directionName, splitTopics, subjectHref, topicEvidence, topicEvidenceCopy, topicLine } from "@/lib/topic-evidence";
 import { topicHref } from "@/lib/routes";
@@ -345,6 +345,8 @@ function EvidenceCounts({ stats, language }: { stats: ObservationStats; language
   );
 }
 
+const Words = ({ text, lang }: Worded) => <span lang={lang}>{text}</span>;
+
 export function Observations({ rows, language, anchors = true }: { rows: ObservationRow[]; language: Language; anchors?: boolean }) {
   const c = ledgerCopy[language];
   const zh = language === "zh-CN";
@@ -357,22 +359,22 @@ export function Observations({ rows, language, anchors = true }: { rows: Observa
             {typeName(row.evidence_type, language)}
           </div>
           <div className={l.what}>
-            {/* Read by a model in English; the quotes below are the post's own words. */}
-            <span className={l.task} lang="en">{row.task}</span>
-            {zh ? <em className={l.original}>{c.original}</em> : null}
+            {/* Read by a model in English, then translated; the quotes below are the post's own words. */}
+            <span className={l.task} lang={observationTask(row, language).lang}>{observationTask(row, language).text}</span>
+            {zh && !observationTask(row, language).translated ? <em className={l.original}>{c.original}</em> : null}
             <p>{actorLine(row, language)}</p>
             {row.facts.length > 0 ? (
               <ul className={l.figures}>
                 {row.facts.map((fact) => (
                   <li key={fact.fact_id}>
-                    <b lang="en">{figure(fact)}</b>
+                    <b lang={worded(language, fact.what, fact.what_zh_cn).lang}>{figure(fact, language)}</b>
                     <q>{fact.quote}</q>
                   </li>
                 ))}
               </ul>
             ) : null}
-            {row.scale ? <p>{c.scale}{zh ? "：" : ": "}<span lang="en">{row.scale}</span></p> : null}
-            {row.conditions ? <p>{c.conditions}{zh ? "：" : ": "}<span lang="en">{row.conditions}</span></p> : null}
+            {row.scale ? <p>{c.scale}{zh ? "：" : ": "}<Words {...worded(language, row.scale, row.scale_zh_cn)} /></p> : null}
+            {row.conditions ? <p>{c.conditions}{zh ? "：" : ": "}<Words {...worded(language, row.conditions, row.conditions_zh_cn)} /></p> : null}
             {row.sources.map((source) => (
               <small key={source.source_ref}>
                 <a href={source.url} rel="nofollow noopener" target="_blank">{c.source} ↗</a> “{source.quote}”

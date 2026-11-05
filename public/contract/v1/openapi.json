@@ -2,9 +2,9 @@
   "openapi": "3.1.0",
   "info": {
     "title": "SurviAGI agent API",
-    "version": "1.9.0",
+    "version": "1.10.0",
     "description": "Read-only access to published SurviAGI records and key-gated submissions. Every record is machine-proposed unless its review state says otherwise; cite the source URLs, not our summaries. Entity field names, types and grades are in the JSON Schemas listed under `x-entities`.",
-    "x-ontology-version": "2.8.0"
+    "x-ontology-version": "2.9.0"
   },
   "servers": [
     {

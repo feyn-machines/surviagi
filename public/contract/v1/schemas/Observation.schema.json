@@ -301,6 +301,54 @@
       "x-ontology-property": "Observation.created_at",
       "x-since": "2.5.0"
     },
+    "task_zh_cn": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The same sentence in Simplified Chinese, by machine translation. Empty until a pass has translated it.",
+      "x-description-zh-CN": "同一句话的简体中文，机器翻译。尚未翻译时为空。",
+      "x-grade": "machine",
+      "x-ontology-property": "Observation.task_zh_cn",
+      "x-since": "2.9.0",
+      "x-key-optional": true
+    },
+    "scale_zh_cn": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The scale in Simplified Chinese, by machine translation. Empty until translated or when there is no scale.",
+      "x-description-zh-CN": "规模的简体中文，机器翻译。尚未翻译或没有规模时为空。",
+      "x-grade": "machine",
+      "x-ontology-property": "Observation.scale_zh_cn",
+      "x-since": "2.9.0",
+      "x-key-optional": true
+    },
+    "conditions_zh_cn": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The conditions in Simplified Chinese, by machine translation. Empty until translated or when there are none.",
+      "x-description-zh-CN": "条件与限制的简体中文，机器翻译。尚未翻译或没有时为空。",
+      "x-grade": "machine",
+      "x-ontology-property": "Observation.conditions_zh_cn",
+      "x-since": "2.9.0",
+      "x-key-optional": true
+    },
+    "actor_name_zh_cn": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The actor in Simplified Chinese when the source only describes them (\"a Virginia librarian\"). A proper name or account handle stays as written.",
+      "x-description-zh-CN": "来源只描述了主体时（如“弗吉尼亚州的一位图书管理员”）的简体中文。专名和账号保持原样。",
+      "x-grade": "machine",
+      "x-ontology-property": "Observation.actor_name_zh_cn",
+      "x-since": "2.9.0",
+      "x-key-optional": true
+    },
     "sources": {
       "type": "array",
       "items": {
@@ -316,8 +364,8 @@
       "items": {
         "type": "object"
       },
-      "description": "Numbers the source states: fact_id, value, unit, what it counts, baseline, method note, and the quote that states it.",
-      "x-description-zh-CN": "来源给出的数值：fact_id、值、单位、指什么、比较基线、口径说明及出处原话。",
+      "description": "Numbers the source states: fact_id, value, unit, what it counts, baseline, method note, and the quote that states it. Since 1.10.0 also `unit_zh_cn` and `what_zh_cn`, machine translations that are null until made; the quote is never translated.",
+      "x-description-zh-CN": "来源给出的数值：fact_id、值、单位、指什么、比较基线、口径说明及出处原话。1.10.0 起另有 `unit_zh_cn`、`what_zh_cn`（机器翻译，译好之前为 null）；原话不翻译。",
       "x-grade": "excerpt",
       "x-shape": "view"
     },

@@ -1517,7 +1517,10 @@ test("market and occupation pages count their observations by evidence type and 
         { ...concern("oaw:task:900002", "task"), label_en: "TASK OF ANOTHER job", occupation_id: "oaw:occupation:99-9999.00" },
         { ...concern("oaw:task:900003", "task"), label_en: "TASK THREE of the job" },
       ],
-      facts: [{ fact_id: "fact-a", value: "48", unit: "%", what: "share of tickets closed", baseline: null, method_note: null, quote: "FIGURE obs-a" }],
+      facts: [{ fact_id: "fact-a", value: "48", unit: "%", what: "share of tickets closed", what_zh_cn: "已关闭工单的比例", baseline: null, method_note: null, quote: "FIGURE obs-a" },
+        { fact_id: "fact-a2", value: "1.2", unit: "million contacts", unit_zh_cn: "百万次联系", what: "contacts handled", what_zh_cn: "处理的联系量", baseline: null, method_note: null, quote: "MORE obs-a" }],
+      // Issue #78: Chinese wording on this one; obs-b has none and falls back to its English.
+      task_zh_cn: "obs-a 的中文任务", conditions: "With review", conditions_zh_cn: "有人复核", actor_name_zh_cn: "obs-a 的主体",
     }),
     row("obs-b", {
       evidence_type: "measurement", direction: "human_still_needed", outcome: "failed", announced_at: day(60), concerns: [concern(first.id, "work")],
@@ -1557,6 +1560,23 @@ test("market and occupation pages count their observations by evidence type and 
   try {
     const marketPath = `/markets/${marketId.replace(/^oaw:market:/, "")}`;
     const md = await (await fetch(`${base}${marketPath}/raw.md`)).text();
+    // Issue #78: a Chinese reader gets the machine translation where there is one and the English where there is
+    // none, an English reader never sees it, and the quote stays the post's own words in both.
+    const mdZh = await (await fetch(`${base}/zh-CN${marketPath}/raw.md`)).text();
+    for (const words of ["obs-a 的中文任务", "48 % — 已关闭工单的比例", "120 万次联系 — 处理的联系量", "有人复核", "obs-a 的主体", "Task of obs-b", "FIGURE obs-a"]) assert.ok(mdZh.includes(words), `Chinese copy: ${words}`);
+    assert.ok(!mdZh.includes("Task of obs-a"), "the translated task replaces the English on the Chinese page");
+    for (const words of ["Task of obs-a", "48 % — share of tickets closed", "1.2 million contacts — contacts handled", "With review", "Actor obs-a", "FIGURE obs-a"]) assert.ok(md.includes(words), `English copy: ${words}`);
+    assert.ok(!md.includes("obs-a 的中文任务"), "the English page has no translation");
+    const pageZh = await (await fetch(`${base}/zh-CN${marketPath}`)).text();
+    assert.ok(/<span[^>]*>obs-a 的中文任务<\/span>/.test(pageZh) && !/lang="en"[^>]*>obs-a 的中文任务/.test(pageZh), "a translated task is not marked as English");
+    assert.ok(/lang="en"[^>]*>Task of obs-b/.test(pageZh), "the English of an untranslated task is marked as English");
+    const agentZh = (await (await fetch(`${base}/api/agent/observations?market=${marketId.replace(/^oaw:market:/, "")}&language=zh-CN&limit=50`)).json());
+    const [rowA, rowB] = ["obs-a", "obs-b"].map((id) => agentZh.results.find((r) => r.id === id));
+    assert.deepEqual([rowA.task, rowA.task_language, rowA.task_original, rowA.facts[0].what, rowA.facts[0].what_original, rowA.facts[0].quote],
+      ["obs-a 的中文任务", "zh-CN", "Task of obs-a", "已关闭工单的比例", "share of tickets closed", "FIGURE obs-a"]);
+    assert.deepEqual([rowB.task, rowB.task_language, rowB.task_original], ["Task of obs-b", "en", undefined]);
+    const agentEn = (await (await fetch(`${base}/api/agent/observations?market=${marketId.replace(/^oaw:market:/, "")}&limit=50`)).json()).results.find((r) => r.id === "obs-a");
+    assert.deepEqual([agentEn.task, agentEn.task_language, agentEn.facts[0].what], ["Task of obs-a", "en", "share of tickets closed"]);
     assert.match(md, /3 observations bear on .*: 1 production use, 1 measurement, 1 vendor claim\./);
     for (const line of ["- Production use: 1", "- Measurement: 1", "- Statistic: 0", "- Own use: 0", "- Demonstration: 0", "- Vendor claim: 1",
       "1 of them says a person is still needed", "1 said in the 30 days before the data date, 2 in the 90 days.", "1 carries no date.",
@@ -1577,7 +1597,7 @@ test("market and occupation pages count their observations by evidence type and 
       const order = ["obs-d", "obs-a", "obs-b"].map((id) => evidence.indexOf(`#${id}"`));
       assert.ok(order.every((at) => at > 0) && order[0] < order[1] && order[1] < order[2], `${prefix}: observations are absent or not newest first (${order})`);
       assert.ok(!evidence.includes("obs-c") && !evidence.includes("obs-1111"), `${prefix}: an undated observation is listed`);
-      assert.ok(evidence.includes("48 % — share of tickets closed"), `${prefix}: the figure is absent`);
+      assert.ok(evidence.includes(prefix ? "48 % — 已关闭工单的比例" : "48 % — share of tickets closed"), `${prefix}: the figure is absent`);
       assert.ok(evidence.includes(`href="${prefix}/occupations/${occupation.id.replace(/^oaw:occupation:/, "")}#obs-a"`), `${prefix}: obs-a is not linked to the occupation page that lists it`);
       assert.ok(!evidence.includes("QUOTE"), `${prefix}: a source quote is on the home page`);
     }
@@ -1617,7 +1637,7 @@ test("market and occupation pages count their observations by evidence type and 
       for (const part of faq.mainEntity[0].acceptedAnswer.text.split(/(?<=[.。])\s*/).filter(Boolean)) {
         assert.ok(visible(html).includes(part.replace(/[.。]$/, "")), `${prefix}${path}: "${part}" is not on the page`);
       }
-      const machine = prefix ? "由模型读出，没有人核对过。" : "Read by a model; no person has checked it.";
+      const machine = prefix ? "由模型读出，没有人核对过；中文是机器翻译，引文保留帖子原话。" : "Read by a model; no person has checked it.";
       assert.ok(faq.mainEntity[1].acceptedAnswer.text.endsWith(machine) && visible(html).includes(machine));
       assert.ok(title.endsWith(prefix ? "现在的证据" : "The evidence so far"));
       const downloads = Object.fromEntries(dataset.distribution.map((d) => [d.encodingFormat === "text/markdown" ? "md" : new URL(d.contentUrl).pathname.split("/").at(-1), d.contentUrl]));
@@ -1702,7 +1722,10 @@ test("market and occupation pages count their observations by evidence type and 
     assert.equal((await api(`/api/agent/observations?cursor=nonsense`)).status, 400);
     assert.equal((await api(`/api/agent/observations?evidence_types=rumour`)).status, 400);
     const a = all.results[0];
-    assert.deepEqual(a.facts, [{ value: "48", unit: "%", what: "share of tickets closed", quote: "FIGURE obs-a" }]);
+    assert.deepEqual(a.facts, [
+      { value: "48", unit: "%", what: "share of tickets closed", quote: "FIGURE obs-a" },
+      { value: "1.2", unit: "million contacts", what: "contacts handled", quote: "MORE obs-a" },
+    ]);
     assert.equal(a.url, `https://surviagi.com${occupationPath}#obs-a`);
 
     const record = (await api("/api/agent/record?id=obs-1111111111111111")).body;

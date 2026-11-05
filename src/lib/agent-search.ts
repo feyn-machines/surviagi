@@ -149,6 +149,8 @@ function observationDoc(row: ObservationRow, updateIds: Set<string>): Doc | null
     type: "observation",
     title: row.task,
     snippet: clip(quote || row.task),
+    // The Chinese title is a machine translation; the snippet stays the post's own words.
+    zh: row.task_zh_cn ? { title: row.task_zh_cn, snippet: clip(quote || row.task_zh_cn) } : undefined,
     content: quote ? "post_quote" : "machine_summary",
     date: observationDate(row),
     organization: row.actor_name,
@@ -156,10 +158,10 @@ function observationDoc(row: ObservationRow, updateIds: Set<string>): Doc | null
     path,
     markdownPath,
     fields: [
-      { name: "task", text: lower(row.task), weight: 3 },
+      { name: "task", text: lower(`${row.task} ${row.task_zh_cn ?? ""}`), weight: 3 },
       { name: "concerns", text: lower(concerns), weight: 2 },
       { name: "actor", text: lower([row.actor_name, row.actor_key, row.subject_key === "unspecified" ? null : row.subject_key].filter(Boolean).join(" ")), weight: 2 },
-      { name: "facts", text: lower(row.facts.map((f) => `${f.value} ${f.unit ?? ""} ${f.what}`).join(" ")), weight: 1 },
+      { name: "facts", text: lower(row.facts.map((f) => `${f.value} ${f.unit ?? ""} ${f.what} ${f.what_zh_cn ?? ""}`).join(" ")), weight: 1 },
       { name: "quotes", text: lower([...row.sources.map((s) => s.quote), ...row.facts.map((f) => f.quote)].join(" ")), weight: 1 },
       { name: "evidence_type", text: lower(basis), weight: 1 },
     ],
