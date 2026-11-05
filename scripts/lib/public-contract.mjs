@@ -421,7 +421,7 @@ export function openApi(entityNames) {
           operationId: "getRecord",
           summary: "Read one record in full.",
           parameters: [
-            { name: "id", in: "query", required: true, schema: { type: "string", minLength: 1, maxLength: 260 }, description: "An id returned by search or query_observations, or an exact published catalog id: oaw:occupation:<code> or oaw:market:<slug> (market or activity). Catalog responses include fields, related_ids, review, coverage, page links, release and versions; market relations are capped with related_total." },
+            { name: "id", in: "query", required: true, schema: { type: "string", minLength: 1, maxLength: 260 }, description: "An id returned by search or query_observations, or model:<owner>:<slug> (published model metadata), x:<handle> (collected account without post bodies), or an exact published catalog id: oaw:occupation:<code> or oaw:market:<slug> (market or activity). Model/account links lead to collection pages and markdown_url is null. Catalog responses include fields, related_ids, review, coverage, page links, release and versions; market relations are capped with related_total." },
             LANGUAGE,
           ],
           responses: { "200": jsonBody(ref("RecordResponse"), "The record."), ...ERRORS, "404": jsonBody(ref("Error"), "No record with this id in the loaded release.") },

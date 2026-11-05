@@ -227,7 +227,7 @@ export async function runRecord(args: Args): Promise<Outcome> {
       return fail(503, "unavailable", "Public article reading is unavailable right now. Try again later.");
     }
   }
-  if (!isRecordId(id)) return fail(400, "invalid", "`id` must be an id returned by search or query_observations (an update, question, observation, evidence, article revision or oaw:market:/oaw:occupation: catalog id).");
+  if (!isRecordId(id)) return fail(400, "invalid", "`id` must be an id returned by search or query_observations (an update, question, observation, evidence, article revision or oaw:market:/oaw:occupation:/model: catalog id, or x: account key).");
   const found = record(id, language ?? "en");
   if (!found) return fail(404, "not_found", "The loaded data release holds no record with this id. Ids of earlier releases may be gone; search again.");
   return ok(found, true);
@@ -636,7 +636,7 @@ export const READ_TOOLS = [
     name: "get_record",
     title: "Read a SurviAGI record",
     description:
-      "Read one published record by its exact id. Catalog ids (oaw:occupation:… and oaw:market:…, including activity ids) return structured fields, related ids, page links and coverage limits; for example id=oaw:occupation:13-2011.00 with language=zh-CN. Other records: a public article revision returns its full Markdown, bilingual link, sources, evidence cutoff, exact version and real approval scope/status; " +
+      "Read one published record by its exact id. model:<owner>:<slug> reads published model metadata; x:<handle> reads a collected account and identity basis, with source URLs but no post bodies. These link to collection pages and have no Markdown page. Example: {id: model:openai:gpt-4}. Catalog ids (oaw:occupation:… and oaw:market:…, including activity ids) return structured fields, related ids, page links and coverage limits; for example id=oaw:occupation:13-2011.00 with language=zh-CN. Other records: a public article revision returns its full Markdown, bilingual link, sources, evidence cutoff, exact version and real approval scope/status; " +
       "an update with its source posts and every reading of it; " +
       "a question with its answer options, the posts that argued them (with short quotes of the posts' own words) and the " +
       "updates that weigh on them; an observation (obs-…, from query_observations or occupation_summary) with its figures, the source words each was read from, " +
@@ -645,7 +645,7 @@ export const READ_TOOLS = [
     inputSchema: {
       type: "object",
       properties: {
-        id: { type: "string", minLength: 1, maxLength: 260, description: "An id from search or query_observations: ev-…, topic:…, obs-…, evidence:…, article:<slug>:v<version>, oaw:occupation:<code> or oaw:market:<slug> (market or activity)." },
+        id: { type: "string", minLength: 1, maxLength: 260, description: "An id from search or query_observations: ev-…, topic:…, obs-…, evidence:…, article:<slug>:v<version>, oaw:occupation:<code>, oaw:market:<slug> (market or activity), model:<owner>:<slug> or x:<handle>." },
         language: LANGUAGE_SCHEMA,
       },
       required: ["id"],
