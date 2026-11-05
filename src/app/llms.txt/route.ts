@@ -79,7 +79,7 @@ export async function GET() {
       `Submitting research questions or accounts to monitor needs a reader's API key and ${SITE_URL}/api/mcp/submit. ` +
       `Details: [For AI agents](${absoluteUrl("en", "/agents")}).`,
     "",
-    `Data contract: a JSON Schema per record type and an OpenAPI description, with every field graded (quote, excerpt, machine, human, record) and four separate versions on every response (contract, ontology, method, data). Index: ${SITE_URL}/contract/v1/index.json; OpenAPI: ${SITE_URL}/contract/v1/openapi.json.`,
+    `Data contract: a JSON Schema per record type and an OpenAPI description, with every field graded (quote, excerpt, machine, human, record) and four separate versions on every response (contract, ontology, method, data). Guide: ${SITE_URL}/contract (English), ${SITE_URL}/zh-CN/contract (简体中文). Index: ${SITE_URL}/contract/v1/index.json; OpenAPI: ${SITE_URL}/contract/v1/openapi.json.`,
     "",
     "## Data",
     "",

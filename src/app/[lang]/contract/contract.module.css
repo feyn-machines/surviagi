@@ -1,0 +1,13 @@
+.page { max-width: 90ch; }
+.list, .grades { font-size: var(--ah-text-body); line-height: var(--ah-leading-body); color: var(--ah-color-muted); }
+.list { padding-inline-start: var(--ah-space-5); }
+.list li { margin-bottom: var(--ah-space-3); }
+.page a { color: var(--ah-color-signal); text-decoration: underline; text-underline-offset: 3px; }
+.grades > div { margin-bottom: var(--ah-space-4); }
+.grades dt { color: var(--ah-color-text); }
+.grades dd { margin-inline-start: 0; }
+.page code { font-family: var(--ah-font-mono); overflow-wrap: anywhere; }
+.tableScroll { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: var(--ah-text-body); line-height: var(--ah-leading-body); }
+.table th, .table td { text-align: start; vertical-align: top; padding: var(--ah-space-3); border-bottom: 1px solid var(--ah-color-line); }
+.table td { color: var(--ah-color-muted); }

@@ -16,7 +16,7 @@ const STANDALONE = join(ROOT, ".next", "standalone");
 const SNAPSHOT_DIR = process.env.SNAPSHOT_DIR ?? join(ROOT, "datasets", "published", "latest");
 const HAS_SNAPSHOT = existsSync(join(SNAPSHOT_DIR, "manifest.json"));
 const LEGAL = ["/privacy", "/terms"];
-const FIXED = ["", "/markets", "/occupations", "/topics", "/updates", "/voices", "/articles", "/whitepaper", "/agents", ...LEGAL];
+const FIXED = ["", "/markets", "/occupations", "/topics", "/updates", "/voices", "/articles", "/whitepaper", "/agents", "/contract", ...LEGAL];
 
 let site;
 const pages = new Map();
@@ -267,7 +267,8 @@ test("every fixed page answers in both languages", () => {
 test("a Chinese page links only to Chinese pages, an English page only to unprefixed ones", () => {
   for (const path of FIXED) {
     for (const link of internal(anchors(html("zh-CN", path)))) {
-      // Installation archives are shared binary downloads, with no page language.
+      // Installation archives and generated JSON contracts have no page language.
+      if (/^\/contract\/v1\/(?:index\.json|openapi\.json|schemas\/[A-Za-z]+\.schema\.json)$/.test(link)) continue;
       if (/^\/api\/agent\/packages\/(surviagi|surviagi-http|surviagi-submit)\.zip$/.test(link)) continue;
       assert.ok(link === "/zh-CN" || link.startsWith("/zh-CN/"), `zh-CN${path} links to ${link}`);
     }
@@ -1305,6 +1306,19 @@ test("the public data contract is served and the agent responses carry its four 
   const llms = body("llms.txt");
   assert.ok(llms.includes("/contract/v1/index.json") && llms.includes("/contract/v1/openapi.json"));
   for (const language of ["en", "zh-CN"]) assert.ok(html(language, "/agents").includes("/contract/v1/openapi.json"));
+  for (const language of ["en", "zh-CN"]) {
+    const page = html(language, "/contract");
+    const prefix = language === "en" ? "" : "/zh-CN";
+    assert.ok(page.includes(language === "en" ? "Public data contract" : "公开数据契约"));
+    assert.ok(page.includes(index.contract_version) && page.includes(index.ontology_version));
+    for (const entity of index.entities) assert.ok(anchors(page).includes(entity.schema), entity.name);
+    assert.ok(anchors(page).includes(index.openapi));
+    assert.ok(anchors(page).includes(`${prefix}/agents`));
+    assert.ok(anchors(html(language, "/agents")).includes(`${prefix}/contract`));
+    assert.ok(llms.includes(`${prefix}/contract`));
+    assert.match(page, /x-key-optional/);
+    assert.match(page, /merged_from/);
+  }
   if (!HAS_SNAPSHOT) return;
 
   const { default: Ajv2020 } = await import("ajv/dist/2020.js");
