@@ -1,4 +1,5 @@
 import contract from "../../public/contract/v1/index.json";
+import { SearchPostings } from "./search-postings";
 import type { Language } from "./i18n";
 import { absoluteUrl } from "./seo";
 import { workSlug } from "./routes";
@@ -353,7 +354,7 @@ export function findAliases(query: string, index: Map<string, AliasTarget[]>): F
   }));
 }
 
-let cached: { key: string; docs: Doc[]; texts: string[]; lexicon: Set<string>; aliases: Map<string, AliasTarget[]> } | null = null;
+let cached: { key: string; docs: Doc[]; index: SearchPostings; lexicon: Set<string>; aliases: Map<string, AliasTarget[]> } | null = null;
 
 /** The documents of the loaded release, built once per release, with each one's fields joined for counting terms. */
 function corpus() {
@@ -361,7 +362,7 @@ function corpus() {
   const key = `${release.releaseId}|${release.loadedAt}`;
   if (cached?.key !== key) {
     const built = buildDocs();
-    cached = { key, docs: built, texts: built.map((d) => d.fields.map((f) => f.text).join("\n")), lexicon: buildLexicon(), aliases: buildAliases(occupations()) };
+    cached = { key, docs: built, index: new SearchPostings(built.map((d) => d.fields.map((f) => f.text).join("\n"))), lexicon: buildLexicon(), aliases: buildAliases(occupations()) };
   }
   return cached;
 }
@@ -394,11 +395,10 @@ export function namedTerms(query: string, lexicon: Set<string>): string[] {
  * hundred, less for a term most records contain ("会被", "取代" in a question), more for a rare one, between 0.25
  * and 1.5. A term no record contains is 0.
  */
-function termWeights(words: string[], texts: string[]): number[] {
-  const n = Math.max(1, texts.length);
+function termWeights(words: string[], index: SearchPostings, size: number): number[] {
+  const n = Math.max(1, size);
   return words.map((word) => {
-    let df = 0;
-    for (const text of texts) if (text.includes(word)) df += 1;
+    const df = index.find(word).size;
     return df === 0 ? 0 : Math.min(1.5, Math.max(0.25, Math.log(n / df) / Math.log(100)));
   });
 }
@@ -469,18 +469,18 @@ export type RankedSearchResult = { result: SearchResult; score: number };
  * records through them; `matched` says which field it was.
  */
 export function rankedSearch(input: SearchInput): { query: string; total: number; results: RankedSearchResult[]; aliases: { term: string; occupations: AliasTarget[] }[]; release: ReturnType<typeof releaseInfo>; content_kinds: typeof CONTENT_KINDS } {
-  const { docs, texts, lexicon, aliases: aliasIndex } = corpus();
+  const { docs, index, lexicon, aliases: aliasIndex } = corpus();
   // An alternative name stands for its occupations' own names; the pieces of the query inside it are not asked again.
-  const aliases = findAliases(input.query, aliasIndex).filter((a) => texts.some((text) => a.texts.some((t) => text.includes(t))));
+  const aliases = findAliases(input.query, aliasIndex).filter((a) => index.any(a.texts).size > 0);
   const inAlias = (word: string) => aliases.some((a) => a.term.includes(word));
-  const named = namedTerms(input.query, lexicon).filter((word) => texts.some((text) => text.includes(word)));
+  const named = namedTerms(input.query, lexicon).filter((word) => index.find(word).size > 0);
   const all = [...new Set([...terms(input.query), ...named])].filter((word) => !inAlias(word));
-  const weights = termWeights(all, texts);
+  const weights = termWeights(all, index, docs.length);
   const words = all.filter((word, i) => weights[i] > 0 || !isCjk(word));
   const rarity = words.map((word) => weights[all.indexOf(word)]);
   const aliasRarity = aliases.map((a) => {
-    const df = texts.filter((text) => a.texts.some((t) => text.includes(t))).length;
-    return Math.min(1.5, Math.max(0.25, Math.log(Math.max(1, texts.length) / df) / Math.log(100)));
+    const df = index.any(a.texts).size;
+    return Math.min(1.5, Math.max(0.25, Math.log(Math.max(1, docs.length) / df) / Math.log(100)));
   });
   const naming = [...named.filter((word) => !inAlias(word)).map((word) => [word]), ...aliases.map((a) => a.texts)];
   const phrase = lower(input.query).trim();
@@ -494,7 +494,9 @@ export function rankedSearch(input: SearchInput): { query: string; total: number
   const enough = (count: number, held: number) =>
     count > 0 && (naming.length > 0 || (asked <= 2 ? count === asked : count >= Math.ceil(asked / 2) || held >= total / 2));
   const scored: { doc: Doc; score: number; matched: Map<string, string[]> }[] = [];
-  for (const doc of asked === 0 ? [] : docs) {
+  const candidates = asked === 0 ? new Set<number>() : index.any([...words, ...aliases.flatMap((a) => a.texts)]);
+  for (const id of candidates) {
+    const doc = docs[id];
     if (!types.has(doc.type)) continue;
     if (input.from && (!doc.date || doc.date.slice(0, 10) < input.from)) continue;
     if (input.to && (!doc.date || doc.date.slice(0, 10) > input.to)) continue;
