@@ -19,6 +19,8 @@ import {
   observationDate,
   observations,
   occupations,
+  occupationById,
+  occupationSlug,
   topics,
   type LinkedEvent,
   type EventRow,
@@ -570,7 +572,7 @@ const ID_QUESTION = /^topic:[a-z_]+:[a-z0-9-]*:[0-9a-f]{8}$/;
 
 /** True for the shape of an id `search` hands out; says nothing about whether the release holds it. */
 export function isRecordId(id: string): boolean {
-  return ID_UPDATE.test(id) || ID_EVIDENCE.test(id) || ID_QUESTION.test(id) || OBSERVATION_ID.test(id);
+  return /^oaw:(market|occupation):[A-Za-z0-9._:-]{1,200}$/.test(id) || ID_UPDATE.test(id) || ID_EVIDENCE.test(id) || ID_QUESTION.test(id) || OBSERVATION_ID.test(id);
 }
 
 function updateRecord(e: LinkedEvent, language: Language) {
@@ -679,6 +681,45 @@ function evidenceRecord(r: EvidenceRow, e: LinkedEvent, language: Language) {
 export function record(id: string, language: Language = "en") {
   const release = releaseInfo();
   const versions = versionsInfo();
+  // Resolve exact catalog ids, never infer a new entity from an unknown id.
+  const occupation = occupationById(id);
+  if (occupation) {
+    return {
+      id, type: "occupation" as const, fields: occupation,
+      related_ids: [...new Set([...(occupation.group_id ? [occupation.group_id] : []), ...occupation.markets.map((m) => m.market_id)])],
+      url: absoluteUrl(language, `/occupations/${occupationSlug(id)}`),
+      markdown_url: absoluteUrl(language, `/occupations/${occupationSlug(id)}/raw.md`),
+      review: "catalog_record" as const,
+      coverage: "Published occupation catalog and its proposed market mappings; task counts do not measure AI capability.",
+      release, versions,
+    };
+  }
+  const activity = activityById(id);
+  if (activity) {
+    const path = `/markets/${marketSlug(activity.market_id)}`;
+    return {
+      id, type: "activity" as const, fields: activity,
+      related_ids: [activity.market_id],
+      url: absoluteUrl(language, `${path}#${activityAnchor(id, activity.market_id)}`),
+      markdown_url: absoluteUrl(language, `${path}/raw.md`),
+      review: "catalog_record" as const,
+      coverage: "Published work catalog. Counts describe collection coverage, not AI capability; individual task mappings are not available here.",
+      release, versions,
+    };
+  }
+  const market = markets().find((m) => m.id === id);
+  if (market) {
+    const related = activities().filter((a) => a.market_id === id).map((a) => a.activity_id).sort();
+    return {
+      id, type: "market" as const, fields: market,
+      related_ids: related.slice(0, DETAIL_ROWS), related_total: related.length,
+      url: absoluteUrl(language, `/markets/${marketSlug(id)}`),
+      markdown_url: absoluteUrl(language, `/markets/${marketSlug(id)}/raw.md`),
+      review: "catalog_record" as const,
+      coverage: `Published market catalog. related_ids lists at most ${DETAIL_ROWS} activities; related_total counts all. Use occupation_summary for observation statistics.`,
+      release, versions,
+    };
+  }
   if (ID_UPDATE.test(id)) {
     const e = linkedEvents().find((row) => row.event_id === id);
     return e ? { ...updateRecord(e, language), release, versions } : null;
