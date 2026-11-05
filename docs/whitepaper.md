@@ -4,250 +4,152 @@
 
 <a id="english"></a>
 
-## How far AI has taken over the world
+## AI and your work: what does the evidence show?
 
-AI is changing the world—and what you can do.
-
-**Will AI kill your idea? Take over your job? Reshape your industry?**
-
-*Every AI update could change your answer.*
+**Will AI take on your work or change your business? Who is using it, what happened, and where are people still needed?**
 
 **PUBLIC WHITEPAPER**  
-v0.2 · October 3, 2026
+v0.3 · November 5, 2026
 [surviagi.com](https://surviagi.com)
 
-### 1. Change begins with work you know
+### 1. Begin with work people know
 
-Building a product means designing it, writing code, answering customers and keeping it running. Providing a service means understanding a need, preparing the work, checking it and delivering a useful result. You put time and skill into each part.
+Building a product means designing it, writing code, answering customers and keeping it running. Providing a service means understanding a need, preparing the work, checking it and delivering a useful result. When AI takes on part of this work, your choices can change.
 
-When AI can take on some of that work, your choices change. Something you could only attempt with a team may become possible on your own. A routine task may take less of your day. A service you planned to sell may become something customers can do for themselves.
+**SurviAGI is an initiative to make evidence about AI doing real work more transparent and credible.** We collect and analyze public accounts of releases, use, tests and failures, connecting them to the occupations and businesses they concern. The website carries this record.
 
-Whether you run a business, work independently, have a job or simply want to make something with AI, those changes matter. They affect what you can offer, what you need to learn and where your effort is still needed.
+We want readers to find what was attempted, under which conditions, with what result and how much human help. These records can inform your own decisions; they cannot establish the probability that you will lose your job or that your business will fail.
 
-**SurviAGI is an initiative to make AI’s progress toward independently completing major production and service work more transparent and credible.** We actively collect and analyze AI developments, connecting them to the work they affect. Our website carries this record; community contributions can help fill gaps and correct our judgments.
+### 2. The unit is an observation
 
-We want users to see what AI has actually achieved, where people are still needed and which possibilities are worth exploring.
+An observation records who used or tested what, on which task, what happened and where the account came from. It can include a result, numerical facts, scale, conditions and limits. Original quotations and source links let readers inspect the basis for the record.
 
-### 2. From a demonstration to everyday use
+The actor may be a maker, an adopting organization, an individual practitioner, an evaluator or a researcher. The evidence may be a vendor claim, a demonstration, personal use, production use, a test or an institutional statistic. These categories describe the account; they are not a ladder of capability levels.
 
-Imagine watching AI finish in minutes something that usually takes you a day. Before relying on it, you need to know what happened around the demonstration: who prepared the materials, whether anyone repaired the result, and whether it would work again with your own task.
+A release or other event can have several observations. An opinion about the future can belong in a topic discussion without becoming evidence that a task was completed. Multiple posts about the same attempt do not automatically become independent confirmations.
 
-A release announcement may describe a feature without showing all the work required to use it. A benchmark tests particular tasks under particular conditions. A business case can show that a system is being used while leaving its failure rate or human workload unclear. Each offers part of the picture.
+Publication time, the time something happened and the time we observed it are separate. Missing dates, results or quantities stay missing; a missing quantity is not zero. Translations are separate from the original evidence.
 
-Developers, businesses and users each hold part of the picture. Developers know how the system was built. Businesses know how it fits into their operations. Users know whether the result was useful and how much they had to fix.
+### 3. Inspect both the result and its limits
 
-We bring those pieces together where evidence is available. We want a useful account of what was attempted, under what conditions, with what outcome and with how much human help. A missing part stays an open question.
+A demonstration may omit preparation. A benchmark covers particular tasks and conditions. A customer story may report production use while leaving failures or human effort unclear. Record those limits alongside the result.
 
-### 3. Connect each update to the work it changes
+**What did AI finish, and what did a person still have to do?** Preparation, checking, corrections, retries and handling unexpected situations belong in the account when known. Failures and evidence that people are still needed belong alongside successful attempts.
 
-An AI update becomes useful when you can connect it to something you do or want to do: preparing a report, editing a video, repairing a program or handling a customer request.
+Source identity, claim verification, adoption and economic effects are separate questions. A verified account does not verify its claims. Production use does not establish independent completion. A successful task does not establish an effect on employment or income.
 
-We are building a record that follows that connection. Users should be able to find an update, see the work it affects, inspect the evidence and follow how the assessment changes over time. Markets and occupations help users find the work relevant to them.
+Extraction and work mapping are machine proposals unless explicitly marked otherwise. A source quotation supports what the source said; it does not mean SurviAGI independently reproduced the result. Candidate mappings must remain distinguishable from confirmed mappings.
 
-**See what AI can take on.** Identify the parts it can complete, the conditions it needs and what a person still has to do. This can help a small team plan its work or someone working alone explore a service they could offer.
+### 4. Find the evidence through four sections
 
-**Understand why an update matters.** A new version may make a task possible, improve the result, reduce effort or make repeated use more reliable. The record should explain which of these changed and what supports that conclusion.
+**Markets** organize evidence about businesses and the work they provide. **Occupations** organize it around jobs and tasks. A single observation can be relevant to both views. Work categories are browsing aids, not scored capabilities.
 
-**Learn from real attempts.** A case is useful when its task, conditions and outcome are clear. It gives you a starting point for trying a similar approach and shows what you will need to check yourself.
+**Topics** bring together questions, competing claims and relevant evidence. **Articles** explain connections across records and distinguish sourced accounts from editorial judgments. Updates and source accounts remain accessible as supporting records.
 
-These records can help users judge both opportunities and pressure on their work. They do not tell us the probability that a business will fail or that a person will lose their job.
+Statistics belong inside market and occupation pages. Counts describe collected evidence and its coverage. They depend on which sources we monitor, what those sources publish and what extraction finds. More observations do not mean more independent capability; no observations do not prove inability. External studies retain their sample, period and scope, including when they cover only one provider's chat product.
 
-### 4. Completing the job includes the work people still do
+Agents can query public records through the published interfaces. Reads use released data and do not start collection or model calls. Exact supported fields and tools are described in [the Agent guide](https://surviagi.com/agents) and the public contract.
 
-By “AI taking over the world,” we mean AI becoming capable of independently completing the major production and service work society relies on. Our scope includes work on computers and work in the physical world through robots and other tools.
+### 5. Retire the progress score, preserve the record
 
-Consider a report for a customer. Writing ten fluent pages is one part of the job. Someone also needs to find the right information, check dates and figures, resolve contradictions and deliver a result the customer can use. If a person must redo those steps, their effort counts when we assess what AI completed.
+The evidence-ledger design confirmed on November 2, 2026 retires L0–L5 levels and the global takeover-progress narrative. We do not turn observations into a replacement percentage, a completion date or a single capability score.
 
-**What did AI finish, and what did a person still have to do?** Preparation, checking, corrections, retries and handling unexpected situations all belong in that account when they are known. Repeated usable results offer a stronger basis than a single successful attempt.
+Earlier level calculations and designs remain historical records. Their retirement does not recalculate them as observations or confirm their judgments. The transition is incremental: reader pages have moved away from levels; legacy Agent evidence records, publication collections and pipeline calculations still require removal. Documentation of the new method is not a claim that this migration or its production rollout is complete.
 
-We collect original announcements, evaluations, product information and accounts of real use, then connect them to specific work. A publisher’s claim and what we accept on the available evidence are recorded separately. Our assessments must show which conclusions come from the source and which come from our analysis.
+Changes in source coverage, extraction method, work mapping and real-world events must remain distinguishable. Stable identities, provenance and versioned releases help readers trace corrections without silently rewriting the earlier record.
 
-We also distinguish three questions: what AI **can do**, whether people **use it in practice**, and what **changes as a result**. Production use does not by itself show that AI completes the work independently. A task result does not by itself establish an effect on employment or income.
+### 6. Your experience and your choice to share
 
-The broader picture grows from these specific assessments. Work without enough evidence remains unresolved; it is not treated as proof that AI cannot do it.
+Your checked repairs, failed automation attempts and acceptance criteria can help define what a useful result requires. Keep the task, model and tools, result, corrections and reasons for accepting or rejecting it. Such records may help prepare evaluations or, with suitable rights and selection, material for further model training.
 
-### 5. Your experience can help improve AI
+**You decide how experience you have the right to use is retained and shared.** Private material stays private. Our data-sovereignty position and aspiration for voluntarily shared, reusable resources continue; they do not imply an available conversation-upload or model-training service.
 
-When you correct an AI’s answer, you contribute knowledge about the work. You might catch a wrong figure, explain a customer’s requirement or show why an apparently finished result cannot be used. Your correction helps define what a good result requires.
+Any future contribution channel must require contributors to select material they have the right to make public and reusable, excluding personal or client confidential information. Keeping a conversation alone does not establish training quality or guarantee a better model.
 
-If you retain the task, result, corrections and reasons for accepting or rejecting it, you preserve more than the final answer. These records can help identify recurring mistakes, prepare tests and, when selected and organized appropriately, become material for post-training: further training that adjusts a model’s behavior after its initial training. [1](#en-note-1)
+### 7. Current work and accountability
 
-**Users should be able to put their own experience to use.** That includes retaining material they have the right to use, choosing a model that supports further training and testing whether it handles their work better. Keeping a conversation is one step in preparing material; improvement still requires suitable data, training and evaluation.
+Observation extraction and publication, occupation evidence pages, topics, articles and Agent reads are implemented in stages. Public records carry machine-proposed review status unless a record explicitly says otherwise. Source expansion, quality evaluation and the remaining legacy retirement are continuing work; no calibrated capability score or measured extraction accuracy is claimed here.
 
-**Post-training data, and the opportunity to use it to improve AI, should be accessible beyond model companies.** A designer’s corrections, an engineer’s checked repairs or a small business’s failed automation attempts may also help other people prepare evaluations and training material.
-
-This is the data sovereignty we advocate: you decide how experience you have the right to use is retained and used, and whether to contribute it. Private material stays outside the community. We want voluntarily contributed material to become public resources that others can reuse to improve and evaluate their own systems.
-
-### 6. Our commitments to evidence and sharing
-
-**Explain the change in terms of work.** Say what AI completed, what changed and what a person still had to do. Include failures and difficulties alongside successful results.
-
-**Make the basis of a judgment accessible.** Show the original source, what has been checked and what is our interpretation. Keep the conditions and limits that affect the conclusion. When a judgment changes, explain why and preserve the earlier record.
-
-**Keep gaps visible.** Missing evidence remains missing. We will distinguish a capability change from an expansion of coverage or a revision to our method.
-
-**Respect your choice to share.** You should be able to keep and use experience you have the right to use without contributing it to the community. Participation is voluntary.
-
-**Keep contributed resources public and reusable.** We do not collect sensitive material. Before uploading, users must review and select their own content, confirm that it contains no private personal information, client confidential information or other sensitive content, and ensure they have the right to make it public and allow reuse. Uploading means agreeing to public sharing and reuse, including evaluation and model post-training. If you are unsure or do not want the material to be public and reusable, do not upload it.
-
-**Support informed choices.** Present what the evidence supports without turning uncertainty into fear or a possible improvement into a guaranteed result. Our analysis remains open to correction.
-
-### 7. Current work and ways to contribute
-
-Local collection, processing and early analysis are underway. We are organizing public AI updates and evidence, linking them to specific work and developing assessments of what AI can complete. The current analysis is machine-generated and has not been individually reviewed by a person. A calibrated public progress baseline and a community submission channel are not yet available.
-
-As the record develops, users should be able to find work similar to their own, inspect original evidence and see why an assessment changed. We also want people familiar with that work to help identify missing conditions, weak evidence and mistaken conclusions.
-
-You can begin with an attempt you know well.
-
-**Keep the whole attempt.** Record what you needed, the model and tools used, the result, checks, corrections and retries, and whether the final outcome was usable. A failed attempt can reveal an important limit.
-
-**Explain what a good result requires.** Note a missing check, an overlooked condition or work a person still had to do. This helps others understand what success means in your field.
-
-**Organize experience you may want to reuse.** Keep examples and acceptance criteria that you have the right to use. They may help you prepare evaluations or training material for your own AI. You decide whether to share them; any future upload must meet the public-reuse conditions above.
-
-For now, keep these records for yourself. We will publish contribution instructions on [surviagi.com](https://surviagi.com) when the channel opens. The open-resource and post-training proposals in this whitepaper are directions for the initiative, not currently available submission or training services.
-
-**We want more people to understand AI’s progress—and what they can do with it.**
+Our commitments are to preserve sources and limits, keep missing evidence visible, separate reported facts from interpretation and correct mistakes with a traceable record. Coverage statistics and any future accuracy report must state the method, sample and date. A proposal or implemented component is not, by itself, production acceptance.
 
 ### Notes and version
 
-**v0.2 · October 3, 2026.** This edition rewrites the opening, chapter titles and body around familiar work, useful evidence and participation. It preserves the initiative’s scope, data-sovereignty position and public-reuse commitments. The first bilingual edition was v0.1, dated September 13, 2026. This editorial revision does not establish a new measurement method or progress result.
+**v0.3 · November 5, 2026.** Replaces the progress-score framing with observations, evidence types and the four reader sections. It preserves the initiative's data-sovereignty position and voluntary public-reuse commitments. v0.2 (October 3, 2026) and v0.1 (September 13, 2026) are earlier editions preserved in version history.
 
-A calibrated public progress baseline has not yet been established. This edition gives no global takeover percentage or completion date. Any future aggregate estimate will need to state which work it covers, how different kinds of work are weighted and how missing evidence affects the result. Capability, actual adoption and economic consequences remain distinct.
-
-The following sources inform specific parts of the approach:
-
-<a id="en-note-1"></a>
-
-1. Human demonstrations and feedback: [Training language models to follow instructions with human feedback — Ouyang et al., 2022](https://arxiv.org/abs/2203.02155).
-2. Tasks grounded in paid work and checked outcomes: [SWE-Lancer — OpenAI, 2025](https://openai.com/index/swe-lancer/).
-3. Task difficulty and reliability: [Task-Completion Time Horizons — METR](https://metr.org/time-horizons/).
-
-The English and Simplified Chinese editions express the same initiative and commitments. Future substantive revisions will identify changes to scope, method or conclusions.
-
----
+The [evidence-ledger method](https://github.com/feyn-machines/surviagi/blob/main/docs/data/evidence-ledger-method.md) defines the current approach and transition limits. The English and Simplified Chinese editions express the same commitments.
 
 <a id="zh-cn"></a>
 
-## AI 接管世界的进度
+## AI 与你的工作：现在的证据是什么？
 
-AI 正在改变世界，也在改变你能做的事。
-
-**AI 会杀死你的创业想法？接管你的工作？重塑你的行业？**
-
-*每一次 AI 更新，都可能会挑战你的答案。*
+**AI 会接手你的工作、改变你的生意吗？谁在用，结果怎样，哪些地方仍然需要人？**
 
 **公众白皮书**  
-v0.2 · 2026年10月3日
+v0.3 · 2026年11月5日
 [surviagi.com](https://surviagi.com)
 
-### 1. 变化从你熟悉的工作开始
+### 1. 从人们熟悉的工作开始
 
-做一个产品，要设计、写代码、回答客户的问题，还要让它持续运行。提供一项服务，要理解需求、准备材料、检查结果，最后完成交付。每一部分，都需要你投入时间和技能。
+做一个产品，要设计、写代码、回答客户的问题，还要让它持续运行。提供一项服务，要理解需求、准备材料、检查结果，最后完成交付。当 AI 接过其中一些工作，你的选择可能发生变化。
 
-当 AI 能接过其中一些工作，你的选择就会改变。过去需要组建团队才能尝试的事，可能一个人就能开始；每天重复处理的事，可能不再占用那么多时间；原本准备出售的一项服务，客户可能已经能自己完成。
+**SurviAGI 是一项让 AI 实际工作的证据更透明、更可信的倡议。** 我们采集和分析公开的发布、使用、测试与失败记录，把它们与相关职业和生意连接起来。网站承载这些记录。
 
-无论你正在经营公司、独立接项目、上班，还是想用 AI 做点什么，这些变化都与你有关。它们影响你能提供什么、需要学什么，以及哪些地方仍然需要你的投入。
+我们希望读者能找到：尝试了什么，条件是什么，结果怎样，人提供了多少帮助。这些材料可以帮助你自己判断，但不能据此算出你失业或生意失败的概率。
 
-**SurviAGI 是一项让 AI 独立完成主要生产与服务工作的进展更透明、更可信的倡议。** 我们主动采集和分析 AI 的变化，把它们与具体工作连接起来。网站承载这些记录，社区共建帮助补充遗漏、纠正判断。
+### 2. 以一条观察为单位
 
-我们希望用户能看清 AI 实际做到了什么，哪些地方仍然需要人，以及哪些新的可能值得尝试。
+一条观察记录：谁用或测试了什么，做哪项任务，结果如何，出处在哪里。它可以包含结果、数值事实、规模、条件与限制。原文引述和来源链接让读者能够检查记录的依据。
 
-### 2. 从一次演示到日常使用
+主体可以是出品方、采用机构、从业者个人、测评者或研究者。依据可以是厂商自述、演示、亲自使用、生产使用、实测或机构统计。这些类别描述材料的性质，不构成能力等级阶梯。
 
-设想你看到 AI 几分钟就完成了自己通常要花一天处理的任务。在把工作交给它之前，你还需要了解演示前后发生的事：材料是谁准备的，结果有没有被人修改，换成自己的任务能否再做一次。
+一次发布或其他事件可以关联多条观察。对未来的观点可以进入话题讨论，但不会因此成为任务已经完成的证据。同一次尝试被多篇帖子提到，也不会自动变成多次独立确认。
 
-一条发布消息可能介绍了新功能，却没有展示使用它所需的全部工作。一项评测检验的是特定条件下的特定任务。一个企业案例可以说明系统已经投入使用，但未必讲清失败率和人的工作量。每一种信息，都只呈现了一部分情况。
+发布时间、事情发生时间与我们观察到的时间分别记录。缺少日期、结果或数量时保持缺失，数量缺失不等于零。译文与原始证据分开。
 
-开发者、企业和用户，各自掌握着一部分信息。开发者了解系统怎样构建，企业了解它怎样进入业务，用户了解结果是否有用、自己还要修正多少。
+### 3. 同时查看结果与限制
 
-我们依据能够获得的证据，把这些信息连起来，记录尝试了什么、条件是什么、结果怎样，以及人提供了多少帮助。缺少的部分，继续作为需要弄清的问题。
+演示可能省略准备过程；评测只覆盖特定任务与条件；客户案例可能报告已在生产中使用，却没说失败和人工投入。这些限制应与结果一起保留。
 
-### 3. 把每一次更新，连到具体工作
+**AI 完成了什么，人还做了什么？** 已知的准备、检查、修正、重试和异常处理都属于记录的一部分。失败和仍需人的证据，与成功尝试一起呈现。
 
-当一次 AI 更新能与你正在做、或者想做的事联系起来，它才容易被理解：准备报告、剪辑视频、修复程序、处理客户请求，究竟哪一项发生了变化？
+来源身份、声明核验、实际采用和经济影响是不同问题。认证账号不能证明其声明属实；生产使用不能证明独立完成；一次任务成功不能证明就业或收入发生了变化。
 
-我们正在建立这样的记录。用户应当能够找到一次更新，看到它涉及哪些工作，查看依据，再沿着时间了解判断怎样变化。赛道和职业，是找到相关工作的入口。
+抽取与工作映射默认是机器提出，除非有明确的其他标记。原文引述支持的是“来源这样说”，不代表 SurviAGI 独立复现了结果。候选映射与已确认映射必须能区分。
 
-**看清哪些工作可以交给 AI。** 它能完成哪些部分，需要什么条件，人还要做什么。这些信息可以帮助小团队安排工作，也可以帮助独立工作的人考虑自己能提供哪些服务。
+### 4. 从四个栏目找到证据
 
-**看懂一次更新为什么值得关注。** 新版本可能让一项工作变得可行，也可能改善结果、减少投入，或提高反复使用时的可靠性。记录应当说明具体改变了哪一部分，以及依据是什么。
+**赛道**组织关于生意及其所提供工作的证据；**职业**按岗位与任务组织证据。一条观察可以同时关联两种视角。工作分类用于浏览，不承载能力评分。
 
-**借鉴一次真实尝试的过程。** 任务、条件和结果说清楚，案例才有参考价值。它可以帮助你尝试类似的做法，也能告诉你需要亲自检查哪些地方。
+**话题**组织问题、相互竞争的说法及相关证据；**文章**解释多条记录之间的联系，把有出处的叙述与作者判断分开。更新与来源账号继续作为支撑记录供读者访问。
 
-这些记录可以帮助用户判断工作中的机会和压力。它们不能直接给出一家公司倒闭、或者一个人失去工作的概率。
+统计放在赛道页和职业页里。计数描述采集到的证据及覆盖情况，受我们关注谁、来源发布什么、抽取找到什么影响。观察更多不等于独立能力更强，没有观察也不证明做不到。引用外部研究时保留样本、时期和范围，包括只覆盖某一家聊天产品的限制。
 
-### 4. 怎样才算把工作做完
+Agent 通过公开接口查询记录。读取使用已发布数据，不触发采集或模型调用。具体支持的字段和工具见 [Agent 指南](https://surviagi.com/zh-CN/agents)与公开契约。
 
-我们所说的“AI 接管世界”，指 AI 逐步具备独立完成社会主要生产与服务工作的能力。范围包括电脑里的工作，也包括借助机器人和其他工具完成的现实世界工作。
+### 5. 撤下进度分数，保留历史记录
 
-以给客户准备一份报告为例。写出十页通顺的文字，是工作的一部分。还需要找到正确的信息、核对日期和数字、处理相互矛盾的材料，最后交付客户能够使用的结果。如果这些步骤仍需人重新做一遍，人的投入就应当算进对 AI 表现的判断。
+2026年11月2日确认的证据账本设计撤下 L0–L5 等级与全球接管进度主线。我们不把观察换算成替代比例、完成日期或单一能力分数。
 
-**AI 做完了什么，人还做了什么？** 在信息已知时，准备、检查、修改、重试和处理意外情况，都应当被记录。多次得到可用结果，比一次成功的尝试更有说服力。
+早期等级计算与设计作为历史记录保留。退役不会把旧计算重新解释为观察，也不代表确认旧判断。迁移分步进行：读者页面已去掉等级，旧 Agent 证据记录、发布集合与管线计算仍待移除。说明新方法不代表迁移或生产上线已经全部完成。
 
-我们采集原始公告、评测、产品信息和真实使用经验，再将它们关联到具体工作。发布方的宣称，与我们依据现有证据采信的表现，分别记录。判断应当说明哪些结论来自原文，哪些来自我们的分析。
+来源覆盖、抽取方法、工作映射与现实事件的变化应分别记录。稳定身份、来源与版本化发布帮助读者追溯修正，不悄悄改写早先的记录。
 
-我们也分别观察三个问题：AI **能做什么**，人们是否**真的在用**，以及使用之后**发生了什么变化**。投入生产使用，本身不能证明 AI 已经独立完成工作；一项任务的结果，也不能直接证明就业或收入发生了变化。
+### 6. 你的经验与分享选择
 
-整体图景由这些具体判断逐步形成。证据不足的工作继续保持未定，不能据此认定 AI 做不到。
+核验过的修复、失败的自动化尝试与验收标准，可以帮助说明怎样的结果才有用。保留任务、模型与工具、结果、修正，以及接受或拒绝结果的理由。这些记录可能用于准备评测，也可能在权利明确、适当筛选后成为模型后训练材料。
 
-### 5. 你的经验，也能帮助 AI 进步
+**你决定如何保留和分享自己有权使用的经验。** 私有材料保持私有。我们继续主张数据主权，并希望自愿分享的材料成为可复用的公共资源；这不代表目前提供对话上传或模型训练服务。
 
-当你纠正 AI 的回答，你也在提供关于这项工作的知识。你可能发现一个错误数字，补充客户的要求，或者指出一份看似完成的结果为什么无法使用。这些修正，帮助说明怎样才算做好。
+任何未来的贡献入口，都应要求贡献者筛选有权公开且允许复用的内容，排除个人隐私与客户机密。仅仅保留对话，不能证明训练材料质量，也不能保证模型变好。
 
-如果你保留任务要求、结果、修改，以及接受或拒绝结果的理由，留下的就不只是最终答案。这些记录可以帮助发现反复出现的错误、准备测试；经过适当筛选和整理，也可能成为后训练材料。后训练是在基础训练之后，进一步调整模型行为的训练。[1](#zh-note-1)
+### 7. 当前工作与可追责性
 
-**用户应当能够利用自己积累的经验。** 包括保留自己有权使用的材料，选择支持进一步训练的模型，并检验它是否更适合自己的工作。保存对话是准备材料的一步；真正改善表现，还需要合适的数据、训练和评测。
+观察抽取与发布、职业证据页、话题、文章和 Agent 读取正在分步实现。公开记录默认带机器提出的复核状态，除非该记录明确另有说明。来源扩展、质量评估与旧机制退役仍在继续；本文不宣称已有经过校准的能力分数或实测的抽取准确率。
 
-**后训练数据，以及利用它们改进 AI 的机会，不应只掌握在模型公司手里。** 设计师的修改记录、工程师通过检查的修复、小企业自动化失败的尝试，也可能帮助其他人准备评测和训练材料。
+我们的承诺是保留来源与限制，让证据缺口可见，区分来源所述与分析解释，并留下可追溯的纠错记录。覆盖统计和未来的准确率报告必须注明方法、样本与日期。一个提议或已实现的组件，本身不等于通过生产验收。
 
-这就是我们主张的数据主权：你决定自己有权使用的经验怎样保存和利用，以及是否贡献出来。私人材料留在社区之外。我们希望自愿贡献的材料成为公开资源，让更多人能够复用它们，改进和评估自己的 AI。
+### 版本说明
 
-### 6. 我们怎样对待证据和分享
+**v0.3 · 2026年11月5日。** 用观察、证据类型与四个读者栏目取代进度评分主线，保留倡议的数据主权立场与自愿公开复用承诺。v0.2（2026年10月3日）与 v0.1（2026年9月13日）作为早期版本保留在版本历史中。
 
-**把变化讲到具体工作上。** 说明 AI 完成了什么、哪里发生了变化、人还做了什么。成功结果之外，也记录失败和困难。
-
-**让用户能够查看判断的依据。** 提供原始来源，说明核查了什么、哪些是我们的解释。保留影响结论的条件与限制。判断改变时，说明原因，并保留此前的记录。
-
-**把信息缺口保留下来。** 缺少证据的地方继续注明。能力的变化、观测范围的扩大和方法的修订，分别说明。
-
-**尊重你是否分享的选择。** 用户应当能够保留和利用自己有权使用的经验，无须以贡献给社区为条件。参与出于自愿。
-
-**贡献的资源公开，并允许复用。** 我们不采集敏感材料。上传前，用户必须自行检查和筛选，确认内容不含个人隐私、客户机密或其他敏感信息，并确认自己有权将它公开、允许他人复用。上传即表示同意公开共享和二次使用，包括评测和模型后训练。不确定，或者不愿让材料公开复用，就不要上传。
-
-**帮助用户有依据地选择。** 说明证据支持什么，避免将不确定性渲染成恐惧，也不把可能的改善写成必然结果。我们的分析始终接受纠正。
-
-### 7. 项目进展与参与方式
-
-本地采集、处理和初步分析已经开展。我们正在整理公开的 AI 更新和证据，将它们关联到具体工作，逐步形成对 AI 完成工作的判断。当前分析由机器生成，尚未经过人工逐条复核。经过校准的公众进度基线和社区提交入口尚未开放。
-
-随着记录积累，用户应当能够找到与自己相似的工作，查看原始证据，并了解为什么调整判断。我们也希望熟悉这些工作的人，帮助指出遗漏的条件、不充分的证据和错误结论。
-
-你可以从一次自己熟悉的尝试开始。
-
-**保留完整过程。** 记录需要完成什么、用了哪些模型和工具、结果怎样，做了哪些检查、修改和重试，以及最后是否可用。失败的尝试也可能揭示重要的限制。
-
-**说明怎样才算做好。** 写下遗漏的检查、忽视的条件，以及仍由人完成的工作。这些信息能帮助其他人理解你所在领域的验收要求。
-
-**整理可能用得上的经验。** 保留自己有权使用的示例和验收标准。它们可能帮助你为自己的 AI 准备评测或训练材料。是否分享，由你决定；未来上传的材料也必须符合上述公开复用条件。
-
-目前可以先为自己保留这些记录。提交入口开放时，我们会在 [surviagi.com](https://surviagi.com) 公布参与说明。本文中的开放资源和后训练主张，是倡议的建设方向；提交和训练服务目前尚未提供。
-
-**让更多人看清 AI 的进展，也看清自己可以做什么。**
-
-### 注记与版本
-
-**v0.2 · 2026年10月3日。** 本版围绕用户熟悉的工作、证据的用途和参与方式，重写开篇、章节标题与正文，保留倡议范围、数据主权立场和公开复用承诺。首个双语版本为 v0.1，日期为2026年9月13日。本次文案修订不代表新的测量方法或进度结果。
-
-经过校准、可供公众使用的进度基线尚未建立。本版不给出全球接管进度百分比或完成日期。未来任何综合估计，都需要说明覆盖哪些工作、不同工作怎样加权，以及缺少证据会怎样影响结果。能力、实际采用与经济后果继续分别记录。
-
-以下资料为方法中的具体部分提供参考：
-
-<a id="zh-note-1"></a>
-
-1. 人类示范与反馈：[Training language models to follow instructions with human feedback — Ouyang 等，2022](https://arxiv.org/abs/2203.02155)。
-2. 基于付费工作的任务与结果验收：[SWE-Lancer — OpenAI，2025](https://openai.com/index/swe-lancer/)。
-3. 任务难度与可靠性：[Task-Completion Time Horizons — METR](https://metr.org/time-horizons/)。
-
-英文与简体中文版表达相同的倡议和承诺。未来的重要修订会说明范围、方法或结论发生了哪些变化。
+[证据账本方法](https://github.com/feyn-machines/surviagi/blob/main/docs/data/evidence-ledger-method.md)说明当前方法与迁移限制。英文与简体中文版表达相同承诺。
