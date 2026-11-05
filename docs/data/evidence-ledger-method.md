@@ -31,3 +31,6 @@ L0–L5, autonomy stages, gate states, minimum-task levels and weighted global t
 Reader pages have moved away from levels. The legacy Agent `evidence` type was deprecated starting at contract 1.1.0, but removal of that type, the `chain`/`markets`/`tasks`/`progress` publication collections and the daily level/gate calculations is still pending. The snapshot reader retains a compatibility fallback. The [delivery plan](../superpowers/plans/2026-11-03-retire-levels-35.md) defines the code-before-data sequence; removing documentation does not make those dependencies disappear.
 
 The older [simulation](takeover-simulation-v0.3.md), [event/social framework](takeover-progress-framework-v1.md) and [knowledge-graph proposal](ai-progress-knowledge-graph-v1.md) are historical designs. Their formulas and status statements are not current instructions. Original publication dates, IDs and history are preserved.
+
+
+来源覆盖的纳入、排除与身份核对规则见[来源覆盖规则 / Source coverage policy](source-coverage-policy.md)。 / See the bilingual [source coverage policy](source-coverage-policy.md) for inclusion, exclusions and identity checks.
