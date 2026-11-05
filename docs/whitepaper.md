@@ -9,7 +9,7 @@
 **Will AI take on your work or change your business? Who is using it, what happened, and where are people still needed?**
 
 **PUBLIC WHITEPAPER**  
-v0.3 · November 5, 2026
+v0.4 · November 5, 2026
 [surviagi.com](https://surviagi.com)
 
 ### 1. Begin with work people know
@@ -72,9 +72,29 @@ Observation extraction and publication, occupation evidence pages, topics, artic
 
 Our commitments are to preserve sources and limits, keep missing evidence visible, separate reported facts from interpretation and correct mistakes with a traceable record. Coverage statistics and any future accuracy report must state the method, sample and date. A proposal or implemented component is not, by itself, production acceptance.
 
+### 8. Whom we follow, and why
+
+Our watchlist groups sources by the evidence they can provide. These uses are not capability levels or a ranking of trustworthy accounts. One account can serve several uses; each observation still needs its own attribution and evidence assessment.
+
+1. **First-party announcements.** Model, Agent/application, cloud and chip organizations qualify through an explicit link from their website or verifiable organizational affiliation. An employee is not automatically an official spokesperson. Releases, demonstrations and customer marketing do not establish independent tests or production outcomes.
+2. **Independent tests and benchmarks.** Named evaluators, research teams and individuals need primary identity evidence and disclosed methods, tested versions, conditions and results. Reposted rankings and recommendations without methods do not qualify as tests. Employment, sponsorship and investment relationships must be disclosed; investors discussing portfolio companies are not independent third parties to those companies.
+3. **Named adopters.** Companies, public institutions and practitioners need verifiable organizational or occupational affiliation and an account of their own use on a specific task. Anonymous customers and vendor-only customer lists are not adopter confirmation. Trials, personal use and production deployment remain distinct; none alone establishes industry prevalence.
+4. **Market and employment measurement.** Identifiable publishers of surveys, economic indices and employment research must retain the sample, period, geography, denominator and method. Product usage indices do not automatically measure job displacement. Hiring, usage, spending and work outcomes are different measures; commercial relationships must be disclosed.
+5. **Views and predictions.** Researchers, practitioners and leaders need verifiable identity and relevant experience; statements retain their attribution and date. Predictions, impressions, relays and social popularity do not establish completed adoption or demonstrated capability.
+
+Identity checks concern who is speaking, not whether the claim is true. Badges, follower counts, self-descriptions and a one-way link to an organization’s website are insufficient on their own. Primary identity links, check dates, numeric account IDs and applicable affiliations support verification. Unresolved identities remain candidates; discovery does not imply activation.
+
+Expansion prioritizes named adopters, independent evaluators and researchers, then market and employment measurement. Vendor accounts remain in scope, with selective additions across major Agent/coding products, model companies, cloud and chips. Baidu/ERNIE remains excluded. For adopters and practitioners, start with accounting, customer service, software development, law including paralegals, and design; adjust using actual Search Console queries. Failures, withdrawals, human intervention and rising costs belong alongside positive results.
+
+Candidate batches must be deduplicated against the current enabled list and retain discovery sources, primary identity evidence, verification status, conflicts, inclusion reasons and missing evidence. Gap lists go through owner confirmation before batch imports; candidates follow the existing identity-check lifecycle. Already confirmed scope does not need renewed approval.
+
+Public account descriptions should explain uses, role, identity evidence and check date, inclusion rationale and conflict limitations. Internal collection state remains private. Coverage statistics must identify their date, 30-day window and timezone, enabled and posting accounts, source posts, deduplicated observations and company/occupation distributions. Multi-use accounts can appear in several groups, but totals must deduplicate them. Collection failures, missing coverage and observed zero must remain distinguishable. Counts are not market shares or representative sampling.
+
+These are coverage requirements: publication of the corresponding account fields, layered statistics and candidate expansion remains work in progress. The [source coverage policy](https://github.com/feyn-machines/surviagi/blob/main/docs/data/source-coverage-policy.md) records the detailed implementation boundary.
+
 ### Notes and version
 
-**v0.3 · November 5, 2026.** Replaces the progress-score framing with observations, evidence types and the four reader sections. It preserves the initiative's data-sovereignty position and voluntary public-reuse commitments. v0.2 (October 3, 2026) and v0.1 (September 13, 2026) are earlier editions preserved in version history.
+**v0.4 · November 5, 2026.** Adds source inclusion, identity checks, coverage priorities and statistical limits. v0.3 (November 5, 2026) replaces the progress-score framing with observations, evidence types and the four reader sections. It preserves the initiative's data-sovereignty position and voluntary public-reuse commitments. v0.2 (October 3, 2026) and v0.1 (September 13, 2026) are earlier editions preserved in version history.
 
 The [evidence-ledger method](https://github.com/feyn-machines/surviagi/blob/main/docs/data/evidence-ledger-method.md) defines the current approach and transition limits. The English and Simplified Chinese editions express the same commitments.
 
@@ -85,7 +105,7 @@ The [evidence-ledger method](https://github.com/feyn-machines/surviagi/blob/main
 **AI 会接手你的工作、改变你的生意吗？谁在用，结果怎样，哪些地方仍然需要人？**
 
 **公众白皮书**  
-v0.3 · 2026年11月5日
+v0.4 · 2026年11月5日
 [surviagi.com](https://surviagi.com)
 
 ### 1. 从人们熟悉的工作开始
@@ -148,8 +168,28 @@ Agent 通过公开接口查询记录。读取使用已发布数据，不触发�
 
 我们的承诺是保留来源与限制，让证据缺口可见，区分来源所述与分析解释，并留下可追溯的纠错记录。覆盖统计和未来的准确率报告必须注明方法、样本与日期。一个提议或已实现的组件，本身不等于通过生产验收。
 
+### 8. 我们在看谁，为什么
+
+名单按来源能提供的证据用途分层。这些用途不是能力等级，也不是账号可信度排名。一个账号可以提供多种用途；每条观察仍须单独核对主体、依据与限制。
+
+1. **第一方发布。** 模型、Agent/应用、云与芯片组织的账号，需有组织官网明确链接或可核对的组织关联证据。员工不自动算官方发言人；发布、演示与客户宣传不能直接证明独立测评或生产效果。
+2. **独立测评与基准。** 具名测评机构、研究团队与个人，需有一手身份证据，公开方法、测试对象与版本、条件和结果。转述排行榜、无方法的推荐不算测评。雇佣、赞助与投资关系须披露；投资机构谈被投公司不算对该公司的独立第三方。
+3. **具名采用方。** 企业、公共机构与行业从业者，需可核对组织或职业关联，直接描述自己在具体任务中的使用。匿名客户、厂商单方面客户名单不算采用方自己确认。试用、个人使用与生产部署分开，不能据此外推行业普及率。
+4. **市场与就业测量。** 调查、经济指数和就业研究须能核对发布主体，并保留样本、时期、地域、分母与方法。产品使用指数不自动代表就业替代；招聘、使用量、支出与工作结果不可互换。商业关系须披露。
+5. **观点与预测。** 研究者、从业者与负责人需可核对身份与相关经历，言论保留归属与日期。预测、感想、转述和社交热度不能当成已经发生的采用或能力证据。
+
+身份核对回答谁在说话，不证明说法属实。认证徽章、粉丝数、账号自述、单向链接到官网均不足以单独确认归属。一手身份链接、核对日期、数字账号 ID 和适用身份支撑核验；无法确认则保持候选，发现来源不等于启用。
+
+扩张优先补具名采用方、独立测评与研究，再补市场与就业测量。保留厂商账号，有选择地补主要 Agent/编程产品、模型、云与芯片公司；Baidu/ERNIE 继续排除。采用方与从业者先覆盖会计、客服、软件开发、法律（含律师助理）和设计，之后按 Search Console 真实查询调整。失败、撤回、人工接管与成本上升等反方向证据同样纳入。
+
+每批候选先与当前启用名单去重，保留发现来源、一手身份证据、核对状态、利益关系、纳入理由与尚缺证据。差距清单经负责人确认后按批导入，候选沿用现有身份核对生命周期；已确认的覆盖范围不要求再次审批。
+
+公开账号说明应包含用途、角色、身份证据与核对日期、纳入理由和利益关系限制，内部采集状态保持私有。覆盖统计须注明统计时点、近 30 天窗口与时区、启用与发帖账号数、来源帖子数、去重观察数及公司和职业分布。多用途账号可分别计入各层，合计必须去重。采集失败、未覆盖与观察为零分别说明；计数不代表市场份额或代表性抽样。
+
+以上是覆盖要求；相应账号字段、分层统计与候选扩张的公开交付仍在进行。[来源覆盖规则](https://github.com/feyn-machines/surviagi/blob/main/docs/data/source-coverage-policy.md)记录详细实施边界。
+
 ### 版本说明
 
-**v0.3 · 2026年11月5日。** 用观察、证据类型与四个读者栏目取代进度评分主线，保留倡议的数据主权立场与自愿公开复用承诺。v0.2（2026年10月3日）与 v0.1（2026年9月13日）作为早期版本保留在版本历史中。
+**v0.4 · 2026年11月5日。** 补充来源纳入、身份核对、覆盖优先级与统计限制。v0.3（2026年11月5日）用观察、证据类型与四个读者栏目取代进度评分主线，保留倡议的数据主权立场与自愿公开复用承诺。v0.2（2026年10月3日）与 v0.1（2026年9月13日）作为早期版本保留在版本历史中。
 
 [证据账本方法](https://github.com/feyn-machines/surviagi/blob/main/docs/data/evidence-ledger-method.md)说明当前方法与迁移限制。英文与简体中文版表达相同承诺。
