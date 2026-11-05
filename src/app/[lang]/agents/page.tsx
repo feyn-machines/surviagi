@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ApiKeys } from "@/components/account/api-keys";
 import { appEnabled } from "@/lib/app-config";
+import { href } from "@/lib/routes";
 import { getLocale } from "@/lib/locale";
 import { pageMetadata } from "@/lib/seo";
 import { agentsCopy, agentsUi, installCopy } from "./copy";
@@ -142,6 +143,7 @@ export default async function AgentsPage() {
             <section key={section.id} id={section.id} className={s.section}>
               <SectionHead n={String(i + 2).padStart(2, "0")} title={section.heading} />
               {section.body.map((text, j) => <p key={j} className={s.paragraph}>{text}</p>)}
+              {section.id === "contract" ? <p className={s.paragraph}><a href={href(language, "/contract")}>{language === "zh-CN" ? "阅读公开数据契约" : "Read the public data contract"}</a></p> : null}
               {section.code ? (
                 <CodeBlock
                   language={language}
