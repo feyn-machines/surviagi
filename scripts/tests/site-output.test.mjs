@@ -1771,6 +1771,22 @@ test("market and occupation pages count their observations by evidence type and 
       assert.equal(byName.url, `https://surviagi.com/zh-CN${occupationPath}#obs-a`);
     }
 
+    // Issue #30: release-provided translations produce a Chinese summary, labelled as a summary rather than a quote.
+    const translated = (await api(`/api/agent/search?query=${encodeURIComponent("obs-a 的中文任务")}&types=observation&language=zh-CN`)).body;
+    const localizedHit = translated.results.find((r) => r.id === "obs-a");
+    assert.ok(localizedHit);
+    assert.deepEqual([localizedHit.title, localizedHit.title_language, localizedHit.content], ["obs-a 的中文任务", "zh-CN", "machine_summary"]);
+    assert.equal(localizedHit.snippet, "标题与摘要为机器翻译：obs-a 的中文任务；有人复核");
+    assert.ok(!localizedHit.snippet.includes("FIGURE obs-a"), "the untranslated quotation is not presented as a Chinese summary");
+    assert.deepEqual(localizedHit.sources, hit.sources, "localization preserves the original sources");
+    const fallback = (await api(`/api/agent/search?query=${encodeURIComponent("Task of obs-b")}&types=observation&language=zh-CN`)).body.results.find((r) => r.id === "obs-b");
+    assert.deepEqual([fallback.title, fallback.snippet, fallback.title_language, fallback.content], ["Task of obs-b", "QUOTE obs-b", "en", "post_quote"]);
+    const localizedMcp = await (await fetch(`${base}/api/mcp`, {
+      method: "POST", headers: { "content-type": "application/json", "cf-connecting-ip": "198.51.100.36" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 30, method: "tools/call", params: { name: "search", arguments: { query: "obs-a 的中文任务", types: ["observation"], language: "zh-CN" } } }),
+    })).json();
+    assert.deepEqual(localizedMcp.result.structuredContent.results.find((r) => r.id === "obs-a"), localizedHit, "HTTP and MCP localize identically");
+
     // Issue #29: what is new since a moment, read from the timestamps the loaded release carries.
     const since = day(10).slice(0, 10);
     const changes = (await api(`/api/agent/changes?since=${since}`)).body;

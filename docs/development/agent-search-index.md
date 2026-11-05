@@ -46,3 +46,21 @@ releases before claiming a performance benefit. It is constructed in memory,
 not stored as a separate published artifact. Editorial article search retains
 its existing separate public-store path. Market/task synonyms, O*NET hierarchy
 expansion and a semantic relevance comparison remain open under #30.
+
+## Chinese observation summaries
+
+When `language=zh-CN` and an observation already has `task_zh_cn`, search returns
+that title and a Chinese summary composed from the translated task, scale and
+conditions available in the release. The summary begins with
+`标题与摘要为机器翻译：` (title and summary are machine translations) and has
+`content=machine_summary`. It is never labelled `post_quote`. Missing optional
+Chinese fields are omitted from this summary instead of inserting English
+wording under a Chinese language marker. The task is always included.
+
+An observation without a translated task retains its English title and snippet,
+`title_language=en`, and the existing content kind. English searches retain the
+original snippets. Source URLs and the original quotes in full records remain
+available unchanged. No request generates a translation. This affects display,
+not matching or relevance scores; the bilingual fixture checks translated,
+untranslated, English, and HTTP/MCP responses even when the loaded real release
+has not received translations yet.
