@@ -1890,11 +1890,13 @@ test("Agent model and source account reads use published metadata in both langua
       [models[0].model_id, "model", models[0]],
       [sources[0].account_key, "source_account", Object.fromEntries(Object.entries(sources[0]).filter(([k]) => k !== "latest"))],
     ]) {
-      const response = await fetch(`${site.base}/api/agent/record?${new URLSearchParams({ id, language })}`);
+      const response = await fetch(`${site.base}/api/agent/record?${new URLSearchParams({ id, language })}`, { headers: { "cf-connecting-ip": "192.0.2.129" } });
       assert.equal(response.status, 200);
       assert.match(response.headers.get("cache-control"), /max-age=60/);
       const record = await response.json();
-      assert.deepEqual((await tool("get_record", { id, language })).structuredContent, record);
+      const mcp = await rpc("/api/mcp", { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "get_record", arguments: { id, language } } }, { "cf-connecting-ip": "192.0.2.129" });
+      assert.equal(mcp.status, 200);
+      assert.deepEqual(mcp.body.result.structuredContent, record);
       assert.deepEqual(record.fields, fields);
       assert.equal(record.type, type);
       assert.equal(record.id, id);
@@ -1909,6 +1911,6 @@ test("Agent model and source account reads use published metadata in both langua
     }
   }
   for (const id of ["model:unknown:missing", "x:missing_account"]) {
-    assert.equal((await fetch(`${site.base}/api/agent/record?${new URLSearchParams({ id })}`)).status, 404);
+    assert.equal((await fetch(`${site.base}/api/agent/record?${new URLSearchParams({ id })}`, { headers: { "cf-connecting-ip": "192.0.2.129" } })).status, 404);
   }
 });
