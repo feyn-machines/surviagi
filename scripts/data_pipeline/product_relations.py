@@ -81,6 +81,9 @@ def reconcile(conn):
                     or row['evidence_type'] not in ('own_use', 'production_use')):
                 continue
             stage = 'production' if row['evidence_type'] == 'production_use' else 'in_use'
+            if conn.execute('SELECT 1 FROM adoptions WHERE observation_id = %s AND stage = %s',
+                            (oid, stage)).fetchone():
+                continue
             aid = 'adoption-' + hashlib.sha256((oid + '\n' + stage).encode()).hexdigest()[:16]
             inserted = conn.execute('''INSERT INTO adoptions
                 (adoption_id, org_id, adopter_name, product_id, model_id, stage, adopted_on, scale, observation_id)
@@ -157,6 +160,10 @@ def import_catalog(conn, doc):
                             or row['org_id'] != observation['actor_org_id']
                             or row['adopter_name'] != observation['actor_name']):
                         raise ValueError('Adoption must agree with a sourced adopter observation')
+                if section == 'adoptions' and conn.execute(
+                        'SELECT 1 FROM adoptions WHERE observation_id = %s AND stage = %s AND adoption_id <> %s',
+                        (row['observation_id'], row['stage'], row[key])).fetchone():
+                    raise ValueError('This observation and adoption stage already have a record')
                 old = conn.execute(sql.SQL('SELECT {} FROM {} WHERE {} = %s').format(
                     sql.SQL(', ').join(map(sql.Identifier, columns)), sql.Identifier(table), sql.Identifier(key)),
                     (row[key],)).fetchone()

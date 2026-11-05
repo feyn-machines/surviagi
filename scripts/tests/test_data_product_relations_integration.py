@@ -71,6 +71,9 @@ class ProductRelations(unittest.TestCase):
         self.assertEqual(adoptions[1]['model_id'], 'model:acme:core')
         self.assertEqual([a['stage'] for a in adoptions], ['in_use', 'production'])
         self.assertTrue(all(a['adopted_on'] is None for a in adoptions))
+        from data_pipeline.product_relations import import_catalog
+        with self.assertRaises(ValueError):
+            import_catalog(self.conn, {'adoptions': [{**adoptions[0], 'adoption_id': 'duplicate-with-another-id'}]})
         self.assertEqual(adoptions[0]['scale'], '100 tickets')
         self.assertEqual(adoptions[0]['observation_id'], product)
         self.assertEqual(adoptions[1]['observation_id'], model)
@@ -78,6 +81,13 @@ class ProductRelations(unittest.TestCase):
                                            (unknown,)).fetchone()['subject_product_id'])
         again = reconcile(self.conn)
         self.assertEqual((again['newly_resolved'], again['new_adoptions']), (0, 0))
+        planned = self.add(13, 'Desk', evidence='vendor_claim')
+        self.conn.execute('UPDATE observation_sources SET quote=%s WHERE observation_id=%s', ('Buyer plans to use Desk', planned))
+        reconcile(self.conn)
+        row = {'adoption_id': 'plan-1', 'org_id': 'org:buyer', 'adopter_name': 'Buyer',
+               'product_id': 'product:acme:desk', 'stage': 'planned', 'observation_id': planned}
+        self.assertEqual(import_catalog(self.conn, {'adoptions': [row]})['inserted'], {'adoptions': 1})
+        self.assertEqual(import_catalog(self.conn, {'adoptions': [row]})['inserted'], {})
         self.assertEqual(self.conn.execute('SELECT subject_key FROM observations WHERE observation_id=%s',
                                            (product,)).fetchone()['subject_key'], 'Desk')
 
