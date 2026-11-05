@@ -1842,3 +1842,28 @@ test("market and occupation pages count their observations by evidence type and 
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("Agent catalog records: bilingual HTTP/MCP parity and navigable relations", { skip: !HAS_SNAPSHOT }, async () => {
+  const work = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "work.json"), "utf8"));
+  const occupations = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "occupations.json"), "utf8"));
+  const activity = work[0];
+  const occupation = occupations.find((o) => o.tasks > 0);
+  for (const language of ["en", "zh-CN"]) {
+    for (const [id, type] of [[activity.id, "activity"], [activity.market_id, "market"], [occupation.id, "occupation"]]) {
+      const response = await fetch(`${site.base}/api/agent/record?${new URLSearchParams({ id, language })}`);
+      assert.equal(response.status, 200, id);
+      assert.match(response.headers.get("cache-control"), /max-age=60/);
+      const record = await response.json();
+      assert.deepEqual((await tool("get_record", { id, language })).structuredContent, record);
+      assert.equal(record.type, type);
+      assert.equal(record.id, id);
+      assert.ok(record.fields && record.related_ids.length > 0);
+      assert.ok(record.coverage && record.review && record.release.generated_at && record.versions.contract);
+      for (const url of [record.url.split("#")[0], record.markdown_url]) {
+        assert.equal((await fetch(`${site.base}${new URL(url).pathname}`)).status, 200, url);
+      }
+    }
+  }
+  const missing = await fetch(`${site.base}/api/agent/record?id=oaw:market:missing-catalog-id`);
+  assert.equal(missing.status, 404);
+});
