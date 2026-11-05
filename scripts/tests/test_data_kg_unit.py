@@ -32,6 +32,7 @@ def small_payload():
         "occupations": [{"id": "o1", "tasks": 2, "touched_tasks": 1}],
         "observations": [{"observation_id": "obs-1", "merged_from": []}],
         "events": [{"event_id": "e1", "title": "T"}],
+        "products": [], "product_availability": [], "adoptions": [], "investments": [],
         "models": [{"model_id": "x"}],
         "sources": [{"account_key": "k", "note": None}],
         "topics": [{"topic_id": "topic:replacement:accountant:00000000"}],

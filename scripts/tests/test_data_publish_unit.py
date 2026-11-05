@@ -243,6 +243,10 @@ class FakeConn:
         return FakeCursor(self)
 
     def route(self, sql):
+        for name, marker in [("products", "FROM products"), ("product_availability", "FROM product_availability"),
+                             ("adoptions", "FROM adoptions a"), ("investments", "FROM org_investments")]:
+            if marker in sql:
+                return name
         for name, marker in ROUTES:
             if marker in sql:
                 return name

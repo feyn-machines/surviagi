@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://surviagi.com/contract/v1/schemas/Investment.schema.json",
+  "title": "Sourced investment",
+  "x-title-zh-CN": "带来源的投资关系",
+  "description": "The investor holds a stake in the company over a period, with its source. Used to tell whether a third party is independent of the company it speaks about.",
+  "x-description-zh-CN": "投资方在一段时间内持有被投公司的股份，带出处。用来判断第三方对其所谈论的公司是否独立。",
+  "type": "object",
+  "properties": {
+    "investment_id": {
+      "type": "string",
+      "x-grade": "record",
+      "x-shape": "view"
+    },
+    "investor_org_id": {
+      "type": "string",
+      "x-grade": "record",
+      "x-shape": "view"
+    },
+    "investee_org_id": {
+      "type": "string",
+      "x-grade": "record",
+      "x-shape": "view"
+    },
+    "stake": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "x-grade": "excerpt",
+      "x-ontology-property": "invests_in.stake"
+    },
+    "started_on": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date",
+      "x-grade": "excerpt",
+      "x-ontology-property": "invests_in.started_on"
+    },
+    "ended_on": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date",
+      "x-grade": "excerpt",
+      "x-ontology-property": "invests_in.ended_on"
+    },
+    "source_url": {
+      "type": "string",
+      "format": "uri",
+      "x-grade": "record",
+      "x-ontology-property": "invests_in.source_url"
+    }
+  },
+  "required": [
+    "investment_id",
+    "investor_org_id",
+    "investee_org_id",
+    "stake",
+    "started_on",
+    "ended_on",
+    "source_url"
+  ],
+  "additionalProperties": false,
+  "x-identifier": "investment_id",
+  "x-snapshot-file": "investments.json"
+}

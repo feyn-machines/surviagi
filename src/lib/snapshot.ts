@@ -468,6 +468,11 @@ export type Payload = {
   coverage: Coverage;
   sources: Source[];
   models?: ModelRow[];
+  /** Contract 1.11.0 collections: absent in earlier releases, not an empty result. */
+  products?: { product_id: string; org_id: string | null; owner_name: string | null; name: string; category: string | null; created_at: string }[];
+  product_availability?: { availability_id: string; product_id: string; as_of: string; stage: string; channel: string | null; region: string | null; audience: string | null; price: string | null; source_url: string }[];
+  adoptions?: { adoption_id: string; org_id: string | null; adopter_name: string | null; product_id: string | null; model_id: string | null; stage: string; adopted_on: string | null; scale: string | null; observation_id: string }[];
+  investments?: { investment_id: string; investor_org_id: string; investee_org_id: string; stake: string | null; started_on: string | null; ended_on: string | null; source_url: string }[];
   /** Absent from a release made before topics were published. */
   topics?: TopicDocument[];
   /** Absent from a release made before Issue #35; then the chain and progress below carry the same. */

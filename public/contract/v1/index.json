@@ -1,5 +1,5 @@
 {
-  "contract_version": "1.10.0",
+  "contract_version": "1.11.0",
   "ontology_version": "2.9.0",
   "name": "SurviAGI public data contract",
   "x-name-zh-CN": "SurviAGI 公开数据契约",
@@ -144,7 +144,7 @@
       },
       "identifier": "product_id",
       "schema": "/contract/v1/schemas/Product.schema.json",
-      "snapshot_file": null
+      "snapshot_file": "products.json"
     },
     {
       "name": "ProductAvailability",
@@ -154,7 +154,27 @@
       },
       "identifier": "availability_id",
       "schema": "/contract/v1/schemas/ProductAvailability.schema.json",
-      "snapshot_file": null
+      "snapshot_file": "product_availability.json"
+    },
+    {
+      "name": "Adoption",
+      "title": {
+        "en": "Observed adoption",
+        "zh-CN": "观察支持的采用"
+      },
+      "identifier": "adoption_id",
+      "schema": "/contract/v1/schemas/Adoption.schema.json",
+      "snapshot_file": "adoptions.json"
+    },
+    {
+      "name": "Investment",
+      "title": {
+        "en": "Sourced investment",
+        "zh-CN": "带来源的投资关系"
+      },
+      "identifier": "investment_id",
+      "schema": "/contract/v1/schemas/Investment.schema.json",
+      "snapshot_file": "investments.json"
     },
     {
       "name": "Observation",

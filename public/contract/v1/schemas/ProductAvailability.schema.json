@@ -113,5 +113,6 @@
   ],
   "additionalProperties": false,
   "x-identifier": "availability_id",
+  "x-snapshot-file": "product_availability.json",
   "x-since": "2.5.0"
 }

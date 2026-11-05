@@ -86,7 +86,7 @@ test("a snapshot directory is checked row by row", () => {
   const dir = mkdtempSync(join(tmpdir(), "contract-"));
   try {
     writeFileSync(join(dir, "manifest.json"), JSON.stringify({ counts: { models: 1 } }));
-    for (const name of ["events", "sources", "topics", "work", "occupations", "observations"]) writeFileSync(join(dir, `${name}.json`), "[]");
+    for (const name of ["events", "sources", "topics", "work", "occupations", "observations", "products", "product_availability", "adoptions", "investments"]) writeFileSync(join(dir, `${name}.json`), "[]");
     const model = { model_id: "m", org_id: null, level: "release", parent_model_id: null, name: "n", version: null, variant: null, status: "confirmed", released_at: null, owner: null, owner_zh_cn: null, events: 0 };
     writeFileSync(join(dir, "models.json"), JSON.stringify([model]));
     assert.deepEqual(checkSnapshot(dir), []);
@@ -97,4 +97,18 @@ test("a snapshot directory is checked row by row", () => {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+
+test("adoption and investment fields project the ontology relation ranges and grades", () => {
+  const adoption = compile("Adoption");
+  const row = { adoption_id: "a", org_id: "org:buyer", adopter_name: "Buyer", product_id: "product:acme:desk",
+    model_id: null, stage: "pilot", adopted_on: null, scale: null, observation_id: "obs-1" };
+  assert.ok(adoption(row), JSON.stringify(adoption.errors));
+  assert.ok(!adoption({ ...row, stage: "guessed" }));
+  assert.ok(!adoption({ ...row, model_id: "model:acme:core" }));
+  assert.ok(!adoption({ ...row, product_id: null }));
+  const investment = compile("Investment");
+  assert.ok(investment({ investment_id: "i", investor_org_id: "org:a", investee_org_id: "org:b",
+    stake: null, started_on: null, ended_on: null, source_url: "https://example.test/investment" }));
 });

@@ -76,5 +76,6 @@
   ],
   "additionalProperties": false,
   "x-identifier": "product_id",
+  "x-snapshot-file": "products.json",
   "x-since": "2.5.0"
 }

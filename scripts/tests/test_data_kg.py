@@ -45,6 +45,7 @@ def payload(extra_event=None, drop_event=None, tweak_model=False):
         "occupations": [{"id": "o1", "tasks": 2, "touched_tasks": 1}],
         "observations": [{"observation_id": "obs-1", "merged_from": []}],
         "events": [dict(e, summary="s") for e in events],
+        "products": [], "product_availability": [], "adoptions": [], "investments": [],
         "models": models,
         "sources": [{"account_key": "k", "followers": 0}],
         "topics": [{"topic_id": "topic:replacement:accountant:00000000", "accounts": 2}],

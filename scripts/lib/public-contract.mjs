@@ -13,7 +13,7 @@
 import { schema, termIds, validateSchema } from "./ontology-schema.mjs";
 
 /** The contract's own version. Moves independently of the ontology, the method and the data. */
-export const CONTRACT_VERSION = "1.10.0";
+export const CONTRACT_VERSION = "1.11.0";
 export const CONTRACT_PATH = "contract/v1";
 
 /**
@@ -165,15 +165,29 @@ export const ENTITIES = [
     fields: { provider_id: "record", name: "excerpt", kind: "machine" },
   },
   {
-    name: "Product", class: "Product", id: "product_id", title: { en: "Product", "zh-CN": "产品" },
+    name: "Product", class: "Product", id: "product_id", collection: "products", title: { en: "Product", "zh-CN": "产品" },
     fields: { product_id: "record", org_id: "record", owner_name: "excerpt", name: "excerpt", category: "machine", created_at: "record" },
   },
   {
-    name: "ProductAvailability", class: "ProductAvailability", id: "availability_id", title: { en: "Product availability", "zh-CN": "产品可用性" },
+    name: "ProductAvailability", class: "ProductAvailability", id: "availability_id", collection: "product_availability", title: { en: "Product availability", "zh-CN": "产品可用性" },
     fields: {
       availability_id: "record", product_id: "record", as_of: "record", stage: "machine", channel: "excerpt",
       region: "excerpt", audience: "excerpt", price: "excerpt", source_url: "record",
     },
+  },
+  {
+    name: "Adoption", relation: "adopts", id: "adoption_id", collection: "adoptions",
+    title: { en: "Observed adoption", "zh-CN": "观察支持的采用" },
+    endpoints: { adoption_id: false, org_id: true, product_id: true, model_id: true },
+    fields: { stage: "machine", adopted_on: "excerpt", scale: "machine", adopter_name: "excerpt", observation_id: "record" },
+    nonNull: ["stage", "observation_id"],
+  },
+  {
+    name: "Investment", relation: "invests_in", id: "investment_id", collection: "investments",
+    title: { en: "Sourced investment", "zh-CN": "带来源的投资关系" },
+    endpoints: { investment_id: false, investor_org_id: false, investee_org_id: false },
+    fields: { stake: "excerpt", started_on: "excerpt", ended_on: "excerpt", source_url: "record" },
+    nonNull: ["source_url"],
   },
   {
     // 1.2.0: the snapshot's `observations.json`. Heads of merges only; a merged id is listed under `merged_from`.
@@ -311,7 +325,37 @@ function viewSchema(name, v) {
 }
 
 /** One entity's JSON Schema (draft 2020-12). */
+function relationSchema(entity) {
+  const relation = schema.relations[entity.relation];
+  if (!relation) throw new Error(`Unknown ontology relation ${entity.relation}`);
+  const attributes = relation.attributes ?? {};
+  if (Object.keys(attributes).some((name) => !(name in entity.fields))) throw new Error(`Unpublished relation attribute: ${entity.relation}`);
+  const properties = {};
+  for (const [name, isNullable] of Object.entries(entity.endpoints)) {
+    properties[name] = { ...(isNullable ? nullable(S("string")) : S("string")), "x-grade": "record", "x-shape": "view" };
+  }
+  for (const [name, grade] of Object.entries(entity.fields)) {
+    if (!attributes[name] || !(grade in GRADES)) throw new Error(`Invalid relation attribute ${entity.relation}.${name}`);
+    const base = baseSchema(attributes[name]);
+    properties[name] = { ...(entity.nonNull.includes(name) ? base : nullable(base)), "x-grade": grade,
+      "x-ontology-property": `${entity.relation}.${name}` };
+  }
+  return {
+    $schema: "https://json-schema.org/draft/2020-12/schema",
+    $id: `https://surviagi.com/${CONTRACT_PATH}/schemas/${entity.name}.schema.json`,
+    title: entity.title.en, "x-title-zh-CN": entity.title["zh-CN"],
+    description: textOf(relation.definition), "x-description-zh-CN": relation.definition?.["zh-CN"] ?? "",
+    type: "object", properties, required: Object.keys(properties), additionalProperties: false,
+    "x-identifier": entity.id, "x-snapshot-file": `${entity.collection}.json`,
+    ...(entity.relation === "adopts" ? { oneOf: [
+      { properties: { product_id: S("string"), model_id: S("null") } },
+      { properties: { product_id: S("null"), model_id: S("string") } },
+    ] } : {}),
+  };
+}
+
 export function entitySchema(entity) {
+  if (entity.relation) return relationSchema(entity);
   const cls = schema.classes[entity.class];
   if (!cls) throw new Error(`public contract names class ${entity.class}, which is not in the ontology schema`);
   for (const name of entity.omit ?? []) propertyOf(entity.class, name);

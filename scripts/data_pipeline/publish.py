@@ -264,6 +264,29 @@ def topics(conn) -> list[dict]:
     return out
 
 
+def product_relations(conn) -> dict:
+    """Only explicit public fields. Adoption points to a published observation head.
+
+    Investments describe recorded financial ties, never proof of independence:
+    a missing tie is unknown and an undated tie cannot settle a past date.
+    """
+    return {
+        "products": _clean(_rows(conn, """SELECT product_id, org_id, owner_name, name, category, created_at
+            FROM products ORDER BY product_id""")),
+        "product_availability": _clean(_rows(conn, """SELECT availability_id, product_id, as_of::text AS as_of, stage,
+            channel, region, audience, price, source_url FROM product_availability ORDER BY availability_id""")),
+        "adoptions": _clean(_rows(conn, """SELECT a.adoption_id, a.org_id, a.adopter_name, a.product_id,
+            a.model_id, a.stage, a.adopted_on::text AS adopted_on, a.scale, a.observation_id
+            FROM adoptions a JOIN observations o USING (observation_id)
+            WHERE o.review_state <> 'human_rejected'
+              AND NOT EXISTS (SELECT 1 FROM observation_merges m WHERE m.observation_id = o.observation_id)
+              AND EXISTS (SELECT 1 FROM observation_sources s WHERE s.observation_id = o.observation_id)
+            ORDER BY a.adoption_id""")),
+        "investments": _clean(_rows(conn, """SELECT investment_id, investor_org_id, investee_org_id,
+            stake, started_on::text AS started_on, ended_on::text AS ended_on, source_url FROM org_investments ORDER BY investment_id""")),
+    }
+
+
 def observations(conn, ontology_version: str) -> list[dict]:
     """What someone did with AI on a piece of work, each with its sources and numbers (Issue #25).
 
@@ -1118,6 +1141,7 @@ def build(conn, ontology_version: str | None = None) -> dict:
         "work": work, "occupations": occupations,
         "events": events, "models": models, "sources": sources(conn),
         "topics": topics(conn), "observations": observations(conn, ontology_version),
+        **product_relations(conn),
         "coverage": coverage, "progress": progress,
     }
     manifest = {
