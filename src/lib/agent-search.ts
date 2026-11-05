@@ -103,7 +103,7 @@ type Doc = {
   title: string;
   snippet: string;
   /** The Chinese title and snippet, where the record has its own; otherwise a Chinese answer shows the English. */
-  zh?: { title: string; snippet: string };
+  zh?: { title: string; snippet: string; content?: keyof typeof CONTENT_KINDS };
   content: keyof typeof CONTENT_KINDS;
   date: string | null;
   organization: string | null;
@@ -154,8 +154,12 @@ function observationDoc(row: ObservationRow, updateIds: Set<string>): Doc | null
     type: "observation",
     title: row.task,
     snippet: clip(quote || row.task),
-    // The Chinese title is a machine translation; the snippet stays the post's own words.
-    zh: row.task_zh_cn ? { title: row.task_zh_cn, snippet: clip(quote || row.task_zh_cn) } : undefined,
+    // Use only release-provided translations. The original quotes remain in the English hit and the full record.
+    zh: row.task_zh_cn?.trim() ? {
+      title: row.task_zh_cn,
+      snippet: clip(`标题与摘要为机器翻译：${[row.task_zh_cn, row.scale_zh_cn, row.conditions_zh_cn].filter((text) => text?.trim()).join("；")}`),
+      content: "machine_summary",
+    } : undefined,
     content: quote ? "post_quote" : "machine_summary",
     date: observationDate(row),
     organization: row.actor_name,
@@ -545,7 +549,7 @@ export function rankedSearch(input: SearchInput): { query: string; total: number
           type: doc.type,
           title: zh?.title ?? doc.title,
           snippet: zh?.snippet ?? doc.snippet,
-          content: doc.content,
+          content: zh?.content ?? doc.content,
           review: REVIEW,
           date: doc.date,
           organization: doc.organization,
