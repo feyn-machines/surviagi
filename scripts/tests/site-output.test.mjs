@@ -1644,6 +1644,14 @@ test("market and occupation pages count their observations by evidence type and 
       const dataset = blocks.find((b) => b["@type"] === "Dataset");
       const faq = blocks.find((b) => b["@type"] === "FAQPage");
       assert.equal(dataset.name, title, `${prefix}${path}: the Dataset is named by the page's question`);
+      assert.equal(dataset.version, read("manifest").content_sha256, "Dataset identifies the exact data contents instead of the retired level method");
+      assert.equal(dataset.dateModified, read("manifest").generated_at);
+      assert.ok(dataset.measurementTechnique.includes(prefix ? "不含第 30/90 天" : "excluding day 30/90"));
+      const raw = await (await fetch(`${base}${prefix}${path}/raw.md`)).text();
+      for (const text of [dataset.measurementTechnique, read("manifest").content_sha256, read("manifest").generated_at]) {
+        assert.ok(visible(html).includes(text), `${prefix}${path}: missing visible statistics provenance`);
+        assert.ok(raw.includes(text), `${prefix}${path}: missing Markdown statistics provenance`);
+      }
       assert.equal(faq.mainEntity[0].name, title);
       assert.equal(dataset.description, faq.mainEntity[0].acceptedAnswer.text);
       assert.equal(faq.mainEntity.length, 2);

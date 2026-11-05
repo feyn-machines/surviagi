@@ -167,6 +167,8 @@ export function datasetLd(
     description: string;
     path: string;
     measured?: string[];
+    measurementTechnique?: string;
+    version?: string;
     downloads?: { url: string; type: string }[];
   },
 ): object | null {
@@ -180,10 +182,11 @@ export function datasetLd(
     url: absoluteUrl(language, page.path),
     inLanguage: language,
     creator: organization,
-    version: `${manifest.method_version} / ontology ${manifest.schema_version}`,
+    version: page.version ?? `${manifest.method_version} / ontology ${manifest.schema_version}`,
     dateModified: manifest.generated_at,
     creativeWorkStatus: DATA_STATUS[language],
     isAccessibleForFree: true,
+    ...(page.measurementTechnique ? { measurementTechnique: page.measurementTechnique } : {}),
     ...(page.measured?.length ? { variableMeasured: page.measured } : {}),
     ...(page.downloads?.length
       ? { distribution: page.downloads.map((d) => ({ "@type": "DataDownload", contentUrl: d.url, encodingFormat: d.type })) }

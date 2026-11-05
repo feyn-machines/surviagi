@@ -444,11 +444,26 @@ export function observationMarkdown(row: ObservationRow, language: Language): st
   return lines;
 }
 
+/** Shared by the visible ledger, its Markdown copy and Dataset metadata. */
+export function evidenceMethod(language: Language): string {
+  return language === "zh-CN"
+    ? "统计口径：只数映射到本页的已发布观察，每条观察计一次；同一观察可出现在多个职业或赛道，不能跨页相加。30/90 天按 UTC 数据日期倒推，含当天、不含第 30/90 天；优先用公开日期，缺失时用发生日期，无日期不计入时间窗口。这是观察的日期分布，不是采集新增量；0 表示没有匹配观察，不表示 AI 没有能力。"
+    : "Counting method: published observations mapped to this page, counted once each. An observation can appear in several occupations or markets; page totals cannot be added together. The 30/90-day windows use the UTC data date, including that day and excluding day 30/90; the public announcement date is used first, then the occurrence date. Undated observations are excluded from these windows. These are observation dates, not newly collected counts; zero means no matching observation, not no AI capability.";
+}
+
+export function evidenceVersion(language: Language): string {
+  const data = manifest();
+  if (!data) return "";
+  return language === "zh-CN"
+    ? `数据版本（内容 SHA-256）：${data.content_sha256}；生成时间：${data.generated_at}。`
+    : `Data version (content SHA-256): ${data.content_sha256}; generated at: ${data.generated_at}.`;
+}
+
 /** The ledger as Markdown lines, under a heading of the page's level two. */
 export function ledgerMarkdown(view: Ledger, language: Language): string[] {
   const c = ledgerCopy[language];
   const sep = colon(language);
-  const body = [`## ${c.title}`, "", c.lead, ""];
+  const body = [`## ${c.title}`, "", c.lead, "", ...(view.state !== "unpublished" ? [evidenceMethod(language), "", evidenceVersion(language), ""] : [])];
   if (view.state === "unpublished") return [...body, c.notPublished, ""];
   if (view.state === "none") return [...body, `${c.none} ${c.noneWhy}`, ""];
   body.push(`> ${view.answer}`, "", ...view.notes.map((n) => `- ${n}`), "");
@@ -552,6 +567,8 @@ export function evidenceLd(
       name: question,
       description: faq[0].answer,
       path: page.path,
+      version: manifest()?.content_sha256,
+      measurementTechnique: evidenceMethod(language),
       measured: EVIDENCE_ORDER.map((t) => typeName(t, language)),
       downloads: [
         { url: absoluteUrl(language, `${page.path}/raw.md`), type: "text/markdown" },

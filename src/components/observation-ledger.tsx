@@ -7,6 +7,8 @@ import {
   ACTOR_ROLES,
   actorLine,
   figure,
+  evidenceMethod,
+  evidenceVersion,
   fill,
   ledger,
   ledgerCopy,
@@ -44,6 +46,13 @@ export function ObservationLedger({
   const view = ledger(rows, name, language);
   return (
     <Block id="evidence" title={c.title} lead={c.lead}>
+      {view.state !== "unpublished" ? (
+        <details className={l.more}>
+          <summary>{language === "zh-CN" ? "统计口径与数据版本" : "Counting method and data version"}</summary>
+          <p className={l.sub}>{evidenceMethod(language)}</p>
+          <p className={l.sub} style={{ overflowWrap: "anywhere" }}>{evidenceVersion(language)}</p>
+        </details>
+      ) : null}
       {view.state === "unpublished" ? (
         <p className={l.empty}>{c.notPublished}</p>
       ) : view.state === "none" ? (
