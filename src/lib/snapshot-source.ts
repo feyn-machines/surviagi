@@ -7,7 +7,7 @@ import type { Manifest, Payload } from "./snapshot";
 export type Loaded = { payload: Payload; releaseId: string };
 
 /** The collections of a release and how each is shaped; mirrors `COLLECTIONS` in scripts/data_pipeline/kg.py. */
-const LISTS = ["markets", "tasks", "work", "occupations", "events", "models", "sources", "topics", "observations"] as const;
+const LISTS = ["markets", "tasks", "work", "occupations", "events", "models", "sources", "topics", "observations", "products", "product_availability", "adoptions", "investments"] as const;
 const CHAIN_LISTS = ["activities", "gates", "events", "evidence", "gate_edges"] as const;
 const SINGLES = ["coverage", "progress"] as const;
 
@@ -90,6 +90,10 @@ export async function loadFromDatabase(url: string): Promise<Loaded | null> {
     work: carried("work") ? list("work") : undefined,
     occupations: carried("occupations") ? list("occupations") : undefined,
     observations: carried("observations") ? list("observations") : undefined,
+    products: carried("products") ? list("products") : undefined,
+    product_availability: carried("product_availability") ? list("product_availability") : undefined,
+    adoptions: carried("adoptions") ? list("adoptions") : undefined,
+    investments: carried("investments") ? list("investments") : undefined,
   } as unknown as Payload;
   return { payload, releaseId: release.release_id };
 }
@@ -125,6 +129,10 @@ export function loadFromFiles(dir: string): Loaded | null {
     work: optional("work"),
     occupations: optional("occupations"),
     observations: optional("observations"),
+    products: optional("products"),
+    product_availability: optional("product_availability"),
+    adoptions: optional("adoptions"),
+    investments: optional("investments"),
   } as Payload;
   return { payload, releaseId: releaseIdOf(manifest) };
 }

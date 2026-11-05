@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://surviagi.com/contract/v1/schemas/Adoption.schema.json",
+  "title": "Observed adoption",
+  "x-title-zh-CN": "观察支持的采用",
+  "description": "The organization uses the product or model, at a stage, supported by an observation. An adopter that is not on the registry is kept by the name the source gives. A later stage is a new row.",
+  "x-description-zh-CN": "组织使用该产品或模型，处于某个阶段，由一条观察支持。不在名单里的采用方用来源给出的名称保存。之后的阶段另写一行。",
+  "type": "object",
+  "properties": {
+    "adoption_id": {
+      "type": "string",
+      "x-grade": "record",
+      "x-shape": "view"
+    },
+    "org_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "x-grade": "record",
+      "x-shape": "view"
+    },
+    "product_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "x-grade": "record",
+      "x-shape": "view"
+    },
+    "model_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "x-grade": "record",
+      "x-shape": "view"
+    },
+    "stage": {
+      "type": "string",
+      "enum": [
+        "in_use",
+        "planned",
+        "pilot",
+        "integrated",
+        "production"
+      ],
+      "x-grade": "machine",
+      "x-ontology-property": "adopts.stage"
+    },
+    "adopted_on": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date",
+      "x-grade": "excerpt",
+      "x-ontology-property": "adopts.adopted_on"
+    },
+    "scale": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "x-grade": "machine",
+      "x-ontology-property": "adopts.scale"
+    },
+    "adopter_name": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "x-grade": "excerpt",
+      "x-ontology-property": "adopts.adopter_name"
+    },
+    "observation_id": {
+      "type": "string",
+      "x-grade": "record",
+      "x-ontology-property": "adopts.observation_id"
+    }
+  },
+  "required": [
+    "adoption_id",
+    "org_id",
+    "product_id",
+    "model_id",
+    "stage",
+    "adopted_on",
+    "scale",
+    "adopter_name",
+    "observation_id"
+  ],
+  "additionalProperties": false,
+  "x-identifier": "adoption_id",
+  "x-snapshot-file": "adoptions.json",
+  "oneOf": [
+    {
+      "properties": {
+        "product_id": {
+          "type": "string"
+        },
+        "model_id": {
+          "type": "null"
+        }
+      }
+    },
+    {
+      "properties": {
+        "product_id": {
+          "type": "null"
+        },
+        "model_id": {
+          "type": "string"
+        }
+      }
+    }
+  ]
+}

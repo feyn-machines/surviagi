@@ -376,6 +376,7 @@ def steps(window: Window, root: Path = ROOT) -> list[Step]:
         Step("classify-unresolved", pnpm("data:classify:unresolved"), notes=unresolved_notes, optional=True),
         Step("extract-observations", observe, notes=observation_notes, optional=True),
         Step("map-observations", pnpm("data:map:observations"), notes=mapping_notes, optional=True),
+        Step("resolve-subjects", pnpm("data:resolve:subjects")),
         Step("translate-observations", pnpm("data:translate:observations"), notes=translation_notes, optional=True),
         Step("verify", pnpm("data:verify"), check=batch_problems, before=typesafe_preflight),
         Step("identify-models", pnpm("data:identify:models"), check=batch_problems),

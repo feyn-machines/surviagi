@@ -188,7 +188,7 @@ class RunTest(DailyCase):
         with mock.patch.object(daily, "typesafe_preflight", blocked):
             self.assertEqual(self.make(runner).main(["--promote"]), 1)
         self.assertEqual(runner.ran, ["crawl-official", "crawl-panel", "extract-events", "classify-unresolved", "extract-observations",
-                                      "map-observations", "translate-observations"])
+                                      "map-observations", "resolve-subjects", "translate-observations"])
         self.assertIn("pending", self.saved())
 
     def test_partly_failed_extraction_is_read_from_its_output_file(self):
@@ -363,6 +363,15 @@ class PieceTest(unittest.TestCase):
             raise urllib.error.URLError("timed out")
         with self.assertRaises(daily.Stop):
             daily.typesafe_preflight(opener=unreachable)
+
+
+class ProductResolutionStepTest(unittest.TestCase):
+    def test_resolution_is_required_and_runs_after_mapping_before_publication(self):
+        steps = list(daily.steps(daily.Window(LAST_END, NOW)))
+        names = [step.name for step in steps]
+        self.assertLess(names.index('map-observations'), names.index('resolve-subjects'))
+        self.assertLess(names.index('resolve-subjects'), names.index('publish-snapshot'))
+        self.assertFalse(steps[names.index('resolve-subjects')].optional)
 
 
 if __name__ == "__main__":

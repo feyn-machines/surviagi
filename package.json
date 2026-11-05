@@ -64,6 +64,8 @@
     "data:gate:state": "data/runtime/venv/bin/python scripts/data-pipeline.py gate-state",
     "data:contract": "node scripts/check-public-contract.mjs",
     "data:publish:snapshot": "data/runtime/venv/bin/python scripts/data-pipeline.py publish-snapshot",
+    "data:resolve:subjects": "data/runtime/venv/bin/python scripts/data-pipeline.py resolve-subjects",
+    "data:products:import": "data/runtime/venv/bin/python scripts/data-pipeline.py import-product-relations",
     "data:daily": "python3 scripts/data_daily.py",
     "site:test:unit": "python3 -m unittest discover -s scripts/tests -p 'test_site_release_unit.py'",
     "site:build": "python3 scripts/site_release.py build",

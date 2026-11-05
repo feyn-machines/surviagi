@@ -156,6 +156,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='command', required=True)
     sub.add_parser('migrate')
+    sub.add_parser('resolve-subjects', help='Resolve observation subjects against product/model names and derive explicit adoption; no model calls')
+    product_catalog = sub.add_parser('import-product-relations', help='Import a source-backed product/availability/adoption/investment document')
+    product_catalog.add_argument('input', type=Path)
     # The sealed ontology release is the world this whole pipeline measures. It
     # used to ride along inside the synthetic `import` command, which meant the
     # only way to load the real concepts was to run the fixture importer.
@@ -286,7 +289,15 @@ def main():
     state.add_argument('--ontology-version', default='1.0.0')
     args = parser.parse_args()
     with connect() as conn:
-        if args.command == 'import-ontology':
+        if args.command == 'import-product-relations':
+            from data_pipeline.product_relations import import_catalog
+            migrate(conn)
+            print(json.dumps(import_catalog(conn, json.loads(args.input.read_text())), ensure_ascii=False, indent=2))
+        elif args.command == 'resolve-subjects':
+            from data_pipeline.product_relations import reconcile
+            migrate(conn)
+            print(json.dumps(reconcile(conn), ensure_ascii=False, indent=2, default=json_default))
+        elif args.command == 'import-ontology':
             migrate(conn)
             print(json.dumps(import_ontology(conn, args.path), ensure_ascii=False,
                              indent=2, default=json_default))
