@@ -36,6 +36,10 @@ class Checked(unittest.TestCase):
         self.assertIsNone(t.checked("what", "closed 48 tickets", "处理了 84 张工单"))
         self.assertIsNone(t.checked("task", "Answer 24/7", "全天候回答"))
 
+    def test_a_version_number_is_kept_as_written(self):
+        self.assertEqual(t.checked("task", "Run version 5.5.1 of the model.", "运行该模型的 5.5.1 版本。"), "运行该模型的 5.5.1 版本。")
+        self.assertIsNone(t.checked("task", "Run version 5.5.1 of the model.", "运行该模型的 5.5 版本。"))
+
     def test_a_number_may_be_written_the_chinese_way_at_the_same_value(self):
         for source, answer in (("1.2 million users", "120 万用户"), ("40k users", "4 万用户"), ("$77.3B market", "773 亿美元市场"),
                                ("200,000-line codebase", "20 万行代码库"), ("252 million visitors", "2.52 亿访客"),

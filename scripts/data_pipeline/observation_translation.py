@@ -81,7 +81,11 @@ def copied_as_is(field, text):
 
 
 def _value(digits, size):
-    return float(digits.replace(",", "")) * size
+    """The number, or None for what only looks like one: "5.5.1" is a version."""
+    try:
+        return float(digits.replace(",", "")) * size
+    except ValueError:
+        return None
 
 
 def numbers_hold(source, answer):
@@ -96,7 +100,8 @@ def numbers_hold(source, answer):
         values.append(_value(digits, _ZH_SIZE.get(size, 1)))
     for digits, size in _NUMBER.findall(source):
         value = _value(digits, _SIZE.get(size.lower(), 1))
-        if digits.replace(",", "") not in written and not any(abs(value - other) <= value * 1e-9 for other in values):
+        same = value is not None and any(other is not None and abs(value - other) <= value * 1e-9 for other in values)
+        if digits.replace(",", "") not in written and not same:
             return False
     return True
 
