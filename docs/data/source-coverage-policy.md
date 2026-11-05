@@ -30,7 +30,7 @@
 
 分层统计须给出统计时点、近 30 天窗口与时区、启用账号数、发帖账号数、来源帖子数和去重观察数，以及公司/职业分布。多用途账号分别计入相应用途，合计必须去重；同一观察多来源也不能重复计为多个事实。采集失败、未覆盖与观察为零分别列明，不能都显示为零。不要把来源数当作市场份额或代表性抽样。
 
-本次文档交付不声称已完成账号字段、统计接口、双语站内展示或候选导入；这些仍是 #22 的验收项。名单维护交给 #23，非 X 来源接入交给 #24，逐条准确率评估交给 #26。
+本次文档交付不声称已完成账号字段、统计接口、双语站内展示或候选导入；这些仍是 #22 的验收项。名单维护交给 #23（[实施约定](../development/panel-maintenance.md)），非 X 来源接入交给 #24，逐条准确率评估交给 #26。
 
 ## English
 
@@ -60,4 +60,4 @@ Public account descriptions must include uses, role, identity evidence and check
 
 Layer statistics must identify the as-of date, 30-day window and timezone, enabled accounts, posting accounts, source posts, deduplicated observations and company/occupation distributions. Multi-use accounts count in each applicable layer but totals must deduplicate them; multiple sources for one observation do not create multiple facts. Distinguish collection failure, missing coverage and observed zero. Source counts are not market shares or representative sampling.
 
-This documentation delivery does not claim completed account fields, statistics APIs, bilingual website presentation or candidate imports. They remain acceptance items for #22. Ongoing watchlist maintenance belongs to #23, non-X ingestion to #24 and observation accuracy evaluation to #26.
+This documentation delivery does not claim completed account fields, statistics APIs, bilingual website presentation or candidate imports. They remain acceptance items for #22. Ongoing watchlist maintenance belongs to #23 ([implementation plan, Chinese](../development/panel-maintenance.md)), non-X ingestion to #24 and observation accuracy evaluation to #26.
