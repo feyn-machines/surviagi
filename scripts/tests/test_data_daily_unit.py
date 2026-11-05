@@ -188,7 +188,7 @@ class RunTest(DailyCase):
         with mock.patch.object(daily, "typesafe_preflight", blocked):
             self.assertEqual(self.make(runner).main(["--promote"]), 1)
         self.assertEqual(runner.ran, ["crawl-official", "crawl-panel", "extract-events", "classify-unresolved", "extract-observations",
-                                      "map-observations"])
+                                      "map-observations", "translate-observations"])
         self.assertIn("pending", self.saved())
 
     def test_partly_failed_extraction_is_read_from_its_output_file(self):

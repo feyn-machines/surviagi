@@ -360,7 +360,7 @@ export function runQueryObservations(args: Args): Outcome {
     versions: versionsInfo(),
     note: !published ? UNPUBLISHED
       : rows.length === 0 ? "No published observation matches. That describes what was collected and read, not the work itself; a query starts no research or collection."
-      : "Observations are read by a model from collected posts and unreviewed unless review_state says otherwise. Cite each result's url and source urls; quote the sources' words, not the task line.",
+      : "Observations are read by a model from collected posts and unreviewed unless review_state says otherwise. Cite each result's url and source urls; quote the sources' words, not the task line. In zh-CN the wording is a machine translation where one exists; quotes stay as written.",
   });
 }
 

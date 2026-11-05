@@ -120,6 +120,8 @@ export type ObservationRow = {
   actor_org_id: string | null;
   actor_person_id: string | null;
   actor_name: string | null;
+  /** Machine translations (contract 1.10.0): null until a pass has made them, absent in older releases. */
+  actor_name_zh_cn?: string | null;
   actor_role: "maker" | "adopter" | "practitioner" | "evaluator" | "researcher";
   subject_key: string;
   subject_product_id: string | null;
@@ -127,11 +129,14 @@ export type ObservationRow = {
   work_key: string;
   event_id: string | null;
   task: string;
+  task_zh_cn?: string | null;
   evidence_type: "vendor_claim" | "demonstration" | "own_use" | "measurement" | "production_use" | "statistic";
   outcome: "succeeded" | "partly" | "failed" | "not_stated";
   direction: "ai_takes_on" | "human_still_needed" | "neutral";
   scale: string | null;
+  scale_zh_cn?: string | null;
   conditions: string | null;
+  conditions_zh_cn?: string | null;
   occurred_on: string | null;
   announced_at: string | null;
   observed_at: string | null;
@@ -143,7 +148,7 @@ export type ObservationRow = {
   schema_version: string;
   created_at: string;
   sources: { source_ref: string; source_type: string; url: string; source_id: string | null; quote: string; published_at: string | null }[];
-  facts: { fact_id: string; value: string; unit: string | null; what: string; baseline: string | null; method_note: string | null; quote: string }[];
+  facts: { fact_id: string; value: string; unit: string | null; unit_zh_cn?: string | null; what: string; what_zh_cn?: string | null; baseline: string | null; method_note: string | null; quote: string }[];
   concerns: {
     concept_id: string;
     kind: "work" | "occupation" | "task" | null;
@@ -871,6 +876,38 @@ export const EVIDENCE_ORDER: EvidenceType[] = ["production_use", "measurement", 
 /** When an observation was said in public: the post's date, else the day it says the thing happened. */
 export function observationDate(row: ObservationRow): string | null {
   return row.announced_at?.slice(0, 10) ?? row.occurred_on ?? null;
+}
+
+/**
+ * An observation's wording for a reader of this language (Issue #78): the machine translation for a
+ * Chinese reader when there is one, else the words the extractor wrote. `lang` marks what is not in
+ * the page's language. Quotes do not come through here: they stay the post's own words.
+ */
+export type Worded = { text: string; lang: "en" | undefined; translated: boolean };
+
+export function worded(language: "en" | "zh-CN", original: string, zh: string | null | undefined): Worded {
+  return language === "zh-CN" && zh ? { text: zh, lang: undefined, translated: true } : { text: original, lang: "en", translated: false };
+}
+
+export const observationTask = (row: ObservationRow, language: "en" | "zh-CN") => worded(language, row.task, row.task_zh_cn);
+
+const CHINESE_SIZE: Record<string, [number, string]> = { 百万: [100, "万"], 千万: [1000, "万"], 十亿: [10, "亿"] };
+
+/** "24" with "百万次联系" reads as "2400 万次联系": the same value, written the way a Chinese reader counts. */
+function valueWithUnit(value: string, unit: string): string {
+  const number = value.match(/^([~≈]?)(\d[\d,]*(?:\.\d+)?)(\+?)$/);
+  const size = /^(百万|千万|十亿)/.exec(unit)?.[1];
+  if (!number || !size) return `${value} ${unit}`;
+  const [factor, word] = CHINESE_SIZE[size];
+  const scaled = Number((Number(number[2].replace(/,/g, "")) * factor).toFixed(6));
+  return `${number[1]}${scaled} ${word}${number[3]}${unit.slice(size.length)}`;
+}
+
+/** What a figure counts and its value with its unit, in this language; both parts come from one fact. */
+export function factWords(fact: ObservationRow["facts"][number], language: "en" | "zh-CN") {
+  const what = worded(language, fact.what, fact.what_zh_cn);
+  const unit = fact.unit ? worded(language, fact.unit, fact.unit_zh_cn) : null;
+  return { value: unit ? valueWithUnit(fact.value, unit.text) : fact.value, what };
 }
 
 export type ObservationStats = {

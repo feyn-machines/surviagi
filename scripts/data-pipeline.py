@@ -225,6 +225,8 @@ def main():
     evidence.add_argument('--limit', type=int)
     evidence.add_argument('--note', default='')
     sub.add_parser('classify-unresolved', help='Say why each update with no kind has none, as a controlled class')
+    translate = sub.add_parser('translate-observations', help='Write the Chinese wording of observations that have none yet')
+    translate.add_argument('--limit', type=int, help='Read at most this many observations (a trial)')
     sub.add_parser('measure-markets', help='Say which market or occupation each market measurement is about')
     index = sub.add_parser('search-index', help='Fill the search indexes from the database and the topics document')
     index.add_argument('--only', action='append', choices=['topics', 'updates', 'catalog'])
@@ -477,6 +479,14 @@ def main():
             migrate(conn)
             print(json.dumps(event_unresolved.classify(
                 conn, progress=lambda done, total: print(f'  update {done}/{total}', flush=True)), ensure_ascii=False))
+        elif args.command == 'translate-observations':
+            from data_pipeline import deepseek, observation_translation
+            deepseek.load_env(ROOT)
+            migrate(conn)
+            print(json.dumps(observation_translation.translate(
+                conn, limit=args.limit,
+                progress=lambda done, total, found: print(f'  batch {done}/{total}: {found}', file=sys.stderr, flush=True)),
+                ensure_ascii=False))
         elif args.command == 'measure-markets':
             from data_pipeline import deepseek, market_measures
             deepseek.load_env(ROOT)

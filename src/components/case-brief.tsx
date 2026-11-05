@@ -1,5 +1,5 @@
 import type { Language } from "@/lib/i18n";
-import { briefCopy, type BriefCase, type CaseBrief } from "@/lib/case-brief";
+import { briefCopy, wordingNote, type BriefCase, type CaseBrief } from "@/lib/case-brief";
 import c from "./case-brief.module.css";
 
 /**
@@ -23,7 +23,7 @@ export function Cases({ brief, language }: { brief: CaseBrief; language: Languag
       {brief.using.length > 0 ? (
         <section className={c.section}>
           <h2 className={c.h2}>{t.useTitle}</h2>
-          <p className={c.sub}>{t.useLead}{language === "zh-CN" ? ` ${t.english}` : ""}</p>
+          <p className={c.sub}>{t.useLead}{language === "zh-CN" ? ` ${wordingNote([...brief.using, ...brief.against], language)}` : ""}</p>
           <ul className={c.list}>
             {brief.using.map((row) => (
               <Card key={row.id} row={row} language={language} />
@@ -54,13 +54,13 @@ function Card({ row, language, against }: { row: BriefCase; language: Language; 
         <b>{row.actor}</b>
         {row.date ? <span>{row.date}</span> : null}
       </p>
-      <p className={c.task} lang="en">{row.task}</p>
+      <p className={c.task} lang={row.task.lang}>{row.task.text}</p>
       {row.figures.length > 0 ? (
         <ul className={c.figures}>
           {row.figures.map((f) => (
-            <li key={`${f.value}-${f.what}`}>
-              <b lang="en">{f.value}</b>
-              <span lang="en">{f.what}</span>
+            <li key={`${f.value}-${f.what.text}`}>
+              <b lang={f.what.lang}>{f.value}</b>
+              <span lang={f.what.lang}>{f.what.text}</span>
             </li>
           ))}
         </ul>

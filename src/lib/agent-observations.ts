@@ -18,8 +18,10 @@ import {
   observationsOfOccupation,
   observationsPublished,
   observationStats,
+  observationTask,
   occupations,
   occupationSlug,
+  worded,
   type EvidenceType,
   type ObservationRow,
 } from "./snapshot";
@@ -45,7 +47,7 @@ export const DEFAULT_CHANGES = 10;
 const TOP = 6;
 
 export const OBSERVATION_CONTENT = {
-  task: "Written by our pipeline from the source: what was done, not the source's own words.",
+  task: "Written by our pipeline from the source: what was done, not the source's own words. With language=zh-CN, task, what, unit, scale and conditions are machine translations where one exists (task_language says which; task_original and what_original keep the English).",
   quote: "Words copied from the source, possibly shortened. Every figure's quote contains the figure.",
   review_state: "machine_proposed until a person confirms or rejects the observation.",
 } as const;
@@ -124,8 +126,21 @@ function observationUrls(row: ObservationRow, language: Language) {
 
 const term = (vocabulary: VocabularyName, value: string, language: Language) => termNameOrRaw(vocabulary, value, language);
 
+const localActor = (row: ObservationRow, language: Language) => (language === "zh-CN" ? row.actor_name_zh_cn : null) ?? row.actor_name;
+
+/** A figure's unit and what it counts in this language, with the English kept beside a translation. */
+function localFact(fact: ObservationRow["facts"][number], language: Language) {
+  const what = worded(language, fact.what, fact.what_zh_cn);
+  return {
+    unit: fact.unit ? worded(language, fact.unit, fact.unit_zh_cn).text : null,
+    what: what.text,
+    ...(what.translated ? { what_original: fact.what } : {}),
+  };
+}
+
 /** One observation as a list shows it: enough to cite, with every figure and its words. */
 export function observationSummary(row: ObservationRow, language: Language) {
+  const task = observationTask(row, language);
   return {
     id: row.observation_id,
     type: "observation" as const,
@@ -134,10 +149,12 @@ export function observationSummary(row: ObservationRow, language: Language) {
     evidence_type_label: term("event_basis", row.evidence_type, language),
     direction: row.direction,
     outcome: row.outcome,
-    task: row.task,
-    actor: { name: row.actor_name, role: row.actor_role, organization_id: row.actor_org_id },
+    task: task.text,
+    task_language: task.translated ? ("zh-CN" as const) : ("en" as const),
+    ...(task.translated ? { task_original: row.task } : {}),
+    actor: { name: localActor(row, language), role: row.actor_role, organization_id: row.actor_org_id },
     subject: row.subject_key === "unspecified" ? null : row.subject_key,
-    facts: row.facts.map((f) => ({ value: f.value, unit: f.unit, what: f.what, quote: f.quote })),
+    facts: row.facts.map((f) => ({ value: f.value, ...localFact(f, language), quote: f.quote })),
     sources: row.sources.map((s) => ({ url: s.url, quote: s.quote, published_at: s.published_at })),
     review_state: row.review_state,
     recorded_at: row.created_at,
@@ -155,19 +172,19 @@ export function observationRecord(requestedId: string, language: Language) {
     ...(requestedId !== row.observation_id ? { merged_into: row.observation_id, requested_id: requestedId } : {}),
     content: OBSERVATION_CONTENT,
     actor: {
-      key: row.actor_key, name: row.actor_name, role: row.actor_role,
+      key: row.actor_key, name: localActor(row, language), role: row.actor_role,
       role_label: term("observation_actor_role", row.actor_role, language),
       organization_id: row.actor_org_id, person_id: row.actor_person_id,
     },
     subject: { key: row.subject_key, product_id: row.subject_product_id, model_id: row.subject_model_id },
-    scale: row.scale,
-    conditions: row.conditions,
+    scale: row.scale ? worded(language, row.scale, row.scale_zh_cn).text : null,
+    conditions: row.conditions ? worded(language, row.conditions, row.conditions_zh_cn).text : null,
     occurred_on: row.occurred_on,
     announced_at: row.announced_at,
     observed_at: row.observed_at,
     reviewed_at: row.reviewed_at,
     method: { extractor: row.extractor, model: row.model, prompt_sha256: row.prompt_sha256, schema_version: row.schema_version },
-    facts: row.facts,
+    facts: row.facts.map((f) => ({ fact_id: f.fact_id, value: f.value, ...localFact(f, language), baseline: f.baseline, method_note: f.method_note, quote: f.quote })),
     sources: row.sources.map((s) => ({ url: s.url, source_type: s.source_type, quote: s.quote, published_at: s.published_at })),
     concerns: row.concerns.map((c) => ({ id: c.concept_id, kind: c.kind, label: c.label_en, label_zh_cn: c.label_zh_cn, method: c.method, status: c.status })),
     pages: pagesOf(row).map((p) => ({ kind: p.kind, id: p.id, url: absoluteUrl(language, `${pagePath(p)}#${row.observation_id}`) })),

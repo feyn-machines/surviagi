@@ -320,16 +320,16 @@ def observations(conn, ontology_version: str) -> list[dict]:
         sources_of.setdefault(r.pop("observation_id"), []).append(r)
     facts_of: dict[str, list] = {}
     for r in _rows(conn, """
-            SELECT observation_id, fact_id, value, unit, what, baseline, method_note, quote
+            SELECT observation_id, fact_id, value, unit, unit_zh_cn, what, what_zh_cn, baseline, method_note, quote
               FROM public.observation_facts ORDER BY observation_id, fact_id"""):
         facts_of.setdefault(r.pop("observation_id"), []).append(r)
     # Rows stored before facts were compared by form can hold one number twice.
     facts_of = {oid: distinct_facts(facts) for oid, facts in facts_of.items()}
 
     out = _clean(_rows(conn, """
-        SELECT o.observation_id, o.actor_key, o.actor_org_id, o.actor_person_id, o.actor_name, o.actor_role,
-               o.subject_key, o.subject_product_id, o.subject_model_id, o.work_key, o.event_id, o.task,
-               o.evidence_type, o.outcome, o.direction, o.scale, o.conditions,
+        SELECT o.observation_id, o.actor_key, o.actor_org_id, o.actor_person_id, o.actor_name, o.actor_name_zh_cn, o.actor_role,
+               o.subject_key, o.subject_product_id, o.subject_model_id, o.work_key, o.event_id, o.task, o.task_zh_cn,
+               o.evidence_type, o.outcome, o.direction, o.scale, o.scale_zh_cn, o.conditions, o.conditions_zh_cn,
                o.occurred_on::text AS occurred_on, o.announced_at, o.observed_at,
                o.review_state, o.reviewed_at, o.extractor, o.prompt_sha256, o.model, o.schema_version,
                o.created_at

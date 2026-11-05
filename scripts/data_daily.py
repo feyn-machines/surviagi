@@ -14,7 +14,8 @@ moves only once the snapshot is written.
 Observations (Issue #25) are read from the window's posts right after updates, in a call of their own;
 that step is optional too, and posts of a batch that failed stay unread for a later run. Then each new
 observation is put on the catalog entries it concerns and observations that turn out to be one are merged
-(`map-observations`, also optional).
+(`map-observations`, also optional), and what has no Chinese wording yet gets one (`translate-observations`,
+also optional: a reader without a translation gets the original wording, Issue #78).
 
 Topics are fed in the same run: before mining, the topics that most need another voice are searched on X
 for the window (`topic-queries` -> `crawl search` -> `topic-searched`), so mining reads those posts with the
@@ -328,6 +329,18 @@ def unresolved_notes(outcome: Outcome) -> list[str]:
     return notes
 
 
+def translation_notes(outcome: Outcome) -> list[str]:
+    """How many observations got a Chinese wording; what failed or was refused is asked again next run."""
+    result = outcome.result
+    if not result.get("run_id"):
+        return []
+    notes = [f"observation translation: {result.get('observations', 0)} observations, {result.get('facts', 0)} facts"]
+    if result.get("failed_batches") or result.get("refused"):
+        notes.append(f"observation translation: {result.get('failed_batches', 0)} batches failed, "
+                     f"{result.get('refused', 0)} wordings refused; asked again next run")
+    return notes
+
+
 def pnpm(*args: str) -> list[str]:
     return ["pnpm", "-s", *args]
 
@@ -363,6 +376,7 @@ def steps(window: Window, root: Path = ROOT) -> list[Step]:
         Step("classify-unresolved", pnpm("data:classify:unresolved"), notes=unresolved_notes, optional=True),
         Step("extract-observations", observe, notes=observation_notes, optional=True),
         Step("map-observations", pnpm("data:map:observations"), notes=mapping_notes, optional=True),
+        Step("translate-observations", pnpm("data:translate:observations"), notes=translation_notes, optional=True),
         Step("verify", pnpm("data:verify"), check=batch_problems, before=typesafe_preflight),
         Step("identify-models", pnpm("data:identify:models"), check=batch_problems),
         Step("route-events", pnpm("data:route:events"), check=batch_problems, before=typesafe_preflight),

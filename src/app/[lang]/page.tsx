@@ -7,7 +7,7 @@ import { bilingual, localizedPath } from "@/lib/i18n";
 import { getLocale } from "@/lib/locale";
 import { href, topicHref, updateHref } from "@/lib/routes";
 import { pageMetadata, siteLd } from "@/lib/seo";
-import { observationDate } from "@/lib/snapshot";
+import { factWords, observationDate, observationTask } from "@/lib/snapshot";
 import { actorLine, figure, typeName } from "@/lib/observation-view";
 import { termNameOrRaw } from "@/components/ontology-labels";
 import { dateLabel } from "@/lib/update-date";
@@ -196,8 +196,8 @@ export default async function Home() {
                 <li key={row.observation_id} className={s.row}>
                   <time className={s.rowDate} dateTime={date ?? undefined}>{date}</time>
                   <div>
-                    {/* Written by a model in English from the post; the figure's own words are on the page it links to. */}
-                    <Link className={s.rowTitle} href={target as never} lang="en">{row.task}</Link>
+                    {/* Written by a model from the post, translated for a Chinese reader; the figure's own words are on the page it links to. */}
+                    <Link className={s.rowTitle} href={target as never} lang={observationTask(row, language).lang}>{observationTask(row, language).text}</Link>
                     <p className={s.rowMeta}>
                       {[
                         actorLine(row, language),
@@ -207,7 +207,7 @@ export default async function Home() {
                         where ? `${c.on} ${pick(where)}` : null,
                       ].filter(Boolean).join(" · ")}
                     </p>
-                    {fact ? <p className={s.rowMeta} lang="en">{figure(fact)}</p> : null}
+                    {fact ? <p className={s.rowMeta} lang={factWords(fact, language).what.lang}>{figure(fact, language)}</p> : null}
                   </div>
                 </li>
               );

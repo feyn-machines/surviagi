@@ -7,12 +7,15 @@ import {
   EVIDENCE_ORDER,
   byStrength,
   coverage,
+  factWords,
   manifest,
   observationDate,
   observationStats,
+  observationTask,
   observationsPublished,
   sources,
   tasksOfObservation,
+  worded,
   type EvidenceType,
   type ObservationRow,
   type ObservationStats,
@@ -103,7 +106,7 @@ export const ledgerCopy = bilingual({
     unknownActor: "未具名",
     source: "原文",
     original: "原文措辞",
-    machine: "由模型读出，没有人核对过。",
+    machine: "由模型读出，没有人核对过；中文是机器翻译，引文保留帖子原话。",
     conditions: "条件",
     scale: "规模",
     perType: "条",
@@ -262,7 +265,7 @@ export function taskLine(group: TaskGroup, language: Language): string {
 
 /** One observation under its task, as a short line: date, type and what was done. */
 export function taskObservationLine(row: ObservationRow, language: Language): string {
-  return `${observationDate(row) ?? "—"} · ${typeName(row.evidence_type, language)} — ${row.task}`;
+  return `${observationDate(row) ?? "—"} · ${typeName(row.evidence_type, language)} — ${observationTask(row, language).text}`;
 }
 
 const escape = (text: string) => text.replace(/([[\]])/g, "\\$1");
@@ -411,14 +414,15 @@ export function monthTypes(month: Month, language: Language): string {
 }
 
 /** One figure as a reader reads it: "48 % — Azure revenue growth". */
-export function figure(fact: ObservationRow["facts"][number]): string {
-  return `${fact.value}${fact.unit ? ` ${fact.unit}` : ""} — ${fact.what}`;
+export function figure(fact: ObservationRow["facts"][number], language: Language): string {
+  const { value, what } = factWords(fact, language);
+  return `${value} — ${what.text}`;
 }
 
 export function actorLine(row: ObservationRow, language: Language): string {
   const c = ledgerCopy[language];
   return fill(c.by, {
-    actor: row.actor_name ?? c.unknownActor,
+    actor: (language === "zh-CN" ? row.actor_name_zh_cn : null) ?? row.actor_name ?? c.unknownActor,
     role: termNameOrRaw("observation_actor_role", row.actor_role, language),
   });
 }
@@ -432,10 +436,10 @@ export function observationMarkdown(row: ObservationRow, language: Language): st
     termNameOrRaw("event_result", row.outcome, language),
     termNameOrRaw("observation_direction", row.direction, language),
   ].join(" · ");
-  const lines = [`- ${head}${sep}${row.task} — ${actorLine(row, language)} \`${row.observation_id}\``];
-  for (const f of row.facts) lines.push(`  - ${figure(f)}: “${f.quote}”`);
-  if (row.scale) lines.push(`  - ${c.scale}${sep}${row.scale}`);
-  if (row.conditions) lines.push(`  - ${c.conditions}${sep}${row.conditions}`);
+  const lines = [`- ${head}${sep}${observationTask(row, language).text} — ${actorLine(row, language)} \`${row.observation_id}\``];
+  for (const f of row.facts) lines.push(`  - ${figure(f, language)}: “${f.quote}”`);
+  if (row.scale) lines.push(`  - ${c.scale}${sep}${worded(language, row.scale, row.scale_zh_cn).text}`);
+  if (row.conditions) lines.push(`  - ${c.conditions}${sep}${worded(language, row.conditions, row.conditions_zh_cn).text}`);
   for (const s of row.sources) lines.push(`  - [${c.source}](${s.url}): “${escape(s.quote)}”`);
   return lines;
 }

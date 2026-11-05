@@ -42,6 +42,18 @@
       "x-ontology-property": "ObservationFact.unit",
       "x-since": "2.5.0"
     },
+    "unit_zh_cn": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The unit in Simplified Chinese, by machine translation; a unit with no Chinese form stays as written.",
+      "x-description-zh-CN": "单位的简体中文，机器翻译；没有中文说法的单位保持原样。",
+      "x-grade": "machine",
+      "x-ontology-property": "ObservationFact.unit_zh_cn",
+      "x-since": "2.9.0",
+      "x-key-optional": true
+    },
     "what": {
       "type": "string",
       "description": "What the value measures.",
@@ -49,6 +61,18 @@
       "x-grade": "excerpt",
       "x-ontology-property": "ObservationFact.what",
       "x-since": "2.5.0"
+    },
+    "what_zh_cn": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "What the value measures, in Simplified Chinese, by machine translation.",
+      "x-description-zh-CN": "这个值指什么的简体中文，机器翻译。",
+      "x-grade": "machine",
+      "x-ontology-property": "ObservationFact.what_zh_cn",
+      "x-since": "2.9.0",
+      "x-key-optional": true
     },
     "baseline": {
       "type": [

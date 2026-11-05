@@ -133,7 +133,7 @@ class AssembleTests(unittest.TestCase):
         doc = assemble_extraction([cand("1")], [{"events": [model_event()]}], meta())
         self.assertEqual(doc["kind_vocabulary"], EVENT_KIND_VOCABULARY)
         self.assertEqual(len(doc["rubric_sha256"]), 64)
-        self.assertEqual(doc["schema_version"], "2.8.0")
+        self.assertEqual(doc["schema_version"], "2.9.0")
 
 
 def person_cand(sid, text, key="x:somebody"):
@@ -159,7 +159,7 @@ class PostOutcomeTests(unittest.TestCase):
         self.assertIsNone(event["primary_org_id"])
         self.assertEqual((event["basis"], event["task"], event["result"]),
                          ("own_use", "Build a browser extension.", "succeeded"))
-        self.assertEqual(event["schema_version"], "2.8.0")
+        self.assertEqual(event["schema_version"], "2.9.0")
 
     def test_a_company_the_person_names_is_not_the_actor(self):
         post = person_cand("1", "it worked in 90 seconds")

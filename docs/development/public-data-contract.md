@@ -1,6 +1,6 @@
 # Public data contract / 对外数据契约
 
-Issue #27, part of the evidence-ledger redesign (#34). Contract version **1.9.0**, ontology schema **2.8.0**.
+Issue #27, part of the evidence-ledger redesign (#34). Contract version **1.10.0**, ontology schema **2.9.0**.
 
 The ontology schema is the one type definition. The public contract is generated from it, so an agent can learn from one place which entities exist, what each field means, how far it can be trusted, and how the format evolves.
 
@@ -61,6 +61,7 @@ A field added in a minor version is optional for readers to use. A field is depr
 
 ## Changes / 变更
 
+- 1.10.0 — `observations.json` rows carry `task_zh_cn`, `scale_zh_cn`, `conditions_zh_cn` and `actor_name_zh_cn`, and each fact `what_zh_cn` and `unit_zh_cn` (ontology 2.9.0, #78): machine translations for reading, `null` until a pass has made them. Quotes are not translated. The translation is no part of the observation's id. With `language=zh-CN`, `query_observations`, `get_record` and `occupation_summary` return the Chinese wording in `task`, `what`, `unit`, `scale` and `conditions`, falling back to English row by row: `task_language` says which a row's task is, and `task_original` and `what_original` keep the English when a translation is shown. Search matches the Chinese wording and titles a result with it in `zh-CN`.
 - 1.9.0 — `events.json` rows carry `unresolved_class` (Event.unresolved_class, ontology 2.8.0, #28): why an update with no `kind` has none, as a controlled class over its free-text `unresolved_reason`. `null` when it has a kind, until a pass has read it, or when the model named no term.
 - 1.8.0 — `topics.json` rows carry `observation_evidence` (Observation `bears_on` TopicOption, ontology 2.7.0, #32): the observations a judge found to weigh for or against each answer, with `sign` and `confidence`. They replace the updates of `evidence`, which is deprecated and empty in releases made from this version; a reader that still reads `evidence` sees no rows, not a different shape. The Agent `question` record lists them under `evidence` with `observation_id` instead of `update_id`.
 - 1.7.0 — each `concerns` entry of an observation carries `occupation_id`: the occupation a `task` belongs to, `null` for other kinds (#32). Occupation pages and `occupation_summary.tasks` count a task only under its own occupation; with an older release, a task counts under an occupation only when it is the observation's one occupation.

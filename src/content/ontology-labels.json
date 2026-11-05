@@ -1,6 +1,6 @@
 {
   "generated_from": "datasets/ontology/schema/schema.json",
-  "schema_version": "2.8.0",
+  "schema_version": "2.9.0",
   "classes": {
     "Concept": {
       "en": "Concept",

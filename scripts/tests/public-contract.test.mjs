@@ -21,6 +21,15 @@ const observation = () => ({
   merged_from: ["obs-0"],
 });
 
+test("an observation's translations are optional and null until made (1.10.0)", () => {
+  const validate = compile("Observation");
+  const fact = { fact_id: "f", value: "48", unit: "%", what: "x", baseline: null, method_note: null, quote: "q" };
+  // A release before 1.10.0 has no such keys.
+  assert.ok(validate({ ...observation(), facts: [fact] }), JSON.stringify(validate.errors));
+  const row = { ...observation(), task_zh_cn: "写代码", scale_zh_cn: null, conditions_zh_cn: null, actor_name_zh_cn: null, facts: [{ ...fact, what_zh_cn: "说明", unit_zh_cn: null }] };
+  assert.ok(validate(row), JSON.stringify(validate.errors));
+});
+
 test("contract files are deterministic and every schema compiles", () => {
   const first = buildContract();
   assert.deepEqual(first, buildContract());
