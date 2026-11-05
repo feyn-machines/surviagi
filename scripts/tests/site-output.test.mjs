@@ -1881,3 +1881,34 @@ test("Agent catalog records: bilingual HTTP/MCP parity and navigable relations",
   const missing = await fetch(`${site.base}/api/agent/record?id=oaw:market:missing-catalog-id`);
   assert.equal(missing.status, 404);
 });
+
+test("Agent model and source account reads use published metadata in both languages", { skip: !HAS_SNAPSHOT }, async () => {
+  const models = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "models.json"), "utf8"));
+  const sources = JSON.parse(readFileSync(join(SNAPSHOT_DIR, "sources.json"), "utf8"));
+  for (const language of ["en", "zh-CN"]) {
+    for (const [id, type, fields] of [
+      [models[0].model_id, "model", models[0]],
+      [sources[0].account_key, "source_account", Object.fromEntries(Object.entries(sources[0]).filter(([k]) => k !== "latest"))],
+    ]) {
+      const response = await fetch(`${site.base}/api/agent/record?${new URLSearchParams({ id, language })}`);
+      assert.equal(response.status, 200);
+      assert.match(response.headers.get("cache-control"), /max-age=60/);
+      const record = await response.json();
+      assert.deepEqual((await tool("get_record", { id, language })).structuredContent, record);
+      assert.deepEqual(record.fields, fields);
+      assert.equal(record.type, type);
+      assert.equal(record.id, id);
+      assert.equal(record.markdown_url, null);
+      assert.ok(record.review && record.coverage && record.versions.data && record.release.generated_at);
+      assert.equal((await fetch(`${site.base}${new URL(record.url).pathname}`)).status, 200);
+      assert.ok(record.related_ids.every((v) => typeof v === "string"));
+      if (type === "source_account") {
+        assert.ok(!("latest" in record.fields));
+        assert.ok(record.sources.every((p) => !Object.hasOwn(p, "excerpt")));
+      }
+    }
+  }
+  for (const id of ["model:unknown:missing", "x:missing_account"]) {
+    assert.equal((await fetch(`${site.base}/api/agent/record?${new URLSearchParams({ id })}`)).status, 404);
+  }
+});

@@ -15,6 +15,8 @@ import {
   isObservationEvidence,
   legacyEvidence,
   manifest,
+  models,
+  sources,
   marketSlug,
   markets,
   observationDate,
@@ -574,7 +576,7 @@ const ID_QUESTION = /^topic:[a-z_]+:[a-z0-9-]*:[0-9a-f]{8}$/;
 
 /** True for the shape of an id `search` hands out; says nothing about whether the release holds it. */
 export function isRecordId(id: string): boolean {
-  return /^oaw:(market|occupation):[A-Za-z0-9._:-]{1,200}$/.test(id) || ID_UPDATE.test(id) || ID_EVIDENCE.test(id) || ID_QUESTION.test(id) || OBSERVATION_ID.test(id);
+  return /^(?:x:[A-Za-z0-9_]{1,15}|model:[a-z0-9][a-z0-9._:-]{0,220})$/.test(id) || /^oaw:(market|occupation):[A-Za-z0-9._:-]{1,200}$/.test(id) || ID_UPDATE.test(id) || ID_EVIDENCE.test(id) || ID_QUESTION.test(id) || OBSERVATION_ID.test(id);
 }
 
 function updateRecord(e: LinkedEvent, language: Language) {
@@ -683,6 +685,33 @@ function evidenceRecord(r: EvidenceRow, e: LinkedEvent, language: Language) {
 export function record(id: string, language: Language = "en") {
   const release = releaseInfo();
   const versions = versionsInfo();
+  const source = sources().find((s) => s.account_key === id);
+  if (source) {
+    // No post bodies: source posts are followed by their original URL.
+    const { latest, ...fields } = source;
+    return {
+      id, type: "source_account" as const, fields,
+      related_ids: [...new Set([source.org_id, source.person_id, ...source.affiliations.map((a) => a.org_id)].filter((v): v is string => v !== null))],
+      url: absoluteUrl(language, "/voices"),
+      markdown_url: null,
+      sources: latest.slice(0, DETAIL_ROWS).map((p) => ({ id: p.source_id, url: p.url, published_at: p.published_at })),
+      review: "published_identity_metadata" as const,
+      coverage: "One collected account in the loaded release. identity_grade describes the identity basis, not independent verification. Post bodies are omitted; open source URLs. Null collection counts do not mean silence.",
+      release, versions,
+    };
+  }
+  const model = models().find((m) => m.model_id === id);
+  if (model) {
+    return {
+      id, type: "model" as const, fields: model,
+      related_ids: [model.org_id, model.parent_model_id].filter((v): v is string => v !== null),
+      url: absoluteUrl(language, "/updates"),
+      markdown_url: null,
+      review: model.status,
+      coverage: "Published model catalog metadata. level denotes a model family/release/variant, not an AI capability grade. The updates link is a collection page, not a dedicated model page; related IDs may lack their own record in this release.",
+      release, versions,
+    };
+  }
   // Resolve exact catalog ids, never infer a new entity from an unknown id.
   const occupation = occupationById(id);
   if (occupation) {

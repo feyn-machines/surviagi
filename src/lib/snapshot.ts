@@ -445,12 +445,29 @@ type LegacyProgress = {
   }>;
 };
 
+/** A model entry already carried by the public release's models collection. */
+export type ModelRow = {
+  model_id: string;
+  org_id: string | null;
+  owner: string;
+  owner_zh_cn: string | null;
+  level: string;
+  parent_model_id: string | null;
+  name: string;
+  version: string | null;
+  variant: string | null;
+  released_at: string | null;
+  status: string;
+  events: number;
+};
+
 /** What one data release holds, shaped as the snapshot files and the release database both deliver it. */
 export type Payload = {
   manifest: Manifest;
   events: EventRow[];
   coverage: Coverage;
   sources: Source[];
+  models?: ModelRow[];
   /** Absent from a release made before topics were published. */
   topics?: TopicDocument[];
   /** Absent from a release made before Issue #35; then the chain and progress below carry the same. */
@@ -668,6 +685,7 @@ export const manifest = (): Manifest | null => current().data?.manifest ?? null;
 export const activities = (): Activity[] => current().work;
 export const events = (): EventRow[] => current().data?.events ?? [];
 export const coverage = (): Coverage | null => current().data?.coverage ?? null;
+export const models = (): ModelRow[] => current().data?.models ?? [];
 export const sources = (): Source[] => current().data?.sources ?? [];
 export const topics = (): Topic[] => current().topics;
 export const topicBySlug = (slug: string): Topic | undefined => topics().find((t) => t.slug === slug);
