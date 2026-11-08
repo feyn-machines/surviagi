@@ -89,7 +89,7 @@ const revisionSchema = schema<KnowledgeRevision>((v, p, e) => {
 const bundleSchema = object({ contractVersion: choice(KNOWLEDGE_CONTRACT_VERSION), records: array(object({ id, head: hash, revisions: array(revisionSchema, 1) })), withdrawals: array(object({ target: refSchema, date, reason: str })) });
 
 /** Canonical JSON v1: recursive UTF-16 key sort; array order and string bytes preserved. */
-function canonical(value: unknown): string {
+export function canonical(value: unknown): string {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return JSON.stringify(value);
   if (typeof value === 'number' && Number.isFinite(value)) return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
