@@ -110,8 +110,8 @@ export function whitepaperMarkdown(language: Language, page: string, site: strin
  * The subset of Markdown the site's own documents use, as blocks. `bullets`
  * turns on unordered lists, which articles use and the whitepaper does not: a
  * line of the whitepaper that happens to begin with a dash stays a paragraph.
- * `images` turns on a figure: a line that is only `![alt](/path)`, the path
- * being a file the site serves itself.
+ * `images` turns on a figure: a line that is only `![alt](source)`, using
+ * a site-relative path or an HTTPS image URL. No raw HTML is interpreted.
  */
 export function parseBlocks(section: string, options: { bullets?: boolean; images?: boolean } = {}): Block[] {
   const blocks: Block[] = [];
@@ -152,7 +152,7 @@ export function parseBlocks(section: string, options: { bullets?: boolean; image
       blocks.push({ kind: "rule" });
       continue;
     }
-    const image = options.images ? line.trim().match(/^!\[([^\]]*)\]\((\/[^)\s]+)\)$/) : null;
+    const image = options.images ? line.trim().match(/^!\[([^\]]*)\]\(((?:\/(?!\/)|https:\/\/)[^)\s]+)\)$/) : null;
     if (image) {
       flush();
       blocks.push({ kind: "image", alt: image[1], src: image[2] });
