@@ -13,7 +13,7 @@
     "security:check": "python3 scripts/check-public-files.py",
     "security:staged": "python3 scripts/check-public-files.py --staged",
     "security:test": "python3 -m unittest discover -s scripts/tests -p 'test_public_files.py'",
-    "check": "pnpm security:check && pnpm security:test && pnpm metadata:check && pnpm platform:test && pnpm platform:check && pnpm ontology:test && pnpm ontology:check && pnpm data:test:unit && pnpm editorial:test && pnpm site:test:unit && pnpm crawl:test:unit && pnpm i18n:test && pnpm design:check && pnpm lint && pnpm typecheck && pnpm build && pnpm site:test && node --test scripts/tests/editorial-schema.integration.test.mjs",
+    "check": "pnpm security:check && pnpm security:test && pnpm knowledge:test && pnpm metadata:check && pnpm platform:test && pnpm platform:check && pnpm ontology:test && pnpm ontology:check && pnpm data:test:unit && pnpm editorial:test && pnpm site:test:unit && pnpm crawl:test:unit && pnpm i18n:test && pnpm design:check && pnpm lint && pnpm typecheck && pnpm build && pnpm site:test && node --test scripts/tests/editorial-schema.integration.test.mjs",
     "check:full": "pnpm check && pnpm data:test",
     "metadata:check": "node scripts/check-metadata.mjs",
     "design:build": "node scripts/build-design-system.mjs",
@@ -113,7 +113,9 @@
     "admins:sync": "data/runtime/venv/bin/python scripts/app-db.py admins --target server",
     "submissions:pull": "data/runtime/venv/bin/python scripts/app-db.py pull --target server",
     "votes:pull": "data/runtime/venv/bin/python scripts/app-db.py votes --target server",
-    "check:public": "pnpm security:check && pnpm security:test && pnpm metadata:check && pnpm editorial:test && pnpm site:test:unit && pnpm i18n:test && pnpm design:check && pnpm lint && pnpm typecheck && pnpm build && pnpm site:test"
+    "check:public": "pnpm security:check && pnpm security:test && pnpm knowledge:test && pnpm metadata:check && pnpm editorial:test && pnpm site:test:unit && pnpm i18n:test && pnpm design:check && pnpm lint && pnpm typecheck && pnpm build && pnpm site:test",
+    "knowledge:test": "node --test scripts/tests/knowledge-contract.test.mjs",
+    "knowledge:check": "node scripts/knowledge/check.mjs"
   },
   "dependencies": {
     "better-auth": "1.7.7",
