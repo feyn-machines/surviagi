@@ -184,6 +184,28 @@ class CandidateTests(unittest.TestCase):
         self.assertNotEqual(invalid.returncode, 0)
         self.assertNotIn('PRIVATE INVALID JSON', invalid.stdout + invalid.stderr)
 
+    def test_question_marker_associates_new_sources_after_issue_is_renamed(self):
+        row = self.preview([{**self.selection, 'source_ids': ['101']}])['candidates'][0]
+        self.assertIn('question_marker', row)
+        issues = [{'number': 9, 'title': 'Renamed question', 'state': 'OPEN',
+                   'body': row['question_marker'] + '\nhttps://x.com/i/status/101'}]
+        new = self.preview(issues=issues)['candidates'][0]
+        self.assertEqual((new['action'], new['issue_number']), ('append_to_issue', 9))
+        self.assertEqual(new['new_source_ids'], ['102'])
+        subset = self.preview([{**self.selection, 'source_ids': ['101']}], issues)['candidates'][0]
+        self.assertEqual(subset['action'], 'already_recorded')
+        self.assertEqual(subset['new_source_ids'], [])
+
+    def test_original_question_is_preserved_and_merge_spelling_is_deterministic(self):
+        question = 'Can AI do task A？'
+        a = {**self.selection, 'question': question, 'source_ids': ['101']}
+        b = {**a, 'question': 'can ai do task a?', 'source_ids': ['102']}
+        result = self.preview([a, b])
+        self.assertEqual(result['candidates'][0]['question'], question)
+        self.assertEqual(result, self.preview([b, a]))
+        expanded = '㍿' * 200
+        self.assertEqual(self.preview([{**a, 'question': expanded}])['candidates'][0]['question'], expanded)
+
 
 if __name__ == '__main__':
     unittest.main()

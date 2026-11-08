@@ -95,8 +95,15 @@ def _associate(candidate, issue_number, issues):
         if issue_number is not None and recorded != [issue_number]:
             raise CandidateError('candidate is already recorded in a different issue')
         return 'already_recorded', recorded[0]
+    related = [n for n, issue in issues.items() if candidate['question_marker'] in issue['body']]
+    if len(related) > 1:
+        raise CandidateError('ambiguous question marker in multiple issues')
     if issue_number is not None:
+        if related and related != [issue_number]:
+            raise CandidateError('question is already associated with a different issue')
         return 'append_to_issue', issue_number
+    if related:
+        return 'append_to_issue', related[0]
     matches = [n for n, issue in issues.items() if _question(issue['title']) == _question(candidate['question'])]
     if len(matches) > 1:
         raise CandidateError('ambiguous question title; specify issue_number')
@@ -163,13 +170,13 @@ def preview(input_id, selections, issues, *, root=ROOT):
                 or any(not isinstance(s, str) or s not in available for s in source_ids)):
             raise CandidateError('source_ids must name existing numeric posts in the pinned collections')
         key = _question(candidate['question'])
-        candidate['question'] = key
         candidate['source_ids'] = sorted(set(source_ids))
         candidate['issue_number'] = row.get('issue_number')
         previous = grouped.get(key)
         if previous is not None:
-            if any(previous[name] != candidate[name] for name in (*TEXT_FIELDS, 'issue_number')):
+            if any(previous[name] != candidate[name] for name in (*TEXT_FIELDS[1:], 'issue_number')):
                 raise CandidateError('conflicting selections for the same question')
+            candidate['question'] = min(previous['question'], candidate['question'])
             candidate['source_ids'] = sorted(set(previous['source_ids'] + source_ids))
         grouped[key] = candidate
     unique = {}
@@ -177,9 +184,20 @@ def preview(input_id, selections, issues, *, root=ROOT):
         issue_number = candidate.pop('issue_number')
         identity = _digest({'question': _question(candidate['question']), 'source_ids': candidate['source_ids']})
         candidate['candidate_id'] = 'lead-' + identity
+        candidate['question_marker'] = '<!-- surviagi-question:' + _digest(_question(candidate['question'])) + ' -->'
         candidate['marker'] = '<!-- surviagi-candidate:' + candidate['candidate_id'] + ' -->'
         candidate['source_urls'] = ['https://x.com/i/status/' + s for s in candidate['source_ids']]
         candidate['action'], candidate['issue_number'] = _associate(candidate, issue_number, issue_map)
+        number = candidate['issue_number']
+        recorded_sources = set()
+        if number is not None:
+            recorded_sources = set(re.findall(r'https://x\.com/[A-Za-z0-9_]+/status/([0-9]+)(?=[?#\s<)\]]|$)',
+                                              issue_map[number]['body']))
+        candidate['new_source_ids'] = [s for s in candidate['source_ids'] if s not in recorded_sources]
+        if candidate['action'] == 'already_recorded':
+            candidate['new_source_ids'] = []
+        elif number is not None and not candidate['new_source_ids']:
+            candidate['action'] = 'already_recorded'
         unique[identity] = candidate
     # Ensure no collection changed between verification and extraction.
     verify_inputs(input_id, root=root)
