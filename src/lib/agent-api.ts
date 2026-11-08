@@ -1,3 +1,5 @@
+import { knowledgeAgent } from './knowledge/runtime';
+import { KNOWLEDGE_SEARCH_TOOL } from './knowledge/agent';
 import { rateLimit } from "./api";
 import { appEnabled } from "./app-config";
 import {
@@ -217,6 +219,8 @@ export async function runRecord(args: Args): Promise<Outcome> {
   if (!id) return fail(400, "invalid", "`id` is required.");
   const language = languageArg(args);
   if (language === null) return fail(400, "invalid", "`language` must be en or zh-CN.");
+  if (id.startsWith("knowledge:")) return knowledgeAgent.get({ ...args, id });
+  if (args.revision !== undefined) return fail(400, "invalid", "revision is only supported for knowledge records.");
   const editorialRevision = parseEditorialRevisionId(id);
   if (editorialRevision) {
     try {
@@ -636,7 +640,7 @@ export const READ_TOOLS = [
     name: "get_record",
     title: "Read a SurviAGI record",
     description:
-      "Read one published record by its exact id. model:<owner>:<slug> reads published model metadata; x:<handle> reads a collected account and identity basis, with source URLs but no post bodies. These link to collection pages and have no Markdown page. Example: {id: model:openai:gpt-4}. Catalog ids (oaw:occupation:… and oaw:market:…, including activity ids) return structured fields, related ids, page links and coverage limits; for example id=oaw:occupation:13-2011.00 with language=zh-CN. Other records: a public article revision returns its full Markdown, bilingual link, sources, evidence cutoff, exact version and real approval scope/status; " +
+      "Read knowledge:* with optional revision (sha256 hash) for the current or exact historical revision, including conditions, sources, full localized text, knowledge commit/index hash and withdrawal generation. Withdrawn records return identity/status/reason only. Legacy records retain their semantics. Read one published record by its exact id. model:<owner>:<slug> reads published model metadata; x:<handle> reads a collected account and identity basis, with source URLs but no post bodies. These link to collection pages and have no Markdown page. Example: {id: model:openai:gpt-4}. Catalog ids (oaw:occupation:… and oaw:market:…, including activity ids) return structured fields, related ids, page links and coverage limits; for example id=oaw:occupation:13-2011.00 with language=zh-CN. Other records: a public article revision returns its full Markdown, bilingual link, sources, evidence cutoff, exact version and real approval scope/status; " +
       "an update with its source posts and every reading of it; " +
       "a question with its answer options, the posts that argued them (with short quotes of the posts' own words) and the " +
       "updates that weigh on them; an observation (obs-…, from query_observations or occupation_summary) with its figures, the source words each was read from, " +
@@ -645,7 +649,8 @@ export const READ_TOOLS = [
     inputSchema: {
       type: "object",
       properties: {
-        id: { type: "string", minLength: 1, maxLength: 260, description: "An id from search or query_observations: ev-…, topic:…, obs-…, evidence:…, article:<slug>:v<version>, oaw:occupation:<code>, oaw:market:<slug> (market or activity), model:<owner>:<slug> or x:<handle>." },
+        revision: { type: "string", pattern: "^sha256:[a-f0-9]{64}$", description: "Exact knowledge revision returned by search_knowledge. Omit for current head; never substituted if missing." },
+        id: { type: "string", minLength: 1, maxLength: 260, description: "A knowledge:* id from search_knowledge, or an id from search or query_observations: ev-…, topic:…, obs-…, evidence:…, article:<slug>:v<version>, oaw:occupation:<code>, oaw:market:<slug> (market or activity), model:<owner>:<slug> or x:<handle>." },
         language: LANGUAGE_SCHEMA,
       },
       required: ["id"],
@@ -731,6 +736,7 @@ export const READ_TOOLS = [
     },
     annotations: { readOnlyHint: true, openWorldHint: false, idempotentHint: true },
   },
+  KNOWLEDGE_SEARCH_TOOL,
 ] as const;
 
 export const SUBMIT_TOOLS = [
@@ -795,6 +801,8 @@ export type ToolName = (typeof READ_TOOLS)[number]["name"] | (typeof SUBMIT_TOOL
 /** Runs one tool by name. `submit` tools are refused on the public endpoint, before any key is looked at. */
 export async function runTool(request: Request, name: string, args: Args, scope: "public" | "submit"): Promise<Outcome | null> {
   switch (name) {
+    case "search_knowledge":
+      return knowledgeAgent.search(args);
     case "search":
       return runSearch(args);
     case "get_record":

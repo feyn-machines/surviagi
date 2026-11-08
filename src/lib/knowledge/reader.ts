@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { open } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { type KnowledgeKind, type KnowledgeRef, type KnowledgeRevision, type KnowledgeWithdrawal } from './contract';
@@ -44,7 +45,7 @@ type Localized<T> = T extends KnowledgeRevision ? Omit<T, 'text'> & { text: { ti
 type Visible = Metadata & { status: 'current' | 'superseded'; record: Localized<KnowledgeRevision> };
 type Hidden = Metadata & { status: 'withdrawn'; reason: string };
 export type KnowledgeRead = Visible | Hidden | (Metadata & { status: 'not_found' });
-export type KnowledgeSearch = { query: string; language: KnowledgeLanguage; kind?: KnowledgeKind; direction?: string; nature?: string; limit?: number };
+export type KnowledgeSearch = { query: string; language: KnowledgeLanguage; kind?: KnowledgeKind; direction?: string; nature?: string; limit?: number; cursor?: string };
 
 export function createKnowledgeReader(input: KnowledgeArtifact, loadBaseline: () => Promise<unknown> = fileBaseline()) {
   const artifact = verifyArtifact(input);
@@ -72,16 +73,26 @@ export function createKnowledgeReader(input: KnowledgeArtifact, loadBaseline: ()
     if (!r) return { ...meta, status: 'not_found' };
     return { ...meta, status: heads.get(r.id) === r.revision ? 'current' : 'superseded', record: { ...structuredClone(r), text: structuredClone(r.text[language]) } as Localized<KnowledgeRevision> };
   }
-  return {
+  const reader = {
     async get(ref: { id: string; revision?: string }, language: KnowledgeLanguage): Promise<KnowledgeRead> {
       languageCheck(language);
       const ctx = await context();
       return read({ id: ref.id, revision: ref.revision ?? heads.get(ref.id) ?? '' }, language, ctx);
     },
-    async search(params: KnowledgeSearch) {
+    async searchPage(params: KnowledgeSearch) {
       languageCheck(params.language);
       if (typeof params.query !== 'string' || params.query.length > 1000 || params.limit !== undefined && (!Number.isSafeInteger(params.limit) || params.limit < 1 || params.limit > 100)) throw new Error('Invalid knowledge search');
       const ctx = await context(); const query = params.query.normalize('NFKC').toLowerCase();
+      const binding = createHash('sha256').update(JSON.stringify([artifact.indexHash, artifact.commit, ctx.baseline, query, params.language, params.kind ?? null, params.direction ?? null, params.nature ?? null])).digest('hex');
+      let offset = 0;
+      if (params.cursor !== undefined) {
+        if (typeof params.cursor !== 'string' || params.cursor.length > 200 || !/^[A-Za-z0-9_-]+$/.test(params.cursor)) throw new KnowledgeCursorError();
+        try {
+          const cursor = JSON.parse(Buffer.from(params.cursor, 'base64url').toString('utf8'));
+          if (cursor.binding !== binding || !Number.isSafeInteger(cursor.offset) || cursor.offset < 1) throw new Error();
+          offset = cursor.offset;
+        } catch { throw new KnowledgeCursorError(); }
+      }
       const results: (Metadata & { kind: KnowledgeKind; status: 'current'; title: string; summary: string; date: string })[] = [];
       for (const e of artifact.bundle.records) {
         const result = read({ id: e.id, revision: e.head }, params.language, ctx);
@@ -95,9 +106,20 @@ export function createKnowledgeReader(input: KnowledgeArtifact, loadBaseline: ()
         const meta = { id: result.id, revision: result.revision, commit: result.commit, websiteCommit: result.websiteCommit, indexHash: result.indexHash, language: result.language, generation: result.generation };
         results.push({ ...meta, status: 'current', kind: r.kind, title: r.text.title, summary: Array.from(r.text.body).slice(0, 240).join(''), date: r.date });
       }
-      return results.slice(0, params.limit ?? 20);
+      const limit = params.limit ?? 20;
+      if (offset > results.length) throw new KnowledgeCursorError();
+      return { commit: artifact.commit, websiteCommit: artifact.websiteCommit, indexHash: artifact.indexHash, generation: ctx.baseline.generation, language: params.language,
+        total: results.length, results: results.slice(offset, offset + limit),
+        next_cursor: offset + limit < results.length ? Buffer.from(JSON.stringify({ binding, offset: offset + limit })).toString('base64url') : null };
+    },
+    async search(params: KnowledgeSearch) {
+      return (await reader.searchPage(params)).results;
     },
   };
+  return reader;
+}
+export class KnowledgeCursorError extends Error {
+  constructor() { super('Invalid or stale knowledge cursor; restart the search.'); }
 }
 /** Render as inert preformatted text (CSS white-space: pre-wrap); never auto-link Markdown. */
 export function renderKnowledgeText(value: string): string {
