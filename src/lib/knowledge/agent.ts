@@ -11,7 +11,10 @@ const invalid = (message: string): Outcome => ({ ok: false, status: 400, error: 
 const unavailable = (): Outcome => ({ ok: false, status: 503, error: 'unavailable', message: 'Knowledge reading is unavailable. No research or collection was started.' });
 const success = (value: Record<string, unknown>): Outcome => ({ ok: true, value, cacheable: false });
 function language(args: Args): KnowledgeLanguage | null {
-  return args.language === undefined ? 'en' : args.language === 'en' || args.language === 'zh-CN' ? args.language : null;
+  if (args.language === undefined || args.language === null) return 'en';
+  if (typeof args.language !== 'string') return null;
+  const tag = args.language.trim().toLowerCase();
+  return tag === 'en' ? 'en' : tag === 'zh-cn' ? 'zh-CN' : null;
 }
 /** HTTP and MCP use this adapter; the page/Markdown source remains the same reader. */
 export function createKnowledgeAgent(load: () => Promise<Reader>) {

@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { createFixture } from './knowledge-fixture.mjs';
 const modules = {};
-for (const name of ['contract', 'importer', 'reader', 'agent']) {
+for (const name of ['contract', 'importer', 'reader', 'agent', 'runtime']) {
   let js = ts.transpileModule(readFileSync(new URL(`../../src/lib/knowledge/${name}.ts`, import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
   for (const [dep, url] of Object.entries(modules)) js = js.replaceAll(`'./${dep}'`, JSON.stringify(url));
   modules[name] = `data:text/javascript,${encodeURIComponent(js)}`;
@@ -26,7 +26,7 @@ function setup(commit = 'a'.repeat(40)) {
   const artifact = importFiles(files, { commit, websiteCommit: 'b'.repeat(40) });
   let baseline = { generation: 0, updatedAt: '2026-11-08T00:00:00Z', withdrawals: [], affected: [] };
   const reader = createKnowledgeReader(artifact, async () => baseline);
-  return { b, old, reader, agent: createKnowledgeAgent(async () => reader), setBaseline(v) { baseline = v; } };
+  return { b, old, reader, artifact, agent: createKnowledgeAgent(async () => reader), setBaseline(v) { baseline = v; } };
 }
 test('bilingual search paginates all heads with shared filters and no cache', async () => {
   const { agent, reader } = setup();
@@ -93,4 +93,38 @@ test('cursor is bound to artifact and empty results still report provenance', as
   assert.equal(empty.value.language, 'en'); assert.equal(empty.value.generation, 0);
   assert.equal(empty.value.next_cursor, null);
   assert.equal((await agent.get({ id: 'knowledge:case:synthetic', revision: 'sha256:' + '0'.repeat(64) })).status, 404);
+});
+
+test('verified artifact reader is reused while baseline remains live and file replacement invalidates it', async () => {
+  const { mkdtempSync, writeFileSync, renameSync, rmSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os'); const { join } = await import('node:path');
+  const { loadKnowledgeReader } = await import(modules.runtime);
+  const { artifact, b } = setup(); const dir = mkdtempSync(join(tmpdir(), 'knowledge-runtime-'));
+  const artifactPath = join(dir, 'artifact.json'), baselinePath = join(dir, 'baseline.json');
+  const previous = [process.env.KNOWLEDGE_ARTIFACT_PATH, process.env.KNOWLEDGE_WITHDRAWALS_PATH];
+  process.env.KNOWLEDGE_ARTIFACT_PATH = artifactPath; process.env.KNOWLEDGE_WITHDRAWALS_PATH = baselinePath;
+  writeFileSync(artifactPath, JSON.stringify(artifact));
+  const baseline = { generation: 0, updatedAt: '2026-11-08T00:00:00Z', withdrawals: [], affected: [] };
+  writeFileSync(baselinePath, JSON.stringify(baseline));
+  try {
+    const first = await loadKnowledgeReader();
+    assert.equal(await loadKnowledgeReader(), first, 'unchanged validated artifact reuses the reader');
+    const c = b.records[1].revisions[0];
+    writeFileSync(baselinePath, JSON.stringify({ ...baseline, generation: 1, withdrawals: [{ target: { id: c.id, revision: c.revision }, date: '2026-11-08', reason: 'Synthetic withdrawal' }] }));
+    assert.equal((await (await loadKnowledgeReader()).get({ id: b.records[2].id }, 'en')).status, 'withdrawn');
+    writeFileSync(artifactPath + '.tmp', JSON.stringify(artifact)); renameSync(artifactPath + '.tmp', artifactPath);
+    assert.notEqual(await loadKnowledgeReader(), first, 'atomic artifact replacement revalidates');
+    writeFileSync(artifactPath, '{}'); await assert.rejects(loadKnowledgeReader());
+    rmSync(artifactPath); await assert.rejects(loadKnowledgeReader());
+  } finally {
+    for (const [i, name] of ['KNOWLEDGE_ARTIFACT_PATH', 'KNOWLEDGE_WITHDRAWALS_PATH'].entries()) {
+      if (previous[i] === undefined) delete process.env[name]; else process.env[name] = previous[i];
+    }
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+test('record language normalization retains legacy aliases', async () => {
+  const { agent } = setup();
+  for (const language of ['zh-cn', 'ZH-CN', ' zh-CN ']) assert.equal((await agent.get({ id: 'knowledge:case:synthetic', language })).value.language, 'zh-CN');
+  assert.equal((await agent.get({ id: 'knowledge:case:synthetic', language: null })).value.language, 'en');
 });

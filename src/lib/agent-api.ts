@@ -220,7 +220,6 @@ export async function runRecord(args: Args): Promise<Outcome> {
   const language = languageArg(args);
   if (language === null) return fail(400, "invalid", "`language` must be en or zh-CN.");
   if (id.startsWith("knowledge:")) return knowledgeAgent.get({ ...args, id });
-  if (args.revision !== undefined) return fail(400, "invalid", "revision is only supported for knowledge records.");
   const editorialRevision = parseEditorialRevisionId(id);
   if (editorialRevision) {
     try {

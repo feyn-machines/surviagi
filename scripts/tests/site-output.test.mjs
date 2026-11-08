@@ -1993,6 +1993,10 @@ test('knowledge HTTP/MCP share pinned revisions, localized facts and live withdr
       const caseRead = await http('record', { id: b.records[1].id, language });
       assert.deepEqual(caseRead.body.record.facts, b.records[1].revisions[0].facts);
     }
+    assert.equal((await http('record', { id: old.id, revision: 'sha256:' + '0'.repeat(64) })).status, 404);
+    assert.equal((await http('record', { id: old.id, language: 'ZH-CN' })).body.language, 'zh-CN');
+    // Unknown legacy id still follows its old not-found path; an extra revision is ignored.
+    assert.equal((await http('record', { id: 'topic:test:nonexistent:00000000', revision: '' })).status, 404);
     const page = (await http('knowledge', { query: 'synthetic', limit: '1' })).body;
     const next = await http('knowledge', { query: 'synthetic', limit: '1', cursor: page.next_cursor });
     assert.notEqual(page.results[0].id, next.body.results[0].id);
@@ -2004,7 +2008,9 @@ test('knowledge HTTP/MCP share pinned revisions, localized facts and live withdr
     assert.equal(hidden.body.status, 'withdrawn'); assert.equal(hidden.body.record, undefined);
     assert.deepEqual((await mcp('get_record', { id: b.records[2].id })).structuredContent, hidden.body);
     assert.equal((await http('knowledge', { query: 'synthetic', cursor: page.next_cursor })).status, 400);
-    assert.equal((await http('knowledge', { query: 'synthetic' })).body.total, 1);
+    const filtered = await http('knowledge', { query: 'synthetic' });
+    assert.equal(filtered.body.total, 1);
+    assert.deepEqual((await mcp('search_knowledge', { query: 'synthetic' })).structuredContent, filtered.body);
     writeFileSync(baselinePath, '{}');
     assert.equal((await http('knowledge', { query: 'synthetic' })).status, 503);
     assert.equal((await http('record', { id: c.id })).status, 503);
