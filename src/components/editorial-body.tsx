@@ -75,7 +75,7 @@ function renderBlock(block: PreviewBlock, index: number, language: Language) {
       return <div key={key} className={p.tableScroll} role="region" aria-label={language === "en" ? "Article table" : "文章表格"} tabIndex={0}><table><thead><tr>{block.rows[0]?.map((cell, i) => <th key={`${key}-h${i}`} scope="col">{inline(cell, `${key}-h${i}`, language)}</th>)}</tr></thead><tbody>{block.rows.slice(1).map((row, i) => <tr key={`${key}-r${i}`}>{row.map((cell, j) => <td key={`${key}-r${i}-c${j}`}>{inline(cell, `${key}-r${i}-c${j}`, language)}</td>)}</tr>)}</tbody></table></div>;
     case "image":
       // eslint-disable-next-line @next/next/no-img-element
-      return <img key={key} className={s.figure} src={block.src} alt={block.alt} loading="lazy" />;
+      return <img key={key} className={s.figure} src={block.src} alt={block.alt} loading="lazy" referrerPolicy="no-referrer" />;
     default: return <p key={key}>{inline(block.inline, key, language)}</p>;
   }
 }
