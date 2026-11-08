@@ -1064,7 +1064,7 @@ test("MCP: a client initializes with no key, and the public endpoint lists only 
   assert.equal(old.body.result.protocolVersion, "2025-06-18");
   assert.equal((await rpc("/api/mcp", { jsonrpc: "2.0", method: "notifications/initialized" })).status, 202);
   const tools = (await rpc("/api/mcp", { jsonrpc: "2.0", id: 3, method: "tools/list" })).body.result.tools;
-  assert.deepEqual(tools.map((t) => t.name), ["search", "get_record", "query_observations", "occupation_summary", "changes_since"]);
+  assert.deepEqual(tools.map((t) => t.name), ["search", "get_record", "query_observations", "occupation_summary", "changes_since", "search_knowledge"]);
   assert.deepEqual(tools[0].inputSchema.properties.types.items.enum, ["update", "question", "observation", "evidence", "article"]);
   assert.deepEqual(tools[0].inputSchema.properties.status.enum, ["approved", "preview"]);
   for (const t of tools) {
@@ -1157,7 +1157,7 @@ test("MCP: bad arguments and unknown ids are tool errors the agent can read, and
 
 test("MCP submit endpoint without the user database: reading works, submitting is unavailable", async () => {
   const tools = (await rpc("/api/mcp/submit", { jsonrpc: "2.0", id: 1, method: "tools/list" })).body.result.tools;
-  assert.equal(tools.length, 8);
+  assert.equal(tools.length, 9);
   assert.equal((await tool("search", { query: "model" }, "/api/mcp/submit")).isError, undefined);
   const refused = await tool("submit_question", { question: "x" }, "/api/mcp/submit");
   assert.equal(refused.isError, true);
@@ -1937,4 +1937,85 @@ test("Agent model and source account reads use published metadata in both langua
   for (const id of ["model:unknown:missing", "x:missing_account"]) {
     assert.equal((await fetch(`${site.base}/api/agent/record?${new URLSearchParams({ id })}`, { headers: { "cf-connecting-ip": "192.0.2.129" } })).status, 404);
   }
+});
+
+test('knowledge HTTP/MCP share pinned revisions, localized facts and live withdrawal filtering', async () => {
+  const ts = (await import('typescript')).default;
+  const { createFixture } = await import('./knowledge-fixture.mjs');
+  const modules = {};
+  for (const name of ['contract', 'importer', 'reader']) {
+    let js = ts.transpileModule(readFileSync(join(ROOT, `src/lib/knowledge/${name}.ts`), 'utf8'), { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
+    for (const [dep, url] of Object.entries(modules)) js = js.replaceAll(`'./${dep}'`, JSON.stringify(url));
+    modules[name] = `data:text/javascript,${encodeURIComponent(js)}`;
+  }
+  const { revisionHash } = await import(modules.contract);
+  const { importFiles } = await import(modules.importer);
+  const { createKnowledgeReader } = await import(modules.reader);
+  const b = createFixture(r => ({ ...r, revision: revisionHash(r) }));
+  const old = structuredClone(b.records[0].revisions[0]);
+  const newer = structuredClone(old); newer.text.en.body = 'Synthetic revision two'; newer.revision = revisionHash(newer);
+  b.records[0].revisions.push(newer); b.records[0].head = newer.revision;
+  const inputs = b.records.flatMap(e => {
+    const [, kind, slug] = e.id.split(':'); const base = `${kind === 'case' ? 'cases' : kind + 's'}/${slug}`;
+    return [{ path: `${base}/head.json`, mode: '100644', data: JSON.stringify({ id: e.id, head: e.head }) }, ...e.revisions.map(r => ({ path: `${base}/revisions/${r.revision.slice(7)}/record.json`, mode: '100644', data: JSON.stringify(r) }))];
+  });
+  inputs.push({ path: 'withdrawals.json', mode: '100644', data: '[]' });
+  const artifact = importFiles(inputs, { commit: 'a'.repeat(40), websiteCommit: 'b'.repeat(40) });
+  let baseline = { generation: 0, updatedAt: '2026-11-08T00:00:00Z', withdrawals: [], affected: [] };
+  const dir = mkdtempSync(join(tmpdir(), 'knowledge-http-'));
+  const artifactPath = join(dir, 'artifact.json'), baselinePath = join(dir, 'withdrawals.json');
+  writeFileSync(artifactPath, JSON.stringify(artifact)); writeFileSync(baselinePath, JSON.stringify(baseline));
+  let server;
+  try {
+    server = await startServer({ KNOWLEDGE_ARTIFACT_PATH: artifactPath, KNOWLEDGE_WITHDRAWALS_PATH: baselinePath }, 3456);
+    const http = async (path, args) => {
+      const response = await fetch(`${server.base}/api/agent/${path}?${new URLSearchParams(args)}`);
+      assert.equal(response.headers.get('cache-control'), 'no-store');
+      return { status: response.status, body: await response.json() };
+    };
+    const mcp = async (name, args) => {
+      const response = await fetch(`${server.base}/api/mcp`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } }) });
+      assert.equal(response.headers.get('cache-control'), 'no-store');
+      return (await response.json()).result;
+    };
+    const reader = createKnowledgeReader(artifact, async () => baseline);
+    for (const language of ['en', 'zh-CN']) {
+      const args = { query: language === 'en' ? 'synthetic' : '合成', language, limit: '1' };
+      const found = await http('knowledge', args);
+      assert.equal(found.status, 200);
+      assert.deepEqual((await mcp('search_knowledge', args)).structuredContent, found.body);
+      assert.deepEqual(found.body, await reader.searchPage({ ...args, limit: 1 }));
+      const exact = { id: old.id, revision: old.revision, language };
+      const read = await http('record', exact);
+      assert.equal(read.status, 200); assert.equal(read.body.status, 'superseded');
+      assert.deepEqual(read.body, await reader.get(exact, language));
+      assert.deepEqual((await mcp('get_record', exact)).structuredContent, read.body);
+      const caseRead = await http('record', { id: b.records[1].id, language });
+      assert.deepEqual(caseRead.body.record.facts, b.records[1].revisions[0].facts);
+    }
+    assert.equal((await http('record', { id: old.id, revision: 'sha256:' + '0'.repeat(64) })).status, 404);
+    assert.equal((await http('record', { id: old.id, language: 'ZH-CN' })).body.language, 'zh-CN');
+    // Unknown legacy id still follows its old not-found path; an extra revision is ignored.
+    assert.equal((await http('record', { id: 'topic:test:nonexistent:00000000', revision: '' })).status, 404);
+    const page = (await http('knowledge', { query: 'synthetic', limit: '1' })).body;
+    const next = await http('knowledge', { query: 'synthetic', limit: '1', cursor: page.next_cursor });
+    assert.notEqual(page.results[0].id, next.body.results[0].id);
+    assert.equal((await http('knowledge', { query: 'synthetic', limit: '101' })).status, 400);
+    const c = b.records[1].revisions[0];
+    baseline = { ...baseline, generation: 1, withdrawals: [{ target: { id: c.id, revision: c.revision }, reason: 'Synthetic withdrawal', date: '2026-11-08' }] };
+    writeFileSync(baselinePath, JSON.stringify(baseline));
+    const hidden = await http('record', { id: b.records[2].id });
+    assert.equal(hidden.body.status, 'withdrawn'); assert.equal(hidden.body.record, undefined);
+    assert.deepEqual((await mcp('get_record', { id: b.records[2].id })).structuredContent, hidden.body);
+    assert.equal((await http('knowledge', { query: 'synthetic', cursor: page.next_cursor })).status, 400);
+    const filtered = await http('knowledge', { query: 'synthetic' });
+    assert.equal(filtered.body.total, 1);
+    assert.deepEqual((await mcp('search_knowledge', { query: 'synthetic' })).structuredContent, filtered.body);
+    writeFileSync(baselinePath, '{}');
+    assert.equal((await http('knowledge', { query: 'synthetic' })).status, 503);
+    assert.equal((await http('record', { id: c.id })).status, 503);
+    assert.equal((await mcp('get_record', { id: c.id })).isError, true);
+    rmSync(artifactPath);
+    assert.equal((await http('knowledge', { query: 'synthetic' })).status, 503);
+  } finally { if (server) await stop(server.proc); rmSync(dir, { recursive: true, force: true }); }
 });

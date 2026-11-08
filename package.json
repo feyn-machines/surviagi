@@ -114,7 +114,7 @@
     "submissions:pull": "data/runtime/venv/bin/python scripts/app-db.py pull --target server",
     "votes:pull": "data/runtime/venv/bin/python scripts/app-db.py votes --target server",
     "check:public": "pnpm security:check && pnpm security:test && pnpm knowledge:test && pnpm metadata:check && pnpm editorial:test && pnpm site:test:unit && pnpm i18n:test && pnpm design:check && pnpm lint && pnpm typecheck && pnpm build && pnpm site:test",
-    "knowledge:test": "node --test scripts/tests/knowledge-contract.test.mjs scripts/tests/knowledge-import.test.mjs",
+    "knowledge:test": "node --test scripts/tests/knowledge-contract.test.mjs scripts/tests/knowledge-import.test.mjs scripts/tests/knowledge-agent.test.mjs",
     "knowledge:check": "node scripts/knowledge/check.mjs",
     "knowledge:import": "node scripts/knowledge/import.mjs"
   },
