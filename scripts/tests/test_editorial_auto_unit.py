@@ -225,6 +225,17 @@ class AutoRunTests(unittest.TestCase):
         self.assertEqual(self.run_input()["state"], "no_topic")
         self.assertEqual(self.runner.calls, ["selection"])
 
+    def test_invalid_draft_keeps_its_problems_privately(self):
+        self.runner.responses["en"] = {**DRAFTS["en"], "claim_ids_used": ["C1", "C99"]}
+        result = self.run_input()
+        self.assertEqual(result.get("failed"), "draft_invalid")
+        kept = list((self.root / "data/editorial/runs").glob("*/draft-en.invalid.json"))
+        self.assertEqual(len(kept), 1)
+        self.assertEqual(kept[0].stat().st_mode & 0o777, 0o600)
+        record = json.loads(kept[0].read_text())
+        self.assertEqual(record["problems"], ["draft names unknown claim ids"])
+        self.assertEqual(record["draft"]["claim_ids_used"], ["C1", "C99"])
+
     def revisable(self):
         article = "agent-cost"
         self.store.rows = [{"article_id": article, "store": "editorial", "withdrawn": False}]

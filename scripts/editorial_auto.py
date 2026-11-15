@@ -785,7 +785,11 @@ class AutoRun:
                 files.update(self._existing_files(base, (language,)))
             result = self._model(prompt, DRAFT_SCHEMA, files, stage, web=False)
             draft = result.data
-            if draft_problems(draft, brief, {str(s.get("sample_id")) for s in samples["samples"]}):
+            problems = draft_problems(draft, brief, {str(s.get("sample_id")) for s in samples["samples"]})
+            if problems:
+                # Keep what was rejected and why, privately, so a failed run can be diagnosed.
+                _write_private(self._dir(run_id) / f"draft-{language}.invalid.json",
+                               _json_bytes({"problems": problems, "draft": draft}))
                 raise StageFail("draft_invalid", result.cost)
             draft["feedback_store_available"] = samples["available"]
             return _write_private(self._dir(run_id) / f"draft-{language}.json", _json_bytes(draft)), result.cost, None
